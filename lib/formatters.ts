@@ -1,0 +1,2 @@
+export function formatPrice(amount: number, currency: string): string { if (currency === "UZS") return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(amount) + " soʻm"; return new Intl.NumberFormat("uz-UZ", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount); }
+export function stockLabel(status: string): string { return status === "available" ? "Mavjud" : status === "coming_soon" ? "Tez orada" : status === "reserved" ? "Band qilingan" : "Sotilgan"; }
