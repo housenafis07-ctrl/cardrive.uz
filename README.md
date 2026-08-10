@@ -34,3 +34,8 @@ Never commit `.env` files or credentials. Do not log secrets, OTPs, passports, P
 ## Phase 2: public catalog
 
 Phase 2 adds `/`, `/cars`, and `/cars/[slug]`. The homepage, catalog, and vehicle detail pages consume the existing public RLS-safe data through `CatalogService` and `CatalogRepository`; components never query Supabase directly. Catalog search, filtering, sorting, and pagination are URL-backed and server-side. The UI deliberately supports an empty database, and the order CTA is a visual-only future entry point.
+
+
+## Phase 3: protected administration
+
+`/admin` is a server-protected management area. `getAdminUser` verifies the Supabase session and profile role; only `admin` and `manager` users proceed, while other visitors are redirected to `/forbidden`. The dashboard displays live counts and the Brands, Models, and Cars modules use server actions → `AdminCatalogService` → `AdminCatalogRepository`. Storage image management is server-only and stores objects in `car-images/cars/{carId}/...`.
