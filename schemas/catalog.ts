@@ -1,0 +1,5 @@
+import { z } from "zod";
+import { idSchema, slugSchema } from "./common";
+export const brandSchema = z.object({ name: z.string().min(1).max(120), slug: slugSchema, logoUrl: z.string().url().nullable().optional(), description: z.string().max(4000).nullable().optional(), isActive: z.boolean().default(true) });
+export const carModelSchema = brandSchema.pick({ name: true, slug: true, description: true, isActive: true }).extend({ brandId: idSchema });
+export const carSchema = z.object({ brandId: idSchema, modelId: idSchema, name: z.string().min(1).max(180), slug: slugSchema, shortDescription: z.string().max(500).nullable().optional(), description: z.string().max(10000).nullable().optional(), price: z.number().nonnegative(), currency: z.string().length(3).default("UZS"), oldPrice: z.number().nonnegative().nullable().optional(), year: z.number().int().min(1900).max(2100), stockStatus: z.enum(["available","reserved","sold","coming_soon"]), isFeatured: z.boolean().default(false), isActive: z.boolean().default(true) });
