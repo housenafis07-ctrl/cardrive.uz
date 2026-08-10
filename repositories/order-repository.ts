@@ -1,0 +1,4 @@
+import "server-only";
+import { createServiceRoleClient } from "@/supabase/server";
+import type { OrderStatus, PurchaseType } from "@/types/domain";
+export class OrderRepository { async findForCustomer(customerId: string) { return createServiceRoleClient().from("orders").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }); } async create(input: { orderNumber: string; customerId: string; carId: string; purchaseType: PurchaseType; totalAmount: number; currency: string; notes?: string }) { return createServiceRoleClient().from("orders").insert({ order_number: input.orderNumber, customer_id: input.customerId, car_id: input.carId, purchase_type: input.purchaseType, total_amount: input.totalAmount, currency: input.currency, notes: input.notes ?? null }).select().single(); } async updateStatus(orderId: string, status: OrderStatus) { return createServiceRoleClient().from("orders").update({ status }).eq("id", orderId).select().single(); } }
