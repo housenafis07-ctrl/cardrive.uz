@@ -29,3 +29,8 @@ The eventual auth flow is normalized Uzbekistan phone (`+998XXXXXXXXX`) → OTP 
 ## Security and phases
 
 Never commit `.env` files or credentials. Do not log secrets, OTPs, passports, PINFL, or sensitive values; the audit metadata schema blocks common sensitive keys. Phase 2 should implement catalog browsing/search/filter/detail UI; Phase 3 secure OTP ordering; Phase 4 approved bank integrations; Phase 5 administration and hardening.
+
+
+## Phase 2: public catalog
+
+Phase 2 adds `/`, `/cars`, and `/cars/[slug]`. The homepage, catalog, and vehicle detail pages consume the existing public RLS-safe data through `CatalogService` and `CatalogRepository`; components never query Supabase directly. Catalog search, filtering, sorting, and pagination are URL-backed and server-side. The UI deliberately supports an empty database, and the order CTA is a visual-only future entry point.
