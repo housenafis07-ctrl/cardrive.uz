@@ -1,0 +1,5 @@
+import { z } from "zod";
+const optionalNumber = z.coerce.number().nonnegative().optional().catch(undefined);
+export const catalogQuerySchema = z.object({ q: z.string().trim().max(100).optional().catch(undefined), brand: z.string().trim().max(120).optional().catch(undefined), model: z.string().trim().max(120).optional().catch(undefined), body: z.string().trim().max(80).optional().catch(undefined), fuel: z.string().trim().max(80).optional().catch(undefined), transmission: z.string().trim().max(80).optional().catch(undefined), drive: z.string().trim().max(80).optional().catch(undefined), status: z.enum(["available","coming_soon"]).optional().catch(undefined), minPrice: optionalNumber, maxPrice: optionalNumber, minYear: z.coerce.number().int().min(1900).max(2100).optional().catch(undefined), maxYear: z.coerce.number().int().min(1900).max(2100).optional().catch(undefined), sort: z.enum(["recommended","price_asc","price_desc","newest","featured"]).default("recommended").catch("recommended"), page: z.coerce.number().int().min(1).default(1).catch(1) });
+export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
+export const PAGE_SIZE = 12;
