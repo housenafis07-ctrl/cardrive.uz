@@ -1,0 +1,1 @@
+export default function ForbiddenPage() { return <main className="mx-auto max-w-xl p-12"><h1 className="text-2xl font-bold">Access denied</h1><p className="mt-2 text-slate-600">You do not have permission to access this area.</p></main>; }
