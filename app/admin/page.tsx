@@ -1,0 +1,4 @@
+import { AdminCard } from "@/components/admin-ui";
+import { AdminCatalogService } from "@/services/admin-catalog-service";
+export const metadata={title:"Admin | Cardrive.uz"};
+export default async function AdminPage(){const counts=await new AdminCatalogService().counts();return <><p className="text-sm font-bold text-amber-600">DASHBOARD</p><h1 className="mt-1 text-3xl font-black">Marketplace holati</h1><div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"><AdminCard label="Brendlar" value={counts.brands}/><AdminCard label="Modellar" value={counts.models}/><AdminCard label="Avtomobillar" value={counts.cars}/><AdminCard label="Tavsiya etilganlar" value={counts.featured}/><AdminCard label="Mavjud" value={counts.available}/><AdminCard label="Tez orada" value={counts.comingSoon}/></div></>;}
