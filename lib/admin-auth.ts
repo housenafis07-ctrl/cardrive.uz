@@ -2,13 +2,13 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, getSupabasePublicKey } from "@/lib/env";
 import type { AuthenticatedUser, UserRole } from "@/types/domain";
 
 export async function getAdminUser(): Promise<AuthenticatedUser | null> {
   const env = getServerEnv();
   const store = await cookies();
-  const client = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  const client = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, getSupabasePublicKey(env), {
     cookies: {
       getAll() { return store.getAll(); },
       setAll(cookiesToSet) { try { cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options)); } catch {} },
@@ -30,10 +30,10 @@ export async function requireAdminUser(): Promise<AuthenticatedUser> {
 export async function signOutAdminUser() {
   const env = getServerEnv();
   const store = await cookies();
-  const client = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  const client = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, getSupabasePublicKey(env), {
     cookies: {
       getAll() { return store.getAll(); },
-      setAll(cookiesToSet) { cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options)); },
+      setAll(cookiesToSet) { try { cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options)); } catch {} },
     },
   });
   await client.auth.signOut();
