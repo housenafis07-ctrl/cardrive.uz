@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+import { syncCreditApplicationStatusAction } from "@/app/account/credit-actions";
+export function CreditApplicationRefresh({applicationId}:{applicationId:string}){const[loading,setLoading]=useState(false);const[error,setError]=useState("");async function onRefresh(){setError("");setLoading(true);const fd=new FormData();fd.set("applicationId",applicationId);const r=await syncCreditApplicationStatusAction(fd);setLoading(false);if(r.status==="error"){setError(r.message);return;}window.location.reload();}return <div className="mt-3"><button type="button" onClick={onRefresh} disabled={loading} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-bold disabled:opacity-50">{loading?"Tekshirilmoqda...":"Statusni yangilash"}</button>{error&&<p role="alert" className="mt-2 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}</div>}
