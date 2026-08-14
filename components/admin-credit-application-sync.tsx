@@ -1,0 +1,3 @@
+"use client";
+import { useState } from "react"; import { syncCreditApplicationStatusAsAdminAction } from "@/app/admin/credit-actions";
+export function AdminCreditApplicationSync({applicationId}:{applicationId:string}){const[loading,setLoading]=useState(false);async function run(){setLoading(true);const fd=new FormData();fd.set("applicationId",applicationId);await syncCreditApplicationStatusAsAdminAction(fd);setLoading(false);window.location.reload();}return <button type="button" onClick={run} disabled={loading} className="text-sm font-bold underline">{loading?"Tekshirilmoqda...":"Yangilash"}</button>}
