@@ -5,10 +5,7 @@ import { CatalogRepository } from "@/repositories/catalog-repository";
 import type { OrderStatus } from "@/types/domain";
 
 export class OrderService {
-  constructor(
-    private readonly orders = new OrderRepository(),
-    private readonly catalog = new CatalogRepository(),
-  ) {}
+  constructor(private readonly orders = new OrderRepository(), private readonly catalog = new CatalogRepository()) {}
 
   async create(input: unknown, customerId: string) {
     const value = orderSchema.parse(input);
@@ -18,22 +15,9 @@ export class OrderService {
     if (car.stock_status !== "available") throw new Error("Bu avtomobil hozircha buyurtma uchun mavjud emas");
     const duplicate = await this.orders.findRecentDuplicate(customerId, value.carId, value.purchaseType);
     if (duplicate.data) return duplicate;
-    const created = await this.orders.create({
-      orderNumber: `CD-${crypto.randomUUID()}`,
-      customerId,
-      carId: value.carId,
-      purchaseType: value.purchaseType,
-      totalAmount: car.price,
-      currency: car.currency,
-      notes: value.notes,
-    });
+    const created = await this.orders.create({ orderNumber: `CD-${crypto.randomUUID()}`, customerId, carId: value.carId, purchaseType: value.purchaseType, totalAmount: car.price, currency: car.currency, notes: value.notes });
     if (created.error || !created.data) throw new Error("Buyurtmani yaratib bo'lmadi");
-    const history = await this.orders.createStatusHistory({
-      orderId: created.data.id,
-      oldStatus: null,
-      newStatus: "pending",
-      changedBy: customerId,
-    });
+    const history = await this.orders.createStatusHistory({ orderId: created.data.id, oldStatus: null, newStatus: "pending", changedBy: customerId });
     if (history.error) throw new Error("Buyurtma tarixini saqlab bo'lmadi");
     return created;
   }
@@ -51,12 +35,7 @@ export class OrderService {
     if (currentStatus !== "pending") return null;
     const updated = await this.orders.updateStatus(orderId, "confirmed");
     if (updated.error) throw new Error("Buyurtma holatini yangilab bo'lmadi");
-    const history = await this.orders.createStatusHistory({
-      orderId,
-      oldStatus: "pending",
-      newStatus: "confirmed",
-      note: "Kredit arizasi tasdiqlanishi bilan avtomatik",
-    });
+    const history = await this.orders.createStatusHistory({ orderId, oldStatus: "pending", newStatus: "confirmed", note: "Kredit arizasi tasdiqlanishi bilan avtomatik" });
     if (history.error) throw new Error("Buyurtma tarixini saqlab bo'lmadi");
     return updated.data;
   }
@@ -66,16 +45,10 @@ export class OrderService {
     if (!order.data) throw new Error("Buyurtma topilmadi yoki sizga tegishli emas");
     const currentStatus = order.data.status as OrderStatus;
     if (currentStatus === "cancelled") return order.data;
-    if (currentStatus !== "pending" && currentStatus !== "confirmed")
-      throw new Error("Bu buyurtmani bekor qilib bo'lmaydi");
+    if (currentStatus !== "pending" && currentStatus !== "confirmed") throw new Error("Bu buyurtmani bekor qilib bo'lmaydi");
     const updated = await this.orders.updateStatus(orderId, "cancelled");
     if (updated.error) throw new Error("Buyurtmani bekor qilib bo'lmadi");
-    const history = await this.orders.createStatusHistory({
-      orderId,
-      oldStatus: currentStatus,
-      newStatus: "cancelled",
-      changedBy: customerId,
-    });
+    const history = await this.orders.createStatusHistory({ orderId, oldStatus: currentStatus, newStatus: "cancelled", changedBy: customerId });
     if (history.error) throw new Error("Buyurtma tarixini saqlab bo'lmadi");
     return updated.data;
   }
