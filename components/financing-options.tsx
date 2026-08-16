@@ -32,45 +32,22 @@ export type FinancingProgram = {
   banks: Bank | null;
 };
 
-const LABEL: Record<string, string> = {
-  credit: "Kredit",
-  installment: "Bo'lib to'lash",
-  promotional: "Aksiya",
-};
+const LABEL: Record<string, string> = { credit: "Kredit", installment: "Bo'lib to'lash", promotional: "Aksiya" };
 
-export function FinancingOptions({
-  carPrice,
-  currency,
-  programs,
-  selectedProgramId = null,
-  onSelectProgram,
-}: {
-  carPrice: number;
-  currency: string;
-  programs: FinancingProgram[];
-  selectedProgramId?: string | null;
-  onSelectProgram?: (id: string) => void;
-}) {
+export function FinancingOptions({ carPrice, currency, programs, selectedProgramId = null, onSelectProgram }: { carPrice: number; currency: string; programs: FinancingProgram[]; selectedProgramId?: string | null; onSelectProgram?: (id: string) => void }) {
   if (!programs.length) {
-    return (
-      <div className="rounded-2xl border border-dashed p-5 text-center text-sm text-slate-600">
-        Kredit va bo&apos;lib to&apos;lash shartlari hozircha mavjud emas.
-      </div>
-    );
+    return <div className="rounded-2xl border border-dashed p-5 text-center text-sm text-slate-600">Kredit va bo&apos;lib to&apos;lash shartlari hozircha mavjud emas.</div>;
   }
 
   return (
     <div className="space-y-4">
       <div>
         <p className="text-lg font-black">Kredit va bo&apos;lib to&apos;lash variantlari</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Bankni tanlang — boshlang&apos;ich to&apos;lov va muddatni o&apos;zgartirsangiz, oylik to&apos;lov avtomatik qayta hisoblanadi.
-        </p>
+        <p className="mt-1 text-sm text-slate-500">Bankni tanlang — boshlang&apos;ich to&apos;lov va muddatni o&apos;zgartirsangiz, oylik to&apos;lov avtomatik qayta hisoblanadi.</p>
       </div>
 
       {programs.map((program) => {
         const connected = program.banks?.integration_status === "connected";
-
         return (
           <div key={program.id}>
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -82,6 +59,7 @@ export function FinancingOptions({
               currency={currency}
               program={program}
               selected={selectedProgramId === program.id}
+              selectable={connected}
               onSelect={() => onSelectProgram?.(program.id)}
             />
           </div>
