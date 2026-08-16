@@ -45,24 +45,53 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 py-16">
-          <h2 className="text-3xl font-black">Brendlar</h2>
-          {brands.data?.length ? (
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {brands.data.map((brand) => (
-                <Link key={brand.id} href={"/cars?brand=" + brand.slug} className="group flex h-32 items-center justify-center rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-                  {brand.logo_url ? (
-                    <img src={brand.logo_url} alt={brand.name} className="max-h-20 w-full object-contain transition group-hover:scale-105" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="text-center text-sm font-black uppercase tracking-wide text-slate-600">{brand.name}</span>
-                  )}
-                </Link>
-              ))}
+        <section className="bg-slate-50">
+          <div className="mx-auto max-w-7xl px-5 py-16">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-sm font-bold text-amber-600">AVTOMOBIL BRENDLARI</p>
+                <h2 className="mt-2 text-3xl font-black text-slate-950">Brendlar</h2>
+              </div>
+              <Link href="/cars" className="text-sm font-bold text-blue-600 hover:underline">Barcha brendlar →</Link>
             </div>
-          ) : <EmptyState title="Hozircha faol brendlar yo‘q" />}
+
+            {brands.data?.length ? (
+              <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {brands.data.map((brand) => (
+                  <Link
+                    key={brand.id}
+                    href={"/cars?brand=" + brand.slug}
+                    className="group flex min-h-28 items-center gap-5 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                  >
+                    <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl bg-slate-50 p-3">
+                      {brand.logo_url ? (
+                        <img
+                          src={brand.logo_url}
+                          alt={brand.name}
+                          className="max-h-12 w-full object-contain transition group-hover:scale-105"
+                          loading="lazy"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <span className="text-center text-xs font-black uppercase tracking-wide text-slate-600">{brand.name}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-black text-slate-950">{brand.name}</h3>
+                      <p className="mt-1 text-sm font-medium text-slate-500">
+                        {brand.model_count} ta model
+                      </p>
+                    </div>
+                    <span className="ml-auto text-xl text-slate-300 transition group-hover:translate-x-1 group-hover:text-slate-500">→</span>
+                  </Link>
+                ))}
+              </div>
+            ) : <EmptyState title="Hozircha faol brendlar yo‘q" />}
+          </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 pb-16">
+        <section className="mx-auto max-w-7xl px-5 pb-16 pt-16">
           <div className="rounded-3xl bg-amber-500 p-8 sm:p-12"><h2 className="text-3xl font-black text-slate-950">O‘zingizga mos avtomobilni toping.</h2><Link href="/cars" className="mt-6 inline-flex rounded-full bg-slate-950 px-5 py-3 font-bold text-white">Katalogni ochish</Link></div>
         </section>
       </main>
