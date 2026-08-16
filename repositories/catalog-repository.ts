@@ -3,7 +3,7 @@ import { createPublicServerClient } from "@/supabase/public-server";
 import { PAGE_SIZE, type CatalogQuery } from "@/features/catalog/catalog-query";
 
 type SingleOrArray<T> = T | T[] | null;
-type BrandRelation = { name: string; slug?: string | null };
+type BrandRelation = { name: string; slug?: string | null; logo_url?: string | null };
 type ModelRelation = { name: string; slug?: string | null };
 type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number };
 type CarRelations = {
@@ -40,7 +40,7 @@ export class CatalogRepository {
     let query = createPublicServerClient()
       .from("cars")
       .select(
-        "id,name,slug,price,currency,old_price,year,body_type,fuel_type,transmission,drive_type,stock_status,is_featured,brands(name,slug),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)",
+        "id,name,slug,price,currency,old_price,year,body_type,fuel_type,transmission,drive_type,engine_volume,stock_status,is_featured,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)",
         { count: "exact" },
       )
       .eq("is_active", true)
@@ -70,7 +70,7 @@ export class CatalogRepository {
   async getCarBySlug(slug: string) {
     const result = await createPublicServerClient()
       .from("cars")
-      .select("*,brands(name,slug),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)")
+      .select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)")
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
@@ -80,7 +80,7 @@ export class CatalogRepository {
   async getFeaturedCars(limit = 4) {
     const result = await createPublicServerClient()
       .from("cars")
-      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
+      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
       .eq("is_active", true)
       .eq("is_featured", true)
       .order("created_at", { ascending: false })
@@ -91,7 +91,7 @@ export class CatalogRepository {
   async getAvailableCars(limit = 4) {
     const result = await createPublicServerClient()
       .from("cars")
-      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
+      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
       .eq("is_active", true)
       .eq("stock_status", "available")
       .order("created_at", { ascending: false })
