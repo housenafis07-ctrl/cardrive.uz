@@ -9,6 +9,7 @@ type Props = {
   currency: string;
   program: FinancingProgram;
   selected: boolean;
+  selectable?: boolean;
   onSelect: () => void;
 };
 
@@ -48,7 +49,7 @@ function termLabel(months: number) {
   return `${years} yil ${rest} oy (${months} oy)`;
 }
 
-export function FinancingCalculator({ carPrice, currency, program, selected, onSelect }: Props) {
+export function FinancingCalculator({ carPrice, currency, program, selected, selectable = true, onSelect }: Props) {
   const minDown = clamp(Number(program.min_down_payment_percent ?? 0), 0, 100);
   const maxFinancing = program.max_financing_percent == null ? 100 : clamp(Number(program.max_financing_percent), 0, 100);
   const maxDown = clamp(100 - maxFinancing, minDown, 100);
@@ -71,7 +72,7 @@ export function FinancingCalculator({ carPrice, currency, program, selected, onS
 
   return (
     <article className={`rounded-3xl border-2 bg-white p-4 shadow-sm transition ${selected ? "border-slate-950 shadow-md" : "border-slate-200"}`}>
-      <button type="button" onClick={onSelect} className="w-full text-left" aria-pressed={selected}>
+      <button type="button" onClick={onSelect} disabled={!selectable} className="w-full text-left disabled:cursor-default" aria-pressed={selected}>
         <div className="flex items-start gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-slate-50">
             {program.banks?.logo_url ? (
@@ -94,18 +95,9 @@ export function FinancingCalculator({ carPrice, currency, program, selected, onS
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-2xl bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Foiz</p>
-            <p className="mt-1 font-black">{calculation.annualRate}%</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Boshlang&apos;ich to&apos;lov</p>
-            <p className="mt-1 font-black">{Math.round(downPaymentPercent)}%</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">Muddat</p>
-            <p className="mt-1 font-black">{termLabel(termMonths)}</p>
-          </div>
+          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Foiz</p><p className="mt-1 font-black">{calculation.annualRate}%</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Boshlang&apos;ich to&apos;lov</p><p className="mt-1 font-black">{Math.round(downPaymentPercent)}%</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Muddat</p><p className="mt-1 font-black">{termLabel(termMonths)}</p></div>
         </div>
       </button>
 
@@ -117,27 +109,18 @@ export function FinancingCalculator({ carPrice, currency, program, selected, onS
 
       <div className="mt-4 space-y-4">
         <label className="block">
-          <div className="flex items-center justify-between gap-3 text-sm font-bold">
-            <span>Boshlang&apos;ich to&apos;lov</span>
-            <span>{Math.round(downPaymentPercent)}% · {formatPrice(calculation.downPayment, program.currency ?? currency)}</span>
-          </div>
+          <div className="flex items-center justify-between gap-3 text-sm font-bold"><span>Boshlang&apos;ich to&apos;lov</span><span>{Math.round(downPaymentPercent)}% · {formatPrice(calculation.downPayment, program.currency ?? currency)}</span></div>
           <input type="range" min={minDown} max={maxDown || minDown} step="1" value={downPaymentPercent} onChange={(e) => setDownPaymentPercent(Number(e.target.value))} className="mt-2 w-full accent-slate-950" />
           <div className="mt-1 flex justify-between text-xs text-slate-500"><span>{Math.round(minDown)}%</span><span>{Math.round(maxDown)}%</span></div>
         </label>
-
         <label className="block">
-          <div className="flex items-center justify-between gap-3 text-sm font-bold">
-            <span>Muddat</span>
-            <span>{termLabel(termMonths)}</span>
-          </div>
+          <div className="flex items-center justify-between gap-3 text-sm font-bold"><span>Muddat</span><span>{termLabel(termMonths)}</span></div>
           <input type="range" min={minTerm} max={maxTerm} step="1" value={termMonths} onChange={(e) => setTermMonths(Number(e.target.value))} className="mt-2 w-full accent-slate-950" />
           <div className="mt-1 flex justify-between text-xs text-slate-500"><span>{termLabel(minTerm)}</span><span>{termLabel(maxTerm)}</span></div>
         </label>
       </div>
 
-      <button type="button" onClick={() => setDetailsOpen((value) => !value)} className="mt-4 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-black hover:bg-slate-50">
-        {detailsOpen ? "Batafsil hisob-kitobni yopish" : "Batafsil hisob-kitob · oyma-oy jadval"}
-      </button>
+      <button type="button" onClick={() => setDetailsOpen((value) => !value)} className="mt-4 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-black hover:bg-slate-50">{detailsOpen ? "Batafsil hisob-kitobni yopish" : "Batafsil hisob-kitob · oyma-oy jadval"}</button>
 
       {detailsOpen && (
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
@@ -148,20 +131,8 @@ export function FinancingCalculator({ carPrice, currency, program, selected, onS
           </div>
           <div className="max-h-80 overflow-auto">
             <table className="w-full min-w-[620px] text-sm">
-              <thead className="sticky top-0 bg-white text-left text-xs uppercase text-slate-500 shadow-sm">
-                <tr><th className="p-3">Oy</th><th className="p-3">To&apos;lov</th><th className="p-3">Asosiy qarz</th><th className="p-3">Foiz</th><th className="p-3">Qoldiq</th></tr>
-              </thead>
-              <tbody>
-                {calculation.schedule.map((row) => (
-                  <tr key={row.month} className="border-t border-slate-100">
-                    <td className="p-3 font-semibold">{row.month}</td>
-                    <td className="p-3">{formatPrice(row.payment, program.currency ?? currency)}</td>
-                    <td className="p-3">{formatPrice(row.principal, program.currency ?? currency)}</td>
-                    <td className="p-3">{formatPrice(row.interest, program.currency ?? currency)}</td>
-                    <td className="p-3 font-semibold">{formatPrice(row.balance, program.currency ?? currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
+              <thead className="sticky top-0 bg-white text-left text-xs uppercase text-slate-500 shadow-sm"><tr><th className="p-3">Oy</th><th className="p-3">To&apos;lov</th><th className="p-3">Asosiy qarz</th><th className="p-3">Foiz</th><th className="p-3">Qoldiq</th></tr></thead>
+              <tbody>{calculation.schedule.map((row) => <tr key={row.month} className="border-t border-slate-100"><td className="p-3 font-semibold">{row.month}</td><td className="p-3">{formatPrice(row.payment, program.currency ?? currency)}</td><td className="p-3">{formatPrice(row.principal, program.currency ?? currency)}</td><td className="p-3">{formatPrice(row.interest, program.currency ?? currency)}</td><td className="p-3 font-semibold">{formatPrice(row.balance, program.currency ?? currency)}</td></tr>)}</tbody>
             </table>
           </div>
         </div>
