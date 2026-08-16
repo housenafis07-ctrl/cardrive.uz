@@ -90,7 +90,13 @@ export class AdminCatalogRepository {
   }
 
   async createCar(input: Record<string, unknown>) {
-    return this.client()
+    const c = this.client();
+    const modelCheck = await c.from("car_models").select("id,brand_id").eq("id", String(input.modelId)).maybeSingle();
+    if (modelCheck.error) throw modelCheck.error;
+    if (!modelCheck.data) throw new Error("Tanlangan model bazada topilmadi.");
+    if (modelCheck.data.brand_id !== String(input.brandId)) throw new Error("Tanlangan model tanlangan brendga tegishli emas.");
+
+    return c
       .from("cars")
       .insert({
         brand_id: input.brandId,
