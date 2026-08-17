@@ -9,7 +9,10 @@ function normalizeOtpCode(code: string): string {
 }
 
 export function generateOtpCode(): string {
-  return process.env.NODE_ENV !== "production" ? TEMPORARY_PREVIEW_OTP : String(Math.floor(100000 + Math.random() * 900000));
+  // Vercel Preview deployments run with NODE_ENV=production, so NODE_ENV
+  // cannot be used to distinguish Preview from Production.
+  if (process.env.VERCEL_ENV === "preview") return TEMPORARY_PREVIEW_OTP;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 export function hashOtpCode(code: string): string {
