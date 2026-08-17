@@ -1,0 +1,32 @@
+create table if not exists public.car_categories (
+  id uuid primary key default gen_random_uuid(), key text not null unique, name_uz text not null, name_ru text not null, icon text, sort_order integer not null default 0, is_active boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table if not exists public.car_category_items (category_id uuid not null references public.car_categories(id) on delete cascade, car_id uuid not null references public.cars(id) on delete cascade, sort_order integer not null default 0, primary key (category_id, car_id));
+create table if not exists public.car_colors (id uuid primary key default gen_random_uuid(), car_id uuid not null references public.cars(id) on delete cascade, name_uz text not null, name_ru text not null, hex_code text not null, sort_order integer not null default 0, is_active boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.car_images add column if not exists color_id uuid references public.car_colors(id) on delete set null;
+create table if not exists public.home_banners (id uuid primary key default gen_random_uuid(), title_uz text not null, title_ru text not null, description_uz text, description_ru text, image_url text not null, cta_uz text, cta_ru text, href text, sort_order integer not null default 0, is_active boolean not null default true, starts_at timestamptz, ends_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+alter table public.brands add column if not exists name_uz text;
+alter table public.brands add column if not exists name_ru text;
+alter table public.car_models add column if not exists name_uz text;
+alter table public.car_models add column if not exists name_ru text;
+alter table public.cars add column if not exists name_uz text;
+alter table public.cars add column if not exists name_ru text;
+update public.brands set name_uz = coalesce(name_uz,name), name_ru = coalesce(name_ru,name) where name_uz is null or name_ru is null;
+update public.car_models set name_uz = coalesce(name_uz,name), name_ru = coalesce(name_ru,name) where name_uz is null or name_ru is null;
+update public.cars set name_uz = coalesce(name_uz,name), name_ru = coalesce(name_ru,name) where name_uz is null or name_ru is null;
+create index if not exists car_category_items_car_id_idx on public.car_category_items(car_id);
+create index if not exists car_colors_car_id_idx on public.car_colors(car_id);
+create index if not exists car_images_color_id_idx on public.car_images(color_id);
+create index if not exists home_banners_active_sort_idx on public.home_banners(is_active,sort_order);
+create trigger car_categories_updated_at before update on public.car_categories for each row execute procedure public.set_updated_at();
+create trigger car_colors_updated_at before update on public.car_colors for each row execute procedure public.set_updated_at();
+create trigger home_banners_updated_at before update on public.home_banners for each row execute procedure public.set_updated_at();
+alter table public.car_categories enable row level security;
+alter table public.car_category_items enable row level security;
+alter table public.car_colors enable row level security;
+alter table public.home_banners enable row level security;
+create policy "public active categories" on public.car_categories for select using (is_active);
+create policy "public category items" on public.car_category_items for select using (exists(select 1 from public.car_categories c where c.id=category_id and c.is_active));
+create policy "public active colors" on public.car_colors for select using (is_active);
+create policy "public active banners" on public.home_banners for select using (is_active and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>=now()));
+insert into public.car_categories(key,name_uz,name_ru,icon,sort_order) values ('popular','Mashhur avtomobillar','Популярные авто','🔥',10),('installment','Foizsiz muddatli to‘lov','Беспроцентная рассрочка','💳',20),('discounts','Issiq chegirmalar','Горячие скидки','🔥',30),('electric','Elektr avtomobillar','Электрические','⚡',40),('hybrid','Gibrid avtomobillar','Гибридные','🔋',50),('premium','Premium avtomobillar','Премиальные авто','💎',60),('commercial','Tijorat avtomobillari','Коммерческие','🚐',70) on conflict(key) do nothing;
