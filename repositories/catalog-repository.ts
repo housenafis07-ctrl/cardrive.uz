@@ -1,6 +1,7 @@
 import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
 import { PAGE_SIZE, type CatalogQuery } from "@/features/catalog/catalog-query";
+import { searchRelevance } from "@/features/catalog/search-utils";
 
 type SingleOrArray<T> = T | T[] | null;
 type BrandRelation = { name: string; slug?: string | null; logo_url?: string | null };
@@ -49,8 +50,24 @@ export class CatalogRepository {
     if (filters.maxPrice !== undefined) query = query.lte("price", filters.maxPrice);
     if (filters.minYear !== undefined) query = query.gte("year", filters.minYear);
     if (filters.maxYear !== undefined) query = query.lte("year", filters.maxYear);
-    if (filters.q) query = query.ilike("name", "%" + filters.q.replace(/[,%()]/g, "") + "%");
+
     if (filters.sort === "price_asc") query = query.order("price", { ascending: true }); else if (filters.sort === "price_desc") query = query.order("price", { ascending: false }); else if (filters.sort === "newest") query = query.order("year", { ascending: false }); else query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+
+    if (filters.q) {
+      // Search is deliberately done after fetching the already-filtered active catalog.
+      // This allows us to search brand + model + car name together and tolerate
+      // Cyrillic/Latin input, case differences, and common typos such as "kobalat".
+      const result = await query;
+      if (result.error) return { ...result, data: null };
+      const normalized = normalizeCars(result.data) ?? [];
+      const ranked = normalized
+        .map((car) => ({ car, score: searchRelevance(filters.q!, [car.name, car.brands?.name ?? "", car.car_models?.name ?? "", car.slug]) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((item) => item.car);
+      return { data: ranked.slice(from, from + PAGE_SIZE), count: ranked.length, error: null };
+    }
+
     const result = await query.range(from, from + PAGE_SIZE - 1);
     return { ...result, data: normalizeCars(result.data) };
   }
