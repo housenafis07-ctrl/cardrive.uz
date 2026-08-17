@@ -23,11 +23,7 @@ function firstRelation<T>(relation: SingleOrArray<T> | undefined): T | null {
 }
 
 function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> {
-  return {
-    ...car,
-    brands: firstRelation(car.brands),
-    car_models: firstRelation(car.car_models),
-  };
+  return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) };
 }
 
 function normalizeCars<T extends CarRelations>(cars: T[] | null): Array<NormalizedCar<T>> | null {
@@ -39,10 +35,7 @@ export class CatalogRepository {
     const from = (filters.page - 1) * PAGE_SIZE;
     let query = createPublicServerClient()
       .from("cars")
-      .select(
-        "id,name,slug,price,currency,old_price,year,body_type,fuel_type,transmission,drive_type,engine_volume,stock_status,is_featured,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)",
-        { count: "exact" },
-      )
+      .select("id,name,slug,price,currency,old_price,year,body_type,fuel_type,transmission,drive_type,engine_volume,stock_status,is_featured,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)", { count: "exact" })
       .eq("is_active", true)
       .in("stock_status", filters.status ? [filters.status] : ["available", "coming_soon"]);
 
@@ -68,49 +61,46 @@ export class CatalogRepository {
   }
 
   async getCarById(id: string) {
-    const result = await createPublicServerClient()
-      .from("cars")
-      .select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)")
-      .eq("id", id)
-      .eq("is_active", true)
-      .single();
+    const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)").eq("id", id).eq("is_active", true).single();
     return { ...result, data: result.data ? normalizeCar(result.data) : null };
   }
 
   async getCarBySlug(slug: string) {
-    const result = await createPublicServerClient()
-      .from("cars")
-      .select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .single();
+    const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)").eq("slug", slug).eq("is_active", true).single();
     return { ...result, data: result.data ? normalizeCar(result.data) : null };
   }
 
   async getFeaturedCars(limit = 4) {
-    const result = await createPublicServerClient()
-      .from("cars")
-      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
-      .eq("is_active", true)
-      .eq("is_featured", true)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)").eq("is_active", true).eq("is_featured", true).order("created_at", { ascending: false }).limit(limit);
     return { ...result, data: normalizeCars(result.data) };
   }
 
   async getAvailableCars(limit = 4) {
-    const result = await createPublicServerClient()
-      .from("cars")
-      .select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)")
-      .eq("is_active", true)
-      .eq("stock_status", "available")
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order)").eq("is_active", true).eq("stock_status", "available").order("created_at", { ascending: false }).limit(limit);
     return { ...result, data: normalizeCars(result.data) };
   }
 
   async getActiveBrands() {
-    return createPublicServerClient().from("brands").select("id,name,slug,logo_url").eq("is_active", true).order("name");
+    const client = createPublicServerClient();
+    const [brandsResult, modelsResult] = await Promise.all([
+      client.from("brands").select("id,name,slug,logo_url").eq("is_active", true).order("name"),
+      client.from("car_models").select("id,brand_id").eq("is_active", true),
+    ]);
+
+    if (brandsResult.error) return brandsResult;
+    if (modelsResult.error) {
+      return { ...brandsResult, data: brandsResult.data?.map((brand) => ({ ...brand, model_count: 0 })) ?? null };
+    }
+
+    const modelCounts = new Map<string, number>();
+    for (const model of modelsResult.data ?? []) {
+      if (model.brand_id) modelCounts.set(model.brand_id, (modelCounts.get(model.brand_id) ?? 0) + 1);
+    }
+
+    return {
+      ...brandsResult,
+      data: brandsResult.data?.map((brand) => ({ ...brand, model_count: modelCounts.get(brand.id) ?? 0 })) ?? null,
+    };
   }
 
   async getModelsByBrand(brandSlug?: string) {
