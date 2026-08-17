@@ -67,6 +67,16 @@ export class CatalogRepository {
     return { ...result, data: normalizeCars(result.data) };
   }
 
+  async getCarById(id: string) {
+    const result = await createPublicServerClient()
+      .from("cars")
+      .select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order)")
+      .eq("id", id)
+      .eq("is_active", true)
+      .single();
+    return { ...result, data: result.data ? normalizeCar(result.data) : null };
+  }
+
   async getCarBySlug(slug: string) {
     const result = await createPublicServerClient()
       .from("cars")
