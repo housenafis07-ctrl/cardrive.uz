@@ -5,7 +5,8 @@ import { PAGE_SIZE, type CatalogQuery } from "@/features/catalog/catalog-query";
 type SingleOrArray<T> = T | T[] | null;
 type BrandRelation = { name: string; slug?: string | null; logo_url?: string | null };
 type ModelRelation = { name: string; slug?: string | null };
-type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number; color_id?: string | null; car_colors?: { name_uz: string; name_ru: string; hex_code: string } | null };
+type ColorRelation = { name_uz: string; name_ru: string; hex_code: string };
+type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number; color_id?: string | null; car_colors?: SingleOrArray<ColorRelation> };
 type CarRelations = { brands?: SingleOrArray<BrandRelation>; car_models?: SingleOrArray<ModelRelation>; car_images?: ImageRelation[] | null };
 type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & {
   id: string;
