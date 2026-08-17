@@ -7,9 +7,20 @@ type BrandRelation = { name: string; slug?: string | null; logo_url?: string | n
 type ModelRelation = { name: string; slug?: string | null };
 type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number; color_id?: string | null; car_colors?: { name_uz: string; name_ru: string; hex_code: string } | null };
 type CarRelations = { brands?: SingleOrArray<BrandRelation>; car_models?: SingleOrArray<ModelRelation>; car_images?: ImageRelation[] | null };
-type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & { brands: BrandRelation | null; car_models: ModelRelation | null };
+type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  currency: string;
+  year: number;
+  stock_status: string;
+  is_featured: boolean;
+  brands: BrandRelation | null;
+  car_models: ModelRelation | null;
+};
 function firstRelation<T>(relation: SingleOrArray<T> | undefined): T | null { if (Array.isArray(relation)) return relation[0] ?? null; return relation ?? null; }
-function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) }; }
+function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) } as NormalizedCar<T>; }
 function normalizeCars<T extends CarRelations>(cars: T[] | null): Array<NormalizedCar<T>> | null { return cars?.map(normalizeCar) ?? null; }
 
 export class CatalogRepository {
