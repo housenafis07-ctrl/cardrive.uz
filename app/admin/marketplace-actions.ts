@@ -36,9 +36,23 @@ export async function toggleCategoryAction(formData: FormData) {
 export async function createBannerAction(formData: FormData) {
   const user = await requireAdminUser();
   const c = createServiceRoleClient();
-  const result = await c.from("home_banners").insert({ title_uz: text(formData, "titleUz"), title_ru: text(formData, "titleRu"), description_uz: text(formData, "descriptionUz"), description_ru: text(formData, "descriptionRu"), image_url: text(formData, "imageUrl"), cta_uz: text(formData, "ctaUz"), cta_ru: text(formData, "ctaRu"), href: text(formData, "href"), sort_order: integer(formData, "sortOrder"), is_active: checked(formData, "isActive") }).select().single();
-  if (result.error) redirect(`/admin/banners?error=${encodeURIComponent(result.error.message)}`);
-  await c.from("audit_logs").insert({ actor_id: user.id, action: "banner.created", entity_type: "home_banner", entity_id: result.data.id, metadata: {} });
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) redirect(`/admin/banners?error=${encodeURIComponent("Banner rasmi tanlanmagan.")}`);
+  if (!file.type.startsWith("image/")) redirect(`/admin/banners?error=${encodeURIComponent("Faqat JPG, PNG yoki WEBP rasm yuklang.")}`);
+  if (file.size > 10 * 1024 * 1024) redirect(`/admin/banners?error=${encodeURIComponent("Rasm hajmi 10 MB dan oshmasligi kerak.")}`);
+
+  const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const storagePath = `banners/${crypto.randomUUID()}.${extension}`;
+  const upload = await c.storage.from("car-images").upload(storagePath, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  if (upload.error) redirect(`/admin/banners?error=${encodeURIComponent(`Rasmni yuklashda xatolik: ${upload.error.message}`)}`);
+
+  const imageUrl = c.storage.from("car-images").getPublicUrl(storagePath).data.publicUrl;
+  const result = await c.from("home_banners").insert({ title_uz: text(formData, "titleUz"), title_ru: text(formData, "titleRu"), description_uz: text(formData, "descriptionUz"), description_ru: text(formData, "descriptionRu"), image_url: imageUrl, cta_uz: text(formData, "ctaUz"), cta_ru: text(formData, "ctaRu"), href: text(formData, "href"), sort_order: integer(formData, "sortOrder"), is_active: checked(formData, "isActive") }).select().single();
+  if (result.error) {
+    await c.storage.from("car-images").remove([storagePath]);
+    redirect(`/admin/banners?error=${encodeURIComponent(result.error.message)}`);
+  }
+  await c.from("audit_logs").insert({ actor_id: user.id, action: "banner.created", entity_type: "home_banner", entity_id: result.data.id, metadata: { storage_path: storagePath } });
   revalidatePath("/admin/banners"); revalidatePath("/");
 }
 
@@ -49,5 +63,23 @@ export async function toggleBannerAction(formData: FormData) {
   if (!id) throw new Error("Banner topilmadi");
   const c = createServiceRoleClient();
   await c.from("home_banners").update({ is_active: active }).eq("id", id);
+  revalidatePath("/admin/banners"); revalidatePath("/");
+}
+
+export async function deleteBannerAction(formData: FormData) {
+  const user = await requireAdminUser();
+  const id = text(formData, "id");
+  const imageUrl = text(formData, "imageUrl");
+  if (!id) throw new Error("Banner topilmadi");
+  const c = createServiceRoleClient();
+  const result = await c.from("home_banners").delete().eq("id", id).select("id").single();
+  if (result.error) redirect(`/admin/banners?error=${encodeURIComponent(result.error.message)}`);
+
+  const marker = "/storage/v1/object/public/car-images/";
+  if (imageUrl?.includes(marker)) {
+    const storagePath = decodeURIComponent(imageUrl.split(marker)[1].split("?")[0]);
+    await c.storage.from("car-images").remove([storagePath]);
+  }
+  await c.from("audit_logs").insert({ actor_id: user.id, action: "banner.deleted", entity_type: "home_banner", entity_id: id, metadata: { image_url: imageUrl } });
   revalidatePath("/admin/banners"); revalidatePath("/");
 }
