@@ -1,6 +1,70 @@
 "use client";
-import { useState } from "react"; import { formatPrice } from "@/lib/formatters";
-type Bank={id:string;name:string;code:string;logo_url:string|null;website_url:string|null;integration_status:string;display_order:number}; export type FinancingProgram={id:string;name:string;description:string|null;financing_type:string;annual_interest_rate:number|null;min_down_payment_percent:number|null;max_financing_percent:number|null;min_term_months:number|null;max_term_months:number|null;min_amount:number|null;max_amount:number|null;currency:string;eligibility_notes:string|null;source_url:string|null;source_label:string|null;last_verified_at:string|null;banks:Bank|null};
-const LABEL:Record<string,string>={credit:"Kredit",installment:"Bo'lib to'lash",promotional:"Aksiya"};
-const payment=(price:number,p:FinancingProgram)=>{const term=p.max_term_months??p.min_term_months;if(!term||term<=0)return null;const amount=price*(1-(p.min_down_payment_percent??0)/100);const rate=(p.annual_interest_rate??0)/100/12;if(amount<=0)return 0;if(rate===0)return Math.round(amount/term);return Math.round((amount*rate)/(1-Math.pow(1+rate,-term)));};
-export function FinancingOptions({carPrice,currency,programs,selectedProgramId=null,onSelectProgram}:{carPrice:number;currency:string;programs:FinancingProgram[];selectedProgramId?:string|null;onSelectProgram?:(id:string)=>void}){const[open,setOpen]=useState<string|null>(null);if(!programs.length)return <div className="rounded-2xl border border-dashed p-5 text-center text-sm text-slate-600">Kredit va bo&apos;lib to&apos;lash shartlari hozircha mavjud emas.</div>;return <div className="space-y-3"><p className="text-lg font-bold">Kredit va bo&apos;lib to&apos;lash variantlari</p>{programs.map(p=>{const b=p.banks;const connected=b?.integration_status==="connected";const estimate=payment(carPrice,p);const term=p.max_term_months??p.min_term_months;return <div key={p.id} className="rounded-2xl border bg-white p-4 shadow-sm"><p className="font-bold">{b?.name??"Bank"} — {p.name}</p><p className="text-xs text-slate-500">{LABEL[p.financing_type]??p.financing_type}</p><div className="mt-2 flex flex-wrap gap-3 text-sm">{p.annual_interest_rate!=null&&<span>{p.annual_interest_rate}% yillik</span>}{p.min_down_payment_percent!=null&&<span>{p.min_down_payment_percent}% boshlang&apos;ich</span>}{term&&<span>{term} oy</span>}</div>{estimate!==null&&<p className="mt-2 text-sm">Taxminiy oylik to&apos;lov: <b>{formatPrice(estimate,p.currency??currency)}</b></p>}<div className="mt-3">{connected?<label className="flex items-center gap-2 text-sm font-bold"><input type="radio" name="financingProgram" checked={selectedProgramId===p.id} onChange={()=>onSelectProgram?.(p.id)}/>{selectedProgramId===p.id?"Tanlandi":"Ushbu dasturni tanlash"}</label>:<button type="button" onClick={()=>setOpen(open===p.id?null:p.id)} className="rounded-full border px-4 py-2 text-sm font-bold">Shartlarni ko&apos;rish</button>}</div>{open===p.id&&!connected&&<div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">{p.eligibility_notes&&<p>{p.eligibility_notes}</p>}{p.source_label&&<p className="text-slate-600">Manba: {p.source_label}</p>}{p.source_url&&<a href={p.source_url} target="_blank" rel="noopener noreferrer" className="font-bold underline">Rasmiy sayt</a>}</div>}</div>})}</div>}
+
+import { FinancingCalculator } from "@/components/financing-calculator";
+
+type Bank = {
+  id: string;
+  name: string;
+  code: string;
+  logo_url: string | null;
+  website_url: string | null;
+  integration_status: string;
+  display_order: number;
+};
+
+export type FinancingProgram = {
+  id: string;
+  name: string;
+  description: string | null;
+  financing_type: string;
+  annual_interest_rate: number | null;
+  min_down_payment_percent: number | null;
+  max_financing_percent: number | null;
+  min_term_months: number | null;
+  max_term_months: number | null;
+  min_amount: number | null;
+  max_amount: number | null;
+  currency: string;
+  eligibility_notes: string | null;
+  source_url: string | null;
+  source_label: string | null;
+  last_verified_at: string | null;
+  banks: Bank | null;
+};
+
+const LABEL: Record<string, string> = { credit: "Kredit", installment: "Bo'lib to'lash", promotional: "Aksiya" };
+
+export function FinancingOptions({ carPrice, currency, programs, selectedProgramId = null, onSelectProgram }: { carPrice: number; currency: string; programs: FinancingProgram[]; selectedProgramId?: string | null; onSelectProgram?: (id: string) => void }) {
+  if (!programs.length) {
+    return <div className="rounded-2xl border border-dashed p-5 text-center text-sm text-slate-600">Kredit va bo&apos;lib to&apos;lash shartlari hozircha mavjud emas.</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-lg font-black">Kredit va bo&apos;lib to&apos;lash variantlari</p>
+        <p className="mt-1 text-sm text-slate-500">Bankni tanlang — boshlang&apos;ich to&apos;lov va muddatni o&apos;zgartirsangiz, oylik to&apos;lov avtomatik qayta hisoblanadi.</p>
+      </div>
+
+      {programs.map((program) => {
+        const connected = program.banks?.integration_status === "connected";
+        return (
+          <div key={program.id}>
+            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <span>{LABEL[program.financing_type] ?? program.financing_type}</span>
+              {!connected && <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700">Ma&apos;lumot uchun</span>}
+            </div>
+            <FinancingCalculator
+              carPrice={carPrice}
+              currency={currency}
+              program={program}
+              selected={selectedProgramId === program.id}
+              selectable={connected}
+              onSelect={() => onSelectProgram?.(program.id)}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
