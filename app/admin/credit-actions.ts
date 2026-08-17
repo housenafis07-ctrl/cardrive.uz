@@ -1,0 +1,6 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { requireAdminUser } from "@/lib/admin-auth";
+import { AdminCreditApplicationService } from "@/services/admin-credit-application-service";
+export type SyncCreditApplicationStatusAsAdminResult={status:"ok";applicationStatus:string}|{status:"error";message:string};
+export async function syncCreditApplicationStatusAsAdminAction(formData:FormData):Promise<SyncCreditApplicationStatusAsAdminResult>{const user=await requireAdminUser();const applicationId=formData.get("applicationId");if(typeof applicationId!=="string"||!applicationId.trim())return{status:"error",message:"So'rov yaroqsiz"};try{const result=await new AdminCreditApplicationService().syncApplicationStatus(applicationId.trim(),user.id);revalidatePath("/admin/credit-applications");revalidatePath("/admin/orders");return{status:"ok",applicationStatus:result.status};}catch(error){return{status:"error",message:error instanceof Error?error.message:"Holatni tekshirib bo'lmadi"};}}
