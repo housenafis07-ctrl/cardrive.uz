@@ -115,7 +115,8 @@ export default async function CarsPage({ searchParams }: { searchParams: Promise
             </label>
             <label className="col-span-full text-sm font-semibold">
               Qisqa tavsif
-              <textarea name="shortDescription" className="mt-1 w-full rounded-lg border p-3" />
+              <textarea name="shortDescription" maxLength={500} className="mt-1 w-full rounded-lg border p-3" aria-describedby="short-description-help" />
+              <p id="short-description-help" className="mt-1 text-xs font-normal text-slate-500">Maksimal 500 belgi. Limitdan oshsa saqlash bloklanadi.</p>
             </label>
             <label className="text-sm font-semibold">
               Zaxira holati
