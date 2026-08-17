@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const metadata: Metadata = { title: "Avtomobillar | Cardrive.uz", description: "Yangi avtomobillar katalogi." };
 
+type CarGridProps = Parameters<typeof CarGrid>[0];
+
 export default async function CarsPage({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) {
   const raw = await searchParams;
   const query = catalogQuerySchema.parse(raw);
@@ -19,6 +21,7 @@ export default async function CarsPage({ searchParams }: { searchParams: Promise
     service.getBodyTypes(),
   ]);
   const bodyTypes = [...new Set((bodies.data ?? []).map((item) => item.body_type).filter((item): item is string => Boolean(item)))].sort();
+  const cars = (result.data ?? []) as CarGridProps["cars"];
 
-  return <><Header/><main className="mx-auto max-w-7xl px-5 py-10"><div className="mb-8"><p className="text-sm font-bold text-amber-600">KATALOG</p><h1 className="mt-2 text-4xl font-black">Yangi avtomobillar</h1><p className="mt-2 text-slate-600">Sizga mos avtomobilni toping.</p></div><div className="grid gap-8 lg:grid-cols-[280px_1fr]"><aside className="hidden lg:block"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></aside><div><details className="mb-5 lg:hidden"><summary className="cursor-pointer rounded-xl border bg-white px-4 py-3 font-bold">Qidiruv va filtrlar</summary><div className="mt-3"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></div></details><p className="mb-5 text-sm text-slate-600">{result.count ?? 0} ta avtomobil topildi</p>{result.error ? <EmptyState title="Katalogni yuklab bo‘lmadi. Keyinroq urinib ko‘ring." action="Yangilash"/> : result.data?.length ? <><CarGrid cars={result.data}/><Pagination page={query.page} total={result.count??0}/></> : <EmptyState title={query.q ? "Qidiruv bo‘yicha avtomobil topilmadi" : "Mos avtomobillar topilmadi"}/>}</div></div></main><Footer/></>;
+  return <><Header/><main className="mx-auto max-w-7xl px-5 py-10"><div className="mb-8"><p className="text-sm font-bold text-amber-600">KATALOG</p><h1 className="mt-2 text-4xl font-black">Yangi avtomobillar</h1><p className="mt-2 text-slate-600">Sizga mos avtomobilni toping.</p></div><div className="grid gap-8 lg:grid-cols-[280px_1fr]"><aside className="hidden lg:block"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></aside><div><details className="mb-5 lg:hidden"><summary className="cursor-pointer rounded-xl border bg-white px-4 py-3 font-bold">Qidiruv va filtrlar</summary><div className="mt-3"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></div></details><p className="mb-5 text-sm text-slate-600">{result.count ?? 0} ta avtomobil topildi</p>{result.error ? <EmptyState title="Katalogni yuklab bo‘lmadi. Keyinroq urinib ko‘ring." action="Yangilash"/> : result.data?.length ? <><CarGrid cars={cars}/><Pagination page={query.page} total={result.count??0}/></> : <EmptyState title={query.q ? "Qidiruv bo‘yicha avtomobil topilmadi" : "Mos avtomobillar topilmadi"}/>}</div></div></main><Footer/></>;
 }
