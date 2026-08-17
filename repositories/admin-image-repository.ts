@@ -12,12 +12,13 @@ export class AdminImageRepository {
     const upload = await client.storage.from("car-images").upload(path, file, { contentType: file.type, upsert: false });
     if (upload.error) return { error: upload.error };
     const { data } = client.storage.from("car-images").getPublicUrl(path);
-    const existing = await client.from("car_images").select("sort_order").eq("car_id", carId).eq(colorId ? "color_id" : "car_id", colorId ?? carId);
-    const rows = existing.data ?? [];
+    let existing = client.from("car_images").select("sort_order").eq("car_id", carId);
+    existing = colorId ? existing.eq("color_id", colorId) : existing.is("color_id", null);
+    const rows = (await existing).data ?? [];
     const allImages = await client.from("car_images").select("sort_order").eq("car_id", carId);
     const isFirstForColor = rows.length === 0;
     const isFirstOverall = (allImages.data ?? []).length === 0;
-    const nextSortOrder = isFirstForColor ? (rows.length ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0) : 0;
+    const nextSortOrder = isFirstForColor ? 0 : Math.max(...rows.map((r) => r.sort_order)) + 1;
     return client.from("car_images").insert({ car_id: carId, color_id: colorId, storage_path: path, public_url: data.publicUrl, alt_text: null, sort_order: nextSortOrder, is_primary: isFirstOverall }).select().single();
   }
   async setPrimary(carId: string, imageId: string) {
