@@ -43,7 +43,15 @@ export async function createBannerAction(formData: FormData) {
 
   const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const storagePath = `banners/${crypto.randomUUID()}.${extension}`;
-  const upload = await c.storage.from("car-images").upload(storagePath, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  const body = Buffer.from(await file.arrayBuffer());
+
+  let upload;
+  try {
+    upload = await c.storage.from("car-images").upload(storagePath, body, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Noma'lum Storage xatosi";
+    redirect(`/admin/banners?error=${encodeURIComponent(`Rasmni yuklashda xatolik: ${message}`)}`);
+  }
   if (upload.error) redirect(`/admin/banners?error=${encodeURIComponent(`Rasmni yuklashda xatolik: ${upload.error.message}`)}`);
 
   const imageUrl = c.storage.from("car-images").getPublicUrl(storagePath).data.publicUrl;
