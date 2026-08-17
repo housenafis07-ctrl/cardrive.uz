@@ -1,4 +1,5 @@
-import { AdminTable, Field } from "@/components/admin-ui";
+import { AdminTable } from "@/components/admin-ui";
+import AdminBannerForm from "@/components/admin-banner-form";
 import { createServiceRoleClient } from "@/supabase/server";
 import { createBannerAction, deleteBannerAction, toggleBannerAction } from "@/app/admin/marketplace-actions";
 
@@ -20,23 +21,7 @@ export default async function BannersPage({ searchParams }: { searchParams: Prom
           </tr>)}</tbody>
         </AdminTable> : <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Bannerlar hali qo‘shilmagan.</p>}
       </section>
-      <form action={createBannerAction} encType="multipart/form-data" className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm">
-        <h2 className="col-span-full text-xl font-black">Yangi banner</h2>
-        <Field name="titleUz" label="Sarlavha — UZ" required/>
-        <Field name="titleRu" label="Sarlavha — RU" required/>
-        <label className="text-sm font-semibold">Tavsif — UZ<textarea name="descriptionUz" className="mt-1 w-full rounded-lg border p-3"/></label>
-        <label className="text-sm font-semibold">Tavsif — RU<textarea name="descriptionRu" className="mt-1 w-full rounded-lg border p-3"/></label>
-        <label className="text-sm font-semibold">Banner rasmi
-          <input name="image" type="file" accept="image/jpeg,image/png,image/webp" required className="mt-1 block w-full rounded-lg border p-3"/>
-          <span className="mt-1 block text-xs text-slate-500">JPG, PNG yoki WEBP · maksimal 10 MB</span>
-        </label>
-        <Field name="ctaUz" label="Tugma — UZ"/>
-        <Field name="ctaRu" label="Tugma — RU"/>
-        <Field name="href" label="Havola"/>
-        <Field name="sortOrder" label="Tartib" type="number" defaultValue={0}/>
-        <label className="flex gap-2 text-sm font-semibold"><input type="checkbox" name="isActive" defaultChecked/>Faol</label>
-        <button className="col-span-full rounded-full bg-slate-950 py-3 font-bold text-white">Rasmni yuklash va saqlash</button>
-      </form>
+      <AdminBannerForm action={createBannerAction} />
     </div>
   </div>;
 }
