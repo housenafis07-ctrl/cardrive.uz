@@ -1,5 +1,6 @@
 import { AdminTable } from "@/components/admin-ui";
 import AdminBannerForm from "@/components/admin-banner-form";
+import AdminDeleteBannerButton from "@/components/admin-delete-banner-button";
 import { createServiceRoleClient } from "@/supabase/server";
 import { createBannerAction, deleteBannerAction, toggleBannerAction } from "@/app/admin/marketplace-actions";
 
@@ -17,7 +18,7 @@ export default async function BannersPage({ searchParams }: { searchParams: Prom
             <td className="p-3"><div className="flex items-center gap-3"><img src={banner.image_url} alt={banner.title_uz || "Banner"} className="h-16 w-28 rounded-lg object-cover"/><div><p className="font-bold">{banner.title_uz}</p><p className="text-xs text-slate-500">{banner.title_ru}</p></div></div></td>
             <td className="p-3">{banner.sort_order}</td>
             <td className="p-3"><form action={toggleBannerAction}><input type="hidden" name="id" value={banner.id}/><input type="hidden" name="isActive" value={banner.is_active ? "" : "on"}/><button className="font-bold">{banner.is_active ? "Faol" : "Nofaol"}</button></form></td>
-            <td className="p-3"><form action={deleteBannerAction} onSubmit={(e) => { if (!confirm("Bu bannerni o‘chirishni tasdiqlaysizmi?")) e.preventDefault(); }}><input type="hidden" name="id" value={banner.id}/><input type="hidden" name="imageUrl" value={banner.image_url}/><button className="font-bold text-red-600">O‘chirish</button></form></td>
+            <td className="p-3"><AdminDeleteBannerButton action={deleteBannerAction} id={banner.id} imageUrl={banner.image_url} /></td>
           </tr>)}</tbody>
         </AdminTable> : <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Bannerlar hali qo‘shilmagan.</p>}
       </section>
