@@ -20,7 +20,7 @@ type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & 
   car_models: ModelRelation | null;
 };
 function firstRelation<T>(relation: SingleOrArray<T> | undefined): T | null { if (Array.isArray(relation)) return relation[0] ?? null; return relation ?? null; }
-function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) } as NormalizedCar<T>; }
+function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) } as unknown as NormalizedCar<T>; }
 function normalizeCars<T extends CarRelations>(cars: T[] | null): Array<NormalizedCar<T>> | null { return cars?.map(normalizeCar) ?? null; }
 
 export class CatalogRepository {
