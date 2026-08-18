@@ -45,9 +45,8 @@ async function sendWithToken(token: string, input: { phone: string; code: string
   const env = getServerEnv();
   const mobilePhone = input.phone.replace(/\D/g, "");
 
-  // Eskiz'da moderatsiyadan o'tgan tasdiqlangan SMS shabloni.
-  // Tasdiqlangan shablondagi 0000 o'rni real OTP kodi bilan almashtiriladi.
-  const message = `Код верификации для входа к мобильному приложению autohouse.uz: ${input.code}`;
+  // Eskiz moderatsiyasidan o'tgan login SMS shabloni.
+  const message = `Код верификации для входа к мобильному приложению cardrive.uz: ${input.code}`;
 
   const form = new FormData();
   form.set("mobile_phone", mobilePhone);
