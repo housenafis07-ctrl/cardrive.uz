@@ -42,15 +42,44 @@ export async function establishCustomerSession(phone: string) {
   const normalized = phone.trim();
   if (!normalized) throw new Error("Telefon raqami yaroqsiz");
 
-  const result = await createServiceRoleClient()
+  const supabase = createServiceRoleClient();
+  const result = await supabase
     .from("profiles")
     .select("id,phone,is_active")
     .eq("phone", normalized)
     .maybeSingle();
 
   if (result.error) throw new Error("Mijoz ma'lumotlarini tekshirib bo'lmadi");
-  if (!result.data || result.data.is_active === false) {
-    throw new Error("Bu telefon raqami bilan mijoz topilmadi");
+
+  let profile = result.data;
+
+  // OTP orqali birinchi marta kirayotgan yangi mijoz uchun profilni avtomatik yaratamiz.
+  if (!profile) {
+    const created = await supabase
+      .from("profiles")
+      .insert({ phone: normalized, is_active: true })
+      .select("id,phone,is_active")
+      .single();
+
+    if (created.error || !created.data) {
+      // Parallel login paytida duplicate insert bo'lishi mumkin; qayta o'qiymiz.
+      const existing = await supabase
+        .from("profiles")
+        .select("id,phone,is_active")
+        .eq("phone", normalized)
+        .maybeSingle();
+
+      if (existing.error || !existing.data) {
+        throw new Error("Mijoz profilini yaratib bo'lmadi");
+      }
+      profile = existing.data;
+    } else {
+      profile = created.data;
+    }
+  }
+
+  if (profile.is_active === false) {
+    throw new Error("Bu mijoz profili faol emas");
   }
 
   const store = await cookies();
