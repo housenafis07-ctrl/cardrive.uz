@@ -11,10 +11,12 @@ function buildSchedule(p:number,r:number,m:number):Row[]{if(p<=0||m<=0)return[];
 function termLabel(m:number){const y=Math.floor(m/12),r=m%12;if(!r)return `${y} yil (${m} oy)`;return `${y} yil ${r} oy (${m} oy)`;}
 export function FinancingCalculator({carPrice,currency,program,selected,selectable=true,onSelect}:Props){
  const minDown=clamp(Number(program.min_down_payment_percent??0),0,100);
- // max_financing_percent caps the financed portion; customers may pay more upfront, so the UI remains draggable up to 100%.
  const maxDown=100;
+ // Database currently stores the maximum term in term_months. Newer records may also provide explicit min/max terms.
+ // Fall back to 12..term_months so existing programs (e.g. 60 months) have a real draggable range.
+ const storedTerm=Math.max(1,Math.round(Number((program as FinancingProgram & {term_months?:number|null}).term_months??0)));
  const minTerm=Math.max(1,Math.round(Number(program.min_term_months??12)));
- const maxTerm=Math.max(minTerm,Math.round(Number(program.max_term_months??minTerm)));
+ const maxTerm=Math.max(minTerm,Math.round(Number(program.max_term_months??storedTerm??minTerm)));
  const[down,setDown]=useState(minDown);const[term,setTerm]=useState(maxTerm);const[details,setDetails]=useState(false);
  const calc=useMemo(()=>{const downAmount=Math.round(carPrice*down/100);const principal=Math.max(0,carPrice-downAmount);const rate=Number(program.annual_interest_rate??0);const payment=monthlyPayment(principal,rate,term);const schedule=buildSchedule(principal,rate,term);const total=schedule.reduce((s,r)=>s+r.payment,0);const interest=schedule.reduce((s,r)=>s+r.interest,0);const insurance=program.insurance_amount!=null?Number(program.insurance_amount):program.insurance_percent!=null?Math.round(carPrice*Number(program.insurance_percent)/100):0;return{downAmount,principal,rate,payment,schedule,total,interest,insurance};},[carPrice,down,program.annual_interest_rate,program.insurance_amount,program.insurance_percent,term]);
  return <article className={`rounded-3xl border-2 bg-white p-4 shadow-sm transition ${selected?"border-slate-950 shadow-md":"border-slate-200"}`}>
