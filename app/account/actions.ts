@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { OtpService } from "@/services/otp-service";
 import { SmsService } from "@/services/sms/sms-service";
-import { MockSmsProvider } from "@/services/sms/providers/mock-sms-provider";
+import { EskizSmsProvider } from "@/services/sms/providers/eskiz-sms-provider";
 import { establishCustomerSession, getCurrentCustomer } from "@/lib/customer-session";
 import { OrderService } from "@/services/order-service";
 import { CreditApplicationService } from "@/services/credit-application-service";
 import type { OtpPurpose, PurchaseType } from "@/types/domain";
 
-const smsProvider = new MockSmsProvider();
+const smsProvider = new EskizSmsProvider();
 export type RequestOtpResult = { status: "sent" } | { status: "error"; message: string };
 export type VerifyOtpResult = { status: "verified" } | { status: "error"; message: string };
 export type CreateOrderResult = { status: "created"; orderId: string; orderNumber: string } | { status: "error"; message: string };
