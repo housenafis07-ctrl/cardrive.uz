@@ -2,6 +2,8 @@ import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
 
 const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description";
+// financing_programs currently stores the maximum term in term_months. The calculator needs a real range;
+// expose 12 months as the default minimum and term_months as the maximum instead of aliasing both to the same value.
 const PROGRAM_WITH_BANK_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,min_term_months:term_months,max_term_months:term_months,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
 
 export class FinancingRepository {
@@ -21,7 +23,11 @@ export class FinancingRepository {
       .or(`max_car_price.is.null,max_car_price.gte.${car.price}`)
       .order("sort_order", { ascending: true }).order("name", { ascending: true });
     if (result.error || !result.data) return result;
-    const data = result.data.filter(program => {
+    const data = result.data.map(program => ({
+      ...program,
+      min_term_months: 12,
+      max_term_months: Math.max(12, Number(program.term_months ?? 12)),
+    })).filter(program => {
       const dealerLinks = Array.isArray(program.financing_program_dealers) ? program.financing_program_dealers : [];
       const carLinks = Array.isArray(program.financing_program_cars) ? program.financing_program_cars : [];
       const dealerMatches = dealerLinks.length === 0 || Boolean(car.dealer_id && dealerLinks.some((link: { dealer_id: string }) => link.dealer_id === car.dealer_id));
