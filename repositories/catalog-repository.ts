@@ -1,5 +1,6 @@
 import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
+import { FinancingRepository } from "@/repositories/financing-repository";
 import { PAGE_SIZE, type CatalogQuery } from "@/features/catalog/catalog-query";
 import { searchRelevance } from "@/features/catalog/search-utils";
 
@@ -8,24 +9,36 @@ type BrandRelation = { name: string; slug?: string | null; logo_url?: string | n
 type ModelRelation = { name: string; slug?: string | null };
 type ColorRelation = { id: string; name_uz: string; name_ru: string; hex_code: string };
 type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number; color_id?: string | null; car_colors?: SingleOrArray<ColorRelation> };
-type CarRelations = { brands?: SingleOrArray<BrandRelation>; car_models?: SingleOrArray<ModelRelation>; car_images?: ImageRelation[] | null };
-type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & {
-  id: string;
-  slug: string;
-  name: string;
-  price: number;
-  currency: string;
-  year: number;
-  stock_status: string;
-  is_featured: boolean;
-  brands: BrandRelation | null;
-  car_models: ModelRelation | null;
-};
+type CarRelations = { id: string; price: number; brands?: SingleOrArray<BrandRelation>; car_models?: SingleOrArray<ModelRelation>; car_images?: ImageRelation[] | null };
+export type FinancingSummary = { financingType: "credit" | "installment" | "credit_installment"; monthlyPayment: number; downPaymentPercent: number; termMonths: number; providerName: string; interestRate: number } | null;
+type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & { brands: BrandRelation | null; car_models: ModelRelation | null; financing: FinancingSummary };
+
 function firstRelation<T>(relation: SingleOrArray<T> | undefined): T | null { if (Array.isArray(relation)) return relation[0] ?? null; return relation ?? null; }
-function normalizeCar<T extends CarRelations>(car: T): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models) } as unknown as NormalizedCar<T>; }
-function normalizeCars<T extends CarRelations>(cars: T[] | null): Array<NormalizedCar<T>> | null { return cars?.map(normalizeCar) ?? null; }
+function normalizeCar<T extends CarRelations>(car: T, financing: FinancingSummary = null): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models), financing } as unknown as NormalizedCar<T>; }
+function normalizeCars<T extends CarRelations>(cars: T[] | null): Array<NormalizedCar<T>> | null { return cars?.map((car) => normalizeCar(car)) ?? null; }
+function monthlyPayment(principal: number, annualRate: number, months: number) { if (principal <= 0 || months <= 0) return 0; const rate = annualRate / 100 / 12; return rate === 0 ? Math.round(principal / months) : Math.round((principal * rate) / (1 - Math.pow(1 + rate, -months))); }
+function financingType(value: unknown): FinancingSummary["financingType"] { const type = String(value ?? "").toLowerCase(); const credit = type.includes("credit") || type.includes("kredit") || type.includes("кредит"); const installment = type.includes("install") || type.includes("rass") || type.includes("расс") || type.includes("muddat"); return credit && installment ? "credit_installment" : installment ? "installment" : "credit"; }
 
 export class CatalogRepository {
+  private readonly financing = new FinancingRepository();
+
+  private async enrichFinancing<T extends CarRelations>(cars: T[] | null): Promise<Array<NormalizedCar<T>>> {
+    if (!cars?.length) return [];
+    return Promise.all(cars.map(async (car) => {
+      const programs = await this.financing.getApplicableProgramsForCar(car.id);
+      const offers = (programs.data ?? []).map((program) => {
+        const termMonths = Math.max(1, Number(program.max_term_months ?? program.term_months ?? 60));
+        const downPaymentPercent = Math.min(100, Math.max(0, Number(program.min_down_payment_percent ?? program.down_payment_percent ?? 0)));
+        const interestRate = Math.max(0, Number(program.annual_interest_rate ?? program.interest_rate ?? 0));
+        const principal = Number(car.price) * (1 - downPaymentPercent / 100);
+        const payment = monthlyPayment(principal, interestRate, termMonths);
+        const providerName = program.banks?.name_ru || program.banks?.name || program.name || "Moliyalashtirish";
+        return { monthlyPayment: payment, downPaymentPercent, termMonths, providerName, financingType: financingType(program.financing_type ?? program.type), interestRate };
+      }).filter((offer) => offer.monthlyPayment > 0).sort((a, b) => a.monthlyPayment - b.monthlyPayment || a.termMonths - b.termMonths);
+      return normalizeCar(car, offers[0] ?? null);
+    }));
+  }
+
   async getCars(filters: CatalogQuery) {
     const from = (filters.page - 1) * PAGE_SIZE;
     const client = createPublicServerClient();
@@ -50,31 +63,22 @@ export class CatalogRepository {
     if (filters.maxPrice !== undefined) query = query.lte("price", filters.maxPrice);
     if (filters.minYear !== undefined) query = query.gte("year", filters.minYear);
     if (filters.maxYear !== undefined) query = query.lte("year", filters.maxYear);
-
     if (filters.sort === "price_asc") query = query.order("price", { ascending: true }); else if (filters.sort === "price_desc") query = query.order("price", { ascending: false }); else if (filters.sort === "newest") query = query.order("year", { ascending: false }); else query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
-
     if (filters.q) {
-      // Search is deliberately done after fetching the already-filtered active catalog.
-      // This allows us to search brand + model + car name together and tolerate
-      // Cyrillic/Latin input, case differences, and common typos such as "kobalat".
       const result = await query;
       if (result.error) return { ...result, data: null };
-      const normalized = normalizeCars(result.data) ?? [];
-      const ranked = normalized
-        .map((car) => ({ car, score: searchRelevance(filters.q!, [car.name, car.brands?.name ?? "", car.car_models?.name ?? "", car.slug]) }))
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map((item) => item.car);
+      const enriched = await this.enrichFinancing(result.data);
+      const ranked = enriched.map((car) => ({ car, score: searchRelevance(filters.q!, [car.name, car.brands?.name ?? "", car.car_models?.name ?? "", car.slug]) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).map((item) => item.car);
       return { data: ranked.slice(from, from + PAGE_SIZE), count: ranked.length, error: null };
     }
-
     const result = await query.range(from, from + PAGE_SIZE - 1);
-    return { ...result, data: normalizeCars(result.data) };
+    return { ...result, data: await this.enrichFinancing(result.data) };
   }
-  async getCarById(id: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("id", id).eq("is_active", true).single(); return { ...result, data: result.data ? normalizeCar(result.data) : null }; }
-  async getCarBySlug(slug: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("slug", slug).eq("is_active", true).single(); return { ...result, data: result.data ? normalizeCar(result.data) : null }; }
-  async getFeaturedCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("is_featured", true).order("created_at", { ascending: false }).limit(limit); return { ...result, data: normalizeCars(result.data) }; }
-  async getAvailableCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("stock_status", "available").order("created_at", { ascending: false }).limit(limit); return { ...result, data: normalizeCars(result.data) }; }
+
+  async getCarById(id: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("id", id).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
+  async getCarBySlug(slug: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("slug", slug).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
+  async getFeaturedCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,body_type,fuel_type,transmission,engine_volume,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("is_featured", true).order("created_at", { ascending: false }).limit(limit); return { ...result, data: await this.enrichFinancing(result.data) }; }
+  async getAvailableCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,body_type,fuel_type,transmission,engine_volume,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("stock_status", "available").order("created_at", { ascending: false }).limit(limit); return { ...result, data: await this.enrichFinancing(result.data) }; }
   async getActiveBrands() { const client = createPublicServerClient(); const [brandsResult, modelsResult] = await Promise.all([client.from("brands").select("id,name,slug,logo_url").eq("is_active", true).order("name"), client.from("car_models").select("id,brand_id").eq("is_active", true)]); if (brandsResult.error) return brandsResult; if (modelsResult.error) return { ...brandsResult, data: brandsResult.data?.map((brand) => ({ ...brand, model_count: 0 })) ?? null }; const modelCounts = new Map<string, number>(); for (const model of modelsResult.data ?? []) if (model.brand_id) modelCounts.set(model.brand_id, (modelCounts.get(model.brand_id) ?? 0) + 1); return { ...brandsResult, data: brandsResult.data?.map((brand) => ({ ...brand, model_count: modelCounts.get(brand.id) ?? 0 })) ?? null }; }
   async getModelsByBrand(brandSlug?: string) { let query = createPublicServerClient().from("car_models").select("id,name,slug,brand_id,brands!inner(slug)").eq("is_active", true).order("name"); if (brandSlug) query = query.eq("brands.slug", brandSlug); return query; }
   async getBodyTypes() { return createPublicServerClient().from("cars").select("body_type").eq("is_active", true).not("body_type", "is", null); }
