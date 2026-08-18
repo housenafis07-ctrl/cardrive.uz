@@ -44,7 +44,10 @@ async function login(): Promise<string> {
 async function sendWithToken(token: string, input: { phone: string; code: string; expiresInSeconds: number }) {
   const env = getServerEnv();
   const mobilePhone = input.phone.replace(/\D/g, "");
-  const message = `Cardrive.uz tasdiqlash kodi: ${input.code}. Kod ${Math.floor(input.expiresInSeconds / 60)} daqiqa amal qiladi.`;
+
+  // Eskiz'da moderatsiyadan o'tgan tasdiqlangan SMS shabloni.
+  // Tasdiqlangan shablondagi 0000 o'rni real OTP kodi bilan almashtiriladi.
+  const message = `Код верификации для входа к мобильному приложению autohouse.uz: ${input.code}`;
 
   const form = new FormData();
   form.set("mobile_phone", mobilePhone);
