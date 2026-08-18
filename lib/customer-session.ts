@@ -1,87 +1,10 @@
 import "server-only";
-
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { createServiceRoleClient } from "@/supabase/server";
 import { getServerEnv } from "@/lib/env";
-
-const COOKIE_NAME = "cardrive_customer_session";
-const MAX_AGE = 60 * 60 * 24 * 30;
-
-type Customer = { id: string; phone: string | null };
-
-function secret() {
-  return getServerEnv().SUPABASE_SERVICE_ROLE_KEY;
-}
-
-function sign(phone: string) {
-  return createHmac("sha256", secret()).update(phone).digest("base64url");
-}
-
-function encode(phone: string) {
-  return `${Buffer.from(phone, "utf8").toString("base64url")}.${sign(phone)}`;
-}
-
-function decode(value: string) {
-  const [encodedPhone, providedSignature] = value.split(".");
-  if (!encodedPhone || !providedSignature) return null;
-  let phone: string;
-  try {
-    phone = Buffer.from(encodedPhone, "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const expected = sign(phone);
-  const a = Buffer.from(providedSignature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  return phone;
-}
-
-export async function establishCustomerSession(phone: string) {
-  const normalized = phone.trim();
-  if (!normalized) throw new Error("Telefon raqami yaroqsiz");
-
-  const result = await createServiceRoleClient()
-    .from("profiles")
-    .select("id,phone,is_active")
-    .eq("phone", normalized)
-    .maybeSingle();
-
-  if (result.error) throw new Error("Mijoz ma'lumotlarini tekshirib bo'lmadi");
-  if (!result.data || result.data.is_active === false) {
-    throw new Error("Bu telefon raqami bilan mijoz topilmadi");
-  }
-
-  const store = await cookies();
-  store.set(COOKIE_NAME, encode(normalized), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: MAX_AGE,
-  });
-}
-
-export async function getCurrentCustomer(): Promise<Customer | null> {
-  const store = await cookies();
-  const value = store.get(COOKIE_NAME)?.value;
-  if (!value) return null;
-
-  const phone = decode(value);
-  if (!phone) return null;
-
-  const result = await createServiceRoleClient()
-    .from("profiles")
-    .select("id,phone,is_active")
-    .eq("phone", phone)
-    .maybeSingle();
-
-  if (result.error || !result.data || result.data.is_active === false) return null;
-  return { id: result.data.id, phone: result.data.phone };
-}
-
-export async function clearCustomerSession() {
-  const store = await cookies();
-  store.set(COOKIE_NAME, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 0 });
-}
+const COOKIE_NAME="cardrive_customer_session"; const MAX_AGE=60*60*24*30; type Customer={id:string;phone:string|null};
+function secret(){return getServerEnv().SUPABASE_SERVICE_ROLE_KEY;} function sign(phone:string){return createHmac("sha256",secret()).update(phone).digest("base64url");} function encode(phone:string){return `${Buffer.from(phone,"utf8").toString("base64url")}.${sign(phone)}`;} function decode(value:string){const[encoded,provided]=value.split(".");if(!encoded||!provided)return null;const phone=Buffer.from(encoded,"base64url").toString("utf8"),expected=sign(phone),a=Buffer.from(provided),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return null;return phone;}
+export async function establishCustomerSession(phone:string){const normalized=phone.trim();if(!normalized)throw new Error("Telefon raqami yaroqsiz");const result=await createServiceRoleClient().from("profiles").select("id,phone,is_active").eq("phone",normalized).maybeSingle();if(result.error)throw new Error("Mijoz ma'lumotlarini tekshirib bo'lmadi");if(!result.data||result.data.is_active===false)throw new Error("Bu telefon raqami bilan mijoz topilmadi");const store=await cookies();store.set(COOKIE_NAME,encode(normalized),{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:MAX_AGE});}
+export async function createCustomerProfile(phone:string,fullName:string){const normalized=phone.trim(),name=fullName.trim().replace(/\s+/g," ");if(!normalized||!name)throw new Error("Ism va familiyani kiriting");const supabase=createServiceRoleClient();const existing=await supabase.from("profiles").select("id,phone,is_active").eq("phone",normalized).maybeSingle();if(existing.error)throw new Error("Mijoz ma'lumotlarini tekshirib bo'lmadi");if(existing.data){if(existing.data.is_active===false)throw new Error("Bu mijoz profili faol emas");await supabase.from("profiles").update({full_name:name}).eq("id",existing.data.id);await establishCustomerSession(normalized);return;}const authUser=await supabase.auth.admin.createUser({phone:normalized,phone_confirm:true,user_metadata:{full_name:name}});if(authUser.error||!authUser.data.user)throw new Error("Mijoz akkauntini yaratib bo'lmadi");const created=await supabase.from("profiles").insert({id:authUser.data.user.id,phone:normalized,full_name:name,is_active:true}).select("id").single();if(created.error){await supabase.auth.admin.deleteUser(authUser.data.user.id);throw new Error("Mijoz profilini yaratib bo'lmadi");}await establishCustomerSession(normalized);}
+export async function getCurrentCustomer():Promise<Customer|null>{const store=await cookies(),value=store.get(COOKIE_NAME)?.value;if(!value)return null;const phone=decode(value);if(!phone)return null;const result=await createServiceRoleClient().from("profiles").select("id,phone,is_active").eq("phone",phone).maybeSingle();if(result.error||!result.data||result.data.is_active===false)return null;return{id:result.data.id,phone:result.data.phone};} export async function clearCustomerSession(){const store=await cookies();store.set(COOKIE_NAME,"",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0});}
