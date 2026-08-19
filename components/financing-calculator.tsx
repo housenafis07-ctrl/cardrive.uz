@@ -22,12 +22,15 @@ export function FinancingCalculator({carPrice,currency,program,selected,selectab
  const[term,setTerm]=useState(initialTerm);
  const[details,setDetails]=useState(false);
  const effectiveAllowedTerms=allowedTerms.length?allowedTerms:[fallbackMax];
- const normalizedTerm=effectiveAllowedTerms.includes(term)?term:effectiveAllowedTerms[effectiveAllowedTerms.length-1];
+ const normalizedTerm=hasMatrix
+  ? (effectiveAllowedTerms.includes(term)?term:effectiveAllowedTerms[effectiveAllowedTerms.length-1])
+  : clamp(Number(term),12,fallbackMax);
  const downSliderIndex=Math.max(0,downOptions.findIndex(v=>Number(v)===Number(down)));
  const termSliderIndex=Math.max(0,effectiveAllowedTerms.findIndex(v=>Number(v)===Number(normalizedTerm)));
  const rule=hasMatrix?rules.find(r=>Number(r.down_payment_percent)===Number(down)&&Number(r.term_months)===Number(normalizedTerm))??null:null;
  const rate=Number(rule?.annual_interest_rate??program.annual_interest_rate??0);
- const minTerm=Math.min(...effectiveAllowedTerms); const maxTerm=Math.max(...effectiveAllowedTerms);
+ const minTerm=hasMatrix?Math.min(...effectiveAllowedTerms):12;
+ const maxTerm=hasMatrix?Math.max(...effectiveAllowedTerms):fallbackMax;
  const calc=useMemo(()=>{const downAmount=Math.round(carPrice*down/100);const principal=Math.max(0,carPrice-downAmount);const payment=monthlyPayment(principal,rate,normalizedTerm);const schedule=buildSchedule(principal,rate,normalizedTerm);const total=schedule.reduce((s,r)=>s+r.payment,0);const interest=schedule.reduce((s,r)=>s+r.interest,0);const insurance=program.insurance_amount!=null?Number(program.insurance_amount):program.insurance_percent!=null?Math.round(carPrice*Number(program.insurance_percent)/100):0;return{downAmount,principal,payment,schedule,total,interest,insurance};},[carPrice,down,rate,normalizedTerm,program.insurance_amount,program.insurance_percent]);
  const changeDown=(value:number)=>{setDown(value);const terms=rules.filter(r=>Number(r.down_payment_percent)===Number(value)).map(r=>Number(r.term_months)).sort((a,b)=>a-b);if(terms.length)setTerm(terms[terms.length-1]);};
  const changeDownIndex=(index:number)=>{const safe=clamp(Math.round(index),0,Math.max(0,downOptions.length-1));const next=downOptions[safe]??initialDown;changeDown(next);};
