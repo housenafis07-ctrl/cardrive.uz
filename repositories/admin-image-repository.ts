@@ -32,8 +32,20 @@ export class AdminImageRepository {
   }
   async remove(carId: string, imageId: string) {
     const client = this.client();
-    const current = await client.from("car_images").select("storage_path").eq("id", imageId).eq("car_id", carId).single();
-    if (current.data) await client.storage.from("car-images").remove([current.data.storage_path]);
-    return client.from("car_images").delete().eq("id", imageId).eq("car_id", carId);
+    const current = await client.from("car_images").select("storage_path,is_primary,color_id").eq("id", imageId).eq("car_id", carId).single();
+    if (current.error || !current.data) return { error: current.error ?? new Error("Rasm topilmadi") };
+    if (current.data.storage_path) {
+      const storage = await client.storage.from("car-images").remove([current.data.storage_path]);
+      if (storage.error) return { error: storage.error };
+    }
+    const deleted = await client.from("car_images").delete().eq("id", imageId).eq("car_id", carId);
+    if (deleted.error) return { error: deleted.error };
+    if (current.data.is_primary) {
+      let next = client.from("car_images").select("id").eq("car_id", carId).order("sort_order").limit(1);
+      next = current.data.color_id ? next.eq("color_id", current.data.color_id) : next.is("color_id", null);
+      const candidate = await next.maybeSingle();
+      if (candidate.data?.id) await client.from("car_images").update({ is_primary: true }).eq("id", candidate.data.id);
+    }
+    return { data: true };
   }
 }
