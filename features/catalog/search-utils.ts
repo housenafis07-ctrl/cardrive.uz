@@ -70,6 +70,6 @@ export function searchRelevance(query: string, fields: string[]): number {
     Math.max(...candidateTokens.map((candidateToken) => tokenSimilarity(queryToken, candidateToken))),
   );
 
-  if (scores.some((score) => score < 0.86)) return 0;
+  if (scores.some((score) => score < 0.84)) return 0;
   return scores.reduce((sum, score) => sum + score, 0) / scores.length;
 }
