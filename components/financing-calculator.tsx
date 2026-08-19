@@ -19,6 +19,7 @@ export function FinancingCalculator({carPrice,currency,program,selected,selectab
  const fallbackMax=Math.max(12,Math.round(Number(program.max_term_months??(program as FinancingProgram & {term_months?:number|null}).term_months??60)));
  const initialTerm=allowedTerms[allowedTerms.length-1]??fallbackMax;
  const[term,setTerm]=useState(initialTerm);
+ const[details,setDetails]=useState(false);
  const effectiveAllowedTerms=allowedTerms.length?allowedTerms:[fallbackMax];
  const normalizedTerm=effectiveAllowedTerms.includes(term)?term:effectiveAllowedTerms[effectiveAllowedTerms.length-1];
  const rule=hasMatrix?rules.find(r=>Number(r.down_payment_percent)===Number(down)&&Number(r.term_months)===Number(normalizedTerm))??null:null;
