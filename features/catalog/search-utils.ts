@@ -44,7 +44,7 @@ function levenshtein(a: string, b: string): number {
 
 function tokenSimilarity(queryToken: string, candidateToken: string): number {
   if (queryToken === candidateToken) return 1;
-  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.96;
+  if (candidateToken.includes(queryToken)) return 0.96;
 
   const distance = levenshtein(queryToken, candidateToken);
   const maxLength = Math.max(queryToken.length, candidateToken.length);
@@ -70,6 +70,6 @@ export function searchRelevance(query: string, fields: string[]): number {
     Math.max(...candidateTokens.map((candidateToken) => tokenSimilarity(queryToken, candidateToken))),
   );
 
-  if (scores.some((score) => score < 0.78)) return 0;
+  if (scores.some((score) => score < 0.84)) return 0;
   return scores.reduce((sum, score) => sum + score, 0) / scores.length;
 }
