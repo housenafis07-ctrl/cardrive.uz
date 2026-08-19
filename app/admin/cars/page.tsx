@@ -24,7 +24,7 @@ export default async function CarsPage({
 
   return (
     <div>
-      <h1 className="text-3xl font-black">Avtomobillar</h1>
+      <h1 className="text-3xl font-black">Avtomobillar va modifikatsiyalar</h1>
 
       <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_420px]">
         <section>
@@ -32,7 +32,7 @@ export default async function CarsPage({
             <AdminTable>
               <thead className="border-b bg-slate-50">
                 <tr>
-                  <th className="p-3">Avtomobil</th>
+                  <th className="p-3">Brend · Model · Modifikatsiya</th>
                   <th className="p-3">Narx</th>
                   <th className="p-3">Holat</th>
                   <th className="p-3" />
@@ -42,10 +42,10 @@ export default async function CarsPage({
                 {result.data.map((car) => (
                   <tr key={car.id} className="border-b last:border-0">
                     <td className="p-3">
-                      <p className="font-semibold">{car.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                         {car.brands?.name} · {car.car_models?.name}
                       </p>
+                      <p className="mt-1 font-semibold">{car.name}</p>
                     </td>
                     <td className="p-3">
                       {car.price} {car.currency}
@@ -66,7 +66,7 @@ export default async function CarsPage({
                             className="text-sm font-bold text-slate-900 underline"
                             href={`/admin/cars/${car.id}/images`}
                           >
-                            Rasmlar
+                            Rasmlar · ranglar
                           </Link>
                           <button className="text-sm font-bold text-red-700">
                             Faolsizlantirish
@@ -88,7 +88,7 @@ export default async function CarsPage({
         <section>
           {p.error ? (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              <p className="font-bold">Avtomobil saqlanmadi.</p>
+              <p className="font-bold">Modifikatsiya saqlanmadi.</p>
               <p className="mt-1">{p.error}</p>
             </div>
           ) : null}
@@ -97,7 +97,7 @@ export default async function CarsPage({
             action={createCarAction}
             className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm sm:grid-cols-2"
           >
-            <h2 className="col-span-full text-xl font-black">Yangi avtomobil</h2>
+            <h2 className="col-span-full text-xl font-black">Yangi modifikatsiya</h2>
 
             <label className="text-sm font-semibold">
               Brend
@@ -136,13 +136,13 @@ export default async function CarsPage({
               </select>
             </label>
 
-            <Field name="name" label="Nomi" required />
+            <Field name="name" label="Modifikatsiya nomi" required />
             <Field name="slug" label="Slug" />
 
             <div className="col-span-full">
               <SlugHint />
               <p className="mt-1 text-xs text-slate-500">
-                Slug bo‘sh qoldirilsa, avtomobil nomidan avtomatik yaratiladi.
+                Slug bo‘sh qoldirilsa, modifikatsiya nomidan avtomatik yaratiladi.
               </p>
             </div>
 
