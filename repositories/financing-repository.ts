@@ -2,7 +2,7 @@ import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
 
 const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description";
-const PROGRAM_WITH_BANK_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
+const PROGRAM_WITH_BANK_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id),financing_program_rules(id,down_payment_percent,term_months,annual_interest_rate,is_available,display_order)";
 
 export class FinancingRepository {
   async getActiveBanks() {
@@ -21,7 +21,10 @@ export class FinancingRepository {
     const data=result.data.map(program=>{
       const minTerm=Number(program.min_term_months??program.term_months??12);
       const maxTerm=Number(program.max_term_months??program.term_months??minTerm);
-      return {...program,min_term_months:minTerm,max_term_months:Math.max(minTerm,maxTerm)};
+      const rules=Array.isArray(program.financing_program_rules)
+        ? program.financing_program_rules.filter((rule:{is_available?:boolean})=>rule.is_available!==false).sort((a:{display_order?:number},b:{display_order?:number})=>(a.display_order??0)-(b.display_order??0))
+        : [];
+      return {...program,min_term_months:minTerm,max_term_months:Math.max(minTerm,maxTerm),financing_program_rules:rules};
     }).filter(program=>{
       const dealerLinks=Array.isArray(program.financing_program_dealers)?program.financing_program_dealers:[];
       const carLinks=Array.isArray(program.financing_program_cars)?program.financing_program_cars:[];
