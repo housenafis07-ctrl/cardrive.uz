@@ -17,9 +17,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const car = result.data;
   if (!car) return { title: "Avtomobil topilmadi | Cardrive.uz" };
   const brand = car.brands?.name ?? "";
+  const model = car.car_models?.name ?? "";
+  const modification = car.name;
   return {
-    title: `${brand} ${car.name} ${car.year} | Cardrive.uz`,
-    description: car.short_description ?? `${brand} ${car.name}, ${car.year}. ${formatPrice(car.price, car.currency)}.`,
+    title: `${brand} ${model} — ${modification} ${car.year} | Cardrive.uz`,
+    description: car.short_description ?? `${brand} ${model} — ${modification}, ${car.year}. ${formatPrice(car.price, car.currency)}.`,
   };
 }
 
@@ -34,6 +36,8 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
   const financingResult = await new FinancingService().getApplicableProgramsForCar(car.id);
   const financingPrograms = financingResult.data ?? [];
   const localizedCar = car as typeof car & { color_name_ru?: string | null; color_name_uz?: string | null };
+  const brandName = car.brands?.name ?? "";
+  const modelName = car.car_models?.name ?? "";
   const specs = [
     [x.body, car.body_type],
     [x.fuel, car.fuel_type],
@@ -62,9 +66,10 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
               ) : (
                 <span className="flex h-6 w-6 items-center justify-center rounded bg-slate-100 text-[9px] font-bold text-slate-500">{(car.brands?.name ?? "?").slice(0, 2).toUpperCase()}</span>
               )}
-              <p className="text-sm font-bold uppercase tracking-wide text-slate-500">{car.brands?.name} · {car.car_models?.name}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-500">{brandName} · {modelName}</p>
             </div>
-            <h1 className="mt-2 text-4xl font-black tracking-tight">{car.name}</h1>
+            <p className="mt-2 text-sm font-semibold text-slate-500">Modifikatsiya</p>
+            <h1 className="text-4xl font-black tracking-tight">{car.name}</h1>
             <div className="mt-4 flex items-center gap-3"><AvailabilityBadge status={car.stock_status} locale={locale} /><span className="text-sm text-slate-600">{car.year}</span></div>
             <div className="mt-6"><Price amount={car.price} currency={car.currency} locale={locale} />{car.old_price && <p className="mt-1 text-sm text-slate-500 line-through">{formatPrice(car.old_price, car.currency, locale)}</p>}</div>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
