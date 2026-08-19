@@ -5,6 +5,8 @@ const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_statu
 const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
 const RULE_SELECT = "id,financing_program_id,down_payment_percent,term_months,annual_interest_rate,is_available,display_order";
 
+type ProgramLink = { dealer_id?: string; car_id?: string };
+
 export class FinancingRepository {
   async getActiveBanks() {
     return createPublicServerClient().from("banks").select(BANK_SELECT).eq("is_active", true).neq("integration_status", "disabled").order("display_order", { ascending: true }).order("name", { ascending: true });
@@ -34,18 +36,27 @@ export class FinancingRepository {
       rulesByProgram.set(rule.financing_program_id,current);
     }
 
-    const data=result.data.map(program=>{
+    const enriched=result.data.map(program=>{
       const minTerm=Number(program.min_term_months??program.term_months??12);
       const maxTerm=Number(program.max_term_months??program.term_months??minTerm);
       const rules=rulesByProgram.get(program.id)??[];
-      return {...program,min_term_months:minTerm,max_term_months:Math.max(minTerm,maxTerm),financing_program_rules:rules};
-    }).filter(program=>{
-      const dealerLinks=Array.isArray(program.financing_program_dealers)?program.financing_program_dealers:[];
-      const carLinks=Array.isArray(program.financing_program_cars)?program.financing_program_cars:[];
-      const dealerMatches=dealerLinks.length===0||Boolean(car.dealer_id&&dealerLinks.some((link:{dealer_id:string})=>link.dealer_id===car.dealer_id));
-      const carMatches=carLinks.length===0||carLinks.some((link:{car_id:string})=>link.car_id===carId);
-      return dealerMatches&&carMatches;
-    });
+      const dealerLinks=(Array.isArray(program.financing_program_dealers)?program.financing_program_dealers:[]) as ProgramLink[];
+      const carLinks=(Array.isArray(program.financing_program_cars)?program.financing_program_cars:[]) as ProgramLink[];
+      const carLinked=carLinks.some(link=>link.car_id===carId);
+      const dealerLinked=dealerLinks.length>0&&Boolean(car.dealer_id&&dealerLinks.some(link=>link.dealer_id===car.dealer_id));
+      const modelSpecific=program.applicable_model_id===car.model_id;
+      const brandSpecific=program.applicable_brand_id===car.brand_id;
+      const specificity=carLinked?4:modelSpecific?3:brandSpecific?2:(dealerLinked?1:0);
+      const applicable=carLinks.length===0||carLinked;
+      const dealerApplicable=dealerLinks.length===0||dealerLinked;
+      return {...program,min_term_months:minTerm,max_term_months:Math.max(minTerm,maxTerm),financing_program_rules:rules,_specificity:specificity,_applicable:applicable&&dealerApplicable};
+    }).filter(program=>program._applicable);
+
+    // Prefer the most specific financing scope for the car. This prevents a generic
+    // program from overriding a dedicated BYD/model/car program while preserving
+    // multiple programs at the same specificity (e.g. several banks for one model).
+    const highestSpecificity=enriched.reduce((max,program)=>Math.max(max,program._specificity),0);
+    const data=enriched.filter(program=>program._specificity===highestSpecificity).map(({_specificity,_applicable,...program})=>program);
     return {...result,data};
   }
 
