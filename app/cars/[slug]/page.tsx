@@ -29,12 +29,16 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const locale = await getLocale();
   const x = t(locale);
-  const result = await new CatalogService().getCarBySlug(slug);
+  const catalog = new CatalogService();
+  const result = await catalog.getCarBySlug(slug);
   if (!result.data) notFound();
   const car = result.data;
   const customer = await getCurrentCustomer();
   const financingResult = await new FinancingService().getApplicableProgramsForCar(car.id);
   const financingPrograms = financingResult.data ?? [];
+  const modelId = car.car_models?.id;
+  const modificationsResult = modelId ? await catalog.getModelModifications(modelId) : null;
+  const modifications = modificationsResult?.data ?? [];
   const localizedCar = car as typeof car & { color_name_ru?: string | null; color_name_uz?: string | null };
   const brandName = car.brands?.name ?? "";
   const modelName = car.car_models?.name ?? "";
@@ -68,7 +72,42 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
               )}
               <p className="text-sm font-bold uppercase tracking-wide text-slate-500">{brandName} · {modelName}</p>
             </div>
-            <p className="mt-2 text-sm font-semibold text-slate-500">Modifikatsiya</p>
+
+            {modifications.length > 0 && (
+              <section className="mt-5">
+                <h2 className="text-lg font-black">Modifikatsiyalar</h2>
+                <div className="mt-3 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                  {modifications.map((modification) => {
+                    const selected = modification.id === car.id;
+                    return (
+                      <Link
+                        key={modification.id}
+                        href={`/cars/${modification.slug}`}
+                        className={`block rounded-2xl border p-3 transition ${selected ? "border-slate-950 bg-white shadow-sm" : "border-slate-200 bg-slate-50 hover:border-slate-400"}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {modification.primary_image ? (
+                            <img src={modification.primary_image} alt={modification.name} className="h-16 w-20 rounded-xl bg-white object-contain" />
+                          ) : (
+                            <div className="h-16 w-20 rounded-xl bg-white" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-black">{modification.name}</p>
+                              {selected && <span className="shrink-0 rounded-full bg-slate-950 px-2 py-1 text-[10px] font-bold text-white">Tanlangan</span>}
+                            </div>
+                            <p className="mt-1 font-bold">{formatPrice(modification.price, modification.currency, locale)}</p>
+                            {modification.old_price ? <p className="text-xs text-slate-400 line-through">{formatPrice(modification.old_price, modification.currency, locale)}</p> : null}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            <p className="mt-5 text-sm font-semibold text-slate-500">Tanlangan modifikatsiya</p>
             <h1 className="text-4xl font-black tracking-tight">{car.name}</h1>
             <div className="mt-4 flex items-center gap-3"><AvailabilityBadge status={car.stock_status} locale={locale} /><span className="text-sm text-slate-600">{car.year}</span></div>
             <div className="mt-6"><Price amount={car.price} currency={car.currency} locale={locale} />{car.old_price && <p className="mt-1 text-sm text-slate-500 line-through">{formatPrice(car.old_price, car.currency, locale)}</p>}</div>
