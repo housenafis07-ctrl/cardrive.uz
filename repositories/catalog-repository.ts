@@ -40,7 +40,7 @@ export class CatalogRepository {
   }
 
   async getModelModifications(modelId: string, excludeCarId?: string) {
-    let query = createPublicServerClient().from("cars").select("id,name,slug,price,old_price,currency,year,stock_status,car_images(public_url,is_primary,sort_order)").eq("car_models.id", modelId).eq("is_active", true).order("price", { ascending: true });
+    let query = createPublicServerClient().from("cars").select("id,name,slug,price,old_price,currency,year,stock_status,car_models!inner(id),car_images(public_url,is_primary,sort_order)").eq("car_models.id", modelId).eq("is_active", true).order("price", { ascending: true });
     if (excludeCarId) query = query.neq("id", excludeCarId);
     const result = await query;
     if (result.error) return { ...result, data: null as ModelModification[] | null };
