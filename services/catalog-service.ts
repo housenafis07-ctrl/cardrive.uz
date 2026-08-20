@@ -13,4 +13,5 @@ export class CatalogService {
   getBodyTypes() { return this.repository.getBodyTypes(); }
   getHomeCategories() { return this.repository.getHomeCategories(); }
   getHomeBanners() { return this.repository.getHomeBanners(); }
+  getModelModifications(modelId: string, excludeCarId?: string) { return this.repository.getModelModifications(modelId, excludeCarId); }
 }

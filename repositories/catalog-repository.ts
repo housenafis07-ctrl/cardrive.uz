@@ -6,13 +6,14 @@ import { searchRelevance } from "@/features/catalog/search-utils";
 
 type SingleOrArray<T> = T | T[] | null;
 type BrandRelation = { name: string; slug?: string | null; logo_url?: string | null };
-type ModelRelation = { name: string; slug?: string | null };
+type ModelRelation = { id?: string; name: string; slug?: string | null };
 type ColorRelation = { id: string; name_uz: string; name_ru: string; hex_code: string };
 type ImageRelation = { public_url: string | null; alt_text: string | null; is_primary: boolean; sort_order: number; color_id?: string | null; car_colors?: SingleOrArray<ColorRelation> };
 type CarRelations = { id: string; price: number; brands?: SingleOrArray<BrandRelation>; car_models?: SingleOrArray<ModelRelation>; car_images?: ImageRelation[] | null };
 type FinancingType = "credit" | "installment" | "credit_installment";
 export type FinancingSummary = { financingType: FinancingType; monthlyPayment: number; downPaymentPercent: number; termMonths: number; providerName: string; interestRate: number } | null;
 type NormalizedCar<T extends CarRelations> = Omit<T, "brands" | "car_models"> & { brands: BrandRelation | null; car_models: ModelRelation | null; financing: FinancingSummary };
+export type ModelModification = { id: string; name: string; slug: string; price: number; old_price: number | null; currency: string; year: number; stock_status: string; primary_image: string | null };
 
 function firstRelation<T>(relation: SingleOrArray<T> | undefined): T | null { if (Array.isArray(relation)) return relation[0] ?? null; return relation ?? null; }
 function normalizeCar<T extends CarRelations>(car: T, financing: FinancingSummary = null): NormalizedCar<T> { return { ...car, brands: firstRelation(car.brands), car_models: firstRelation(car.car_models), financing } as unknown as NormalizedCar<T>; }
@@ -38,6 +39,19 @@ export class CatalogRepository {
     }));
   }
 
+  async getModelModifications(modelId: string, excludeCarId?: string) {
+    let query = createPublicServerClient().from("cars").select("id,name,slug,price,old_price,currency,year,stock_status,car_models!inner(id),car_images(public_url,is_primary,sort_order)").eq("car_models.id", modelId).eq("is_active", true).order("price", { ascending: true });
+    if (excludeCarId) query = query.neq("id", excludeCarId);
+    const result = await query;
+    if (result.error) return { ...result, data: null as ModelModification[] | null };
+    const data = (result.data ?? []).map((car) => {
+      const images = Array.isArray(car.car_images) ? car.car_images : [];
+      const sorted = [...images].sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order);
+      return { ...car, primary_image: sorted[0]?.public_url ?? null } as ModelModification;
+    });
+    return { ...result, data };
+  }
+
   async getCars(filters: CatalogQuery) {
     const from = (filters.page - 1) * PAGE_SIZE;
     const client = createPublicServerClient();
@@ -48,8 +62,8 @@ export class CatalogRepository {
     const result = await query.range(from, from + PAGE_SIZE - 1); return { ...result, data: await this.enrichFinancing(result.data) };
   }
 
-  async getCarById(id: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("id", id).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
-  async getCarBySlug(slug: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("slug", slug).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
+  async getCarById(id: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(id,name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("id", id).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
+  async getCarBySlug(slug: string) { const result = await createPublicServerClient().from("cars").select("*,brands(name,slug,logo_url),car_models(id,name,slug),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("slug", slug).eq("is_active", true).single(); return { ...result, data: result.data ? (await this.enrichFinancing([result.data]))[0] : null }; }
   async getFeaturedCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,currency,year,stock_status,is_featured,body_type,fuel_type,transmission,engine_volume,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("is_featured", true).order("created_at", { ascending: false }).limit(limit); return { ...result, data: await this.enrichFinancing(result.data) }; }
   async getAvailableCars(limit = 4) { const result = await createPublicServerClient().from("cars").select("id,name,slug,price,body_type,fuel_type,transmission,engine_volume,currency,year,stock_status,is_featured,brands(name,logo_url),car_models(name),car_images(public_url,alt_text,is_primary,sort_order,color_id,car_colors(id,name_uz,name_ru,hex_code))").eq("is_active", true).eq("stock_status", "available").order("created_at", { ascending: false }).limit(limit); return { ...result, data: await this.enrichFinancing(result.data) }; }
   async getActiveBrands() { const client = createPublicServerClient(); const [brandsResult, modelsResult] = await Promise.all([client.from("brands").select("id,name,slug,logo_url").eq("is_active", true).order("name"), client.from("car_models").select("id,brand_id").eq("is_active", true)]); if (brandsResult.error) return brandsResult; if (modelsResult.error) return { ...brandsResult, data: brandsResult.data?.map((brand) => ({ ...brand, model_count: 0 })) ?? null }; const modelCounts = new Map<string, number>(); for (const model of modelsResult.data ?? []) if (model.brand_id) modelCounts.set(model.brand_id, (modelCounts.get(model.brand_id) ?? 0) + 1); return { ...brandsResult, data: brandsResult.data?.map((brand) => ({ ...brand, model_count: modelCounts.get(brand.id) ?? 0 })) ?? null }; }
