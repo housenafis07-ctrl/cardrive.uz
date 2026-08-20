@@ -5,7 +5,7 @@ import { catalogQuerySchema } from "@/features/catalog/catalog-query";
 export class CatalogService {
   constructor(private readonly repository = new CatalogRepository()) {}
   getCars(input: Record<string, string | string[] | undefined>) { return this.repository.getCars(catalogQuerySchema.parse(input)); }
-  getCarBySlug(slug: string) { return this.repository.getCarBySlug(slug); }
+  getCarBySlug(slug: string, withFinancing = true) { return this.repository.getCarBySlug(slug, withFinancing); }
   getCarVariants(modelId: string) { return this.repository.getCarVariants(modelId); }
   getFeaturedCars(limit = 12) { return this.repository.getFeaturedCars(limit); }
   getAvailableCars(limit = 12) { return this.repository.getAvailableCars(limit); }
