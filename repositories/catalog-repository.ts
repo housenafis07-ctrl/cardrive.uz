@@ -7,7 +7,8 @@ import { searchRelevance } from "@/features/catalog/search-utils";
 type SingleOrArray<T> = T | T[] | null;
 type BrandRelation = { name:string; slug?:string|null; logo_url?:string|null };
 type ModelRelation = { name:string; slug?:string|null; brands?:SingleOrArray<BrandRelation> };
-type CarRelations = { id:string; model_id:string; name:string; slug:string; price:number; currency:string; old_price?:number|null; year:number; stock_status:string; is_featured:boolean; description?:string|null; short_description?:string|null; body_type?:string|null; fuel_type?:string|null; transmission?:string|null; drive_type?:string|null; engine_volume?:number|string|null; engine_power?:number|string|null; range_km?:number|null; seats?:number|null; color?:string|null; brands?:SingleOrArray<BrandRelation>; car_models?:SingleOrArray<ModelRelation>; car_images?:unknown[]|null };
+type CarImage = { public_url:string|null; alt_text:string|null; is_primary:boolean; sort_order:number; color_id?:string|null; car_colors?:{id:string;name_uz:string;name_ru:string;hex_code:string}|{id:string;name_uz:string;name_ru:string;hex_code:string}[]|null };
+type CarRelations = { id:string; model_id:string; name:string; slug:string; price:number; currency:string; old_price?:number|null; year:number; stock_status:string; is_featured:boolean; description?:string|null; short_description?:string|null; body_type?:string|null; fuel_type?:string|null; transmission?:string|null; drive_type?:string|null; engine_volume?:number|string|null; engine_power?:number|string|null; range_km?:number|null; seats?:number|null; color?:string|null; brands?:SingleOrArray<BrandRelation>; car_models?:SingleOrArray<ModelRelation>; car_images?:CarImage[]|null };
 type FinancingType="credit"|"installment"|"credit_installment";
 export type FinancingSummary={financingType:FinancingType;monthlyPayment:number;downPaymentPercent:number;termMonths:number;providerName:string;interestRate:number}|null;
 export type CatalogVariant={id:string;name:string;slug:string;price:number;currency:string;old_price?:number|null;year:number;stock_status:string};
@@ -30,5 +31,5 @@ export class CatalogRepository{
  async getModelsByBrand(brandSlug?:string){let query=createPublicServerClient().from("car_models").select("id,name,slug,brand_id,brands!inner(slug)").eq("is_active",true).order("name");if(brandSlug)query=query.eq("brands.slug",brandSlug);return query}
  async getBodyTypes(){return createPublicServerClient().from("cars").select("body_type").eq("is_active",true).not("body_type","is",null)}
  async getHomeCategories(){return createPublicServerClient().from("car_categories").select("id,key,name_uz,name_ru,icon,sort_order").eq("is_active",true).order("sort_order")}
- async getHomeBanners(){return createPublicServerClient().from("home_banners").select("id,title_uz,title_ru,description_uz,description_ru,image_url,cta_uz,cta_ru,href,sort_order").eq("is_active",true).order("sort_order")}
+ async getHomeBanners(){return createPublicServerClient().from("home_banners").select("id,title_uz,title_ru,description_uz,description_ru,image_url,cta_uz,cta_ru,sort_order").eq("is_active",true).order("sort_order")}
 }
