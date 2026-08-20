@@ -7,7 +7,7 @@ import { searchRelevance } from "@/features/catalog/search-utils";
 type SingleOrArray<T> = T | T[] | null;
 type BrandRelation = { name:string; slug?:string|null; logo_url?:string|null };
 type ModelRelation = { name:string; slug?:string|null; brands?:SingleOrArray<BrandRelation> };
-type CarRelations = { id:string; model_id:string; name:string; slug:string; price:number; currency:string; old_price?:number|null; year:number; stock_status:string; is_featured:boolean; body_type?:string|null; fuel_type?:string|null; transmission?:string|null; drive_type?:string|null; engine_volume?:number|string|null; brands?:SingleOrArray<BrandRelation>; car_models?:SingleOrArray<ModelRelation>; car_images?:unknown[]|null };
+type CarRelations = { id:string; model_id:string; name:string; slug:string; price:number; currency:string; old_price?:number|null; year:number; stock_status:string; is_featured:boolean; description?:string|null; short_description?:string|null; body_type?:string|null; fuel_type?:string|null; transmission?:string|null; drive_type?:string|null; engine_volume?:number|string|null; engine_power?:number|string|null; range_km?:number|null; seats?:number|null; color?:string|null; brands?:SingleOrArray<BrandRelation>; car_models?:SingleOrArray<ModelRelation>; car_images?:unknown[]|null };
 type FinancingType="credit"|"installment"|"credit_installment";
 export type FinancingSummary={financingType:FinancingType;monthlyPayment:number;downPaymentPercent:number;termMonths:number;providerName:string;interestRate:number}|null;
 export type CatalogVariant={id:string;name:string;slug:string;price:number;currency:string;old_price?:number|null;year:number;stock_status:string};
