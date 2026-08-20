@@ -13,7 +13,7 @@ import { getLocale, t } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const result = await new CatalogService().getCarBySlug(slug);
+  const result = await new CatalogService().getCarBySlug(slug, false);
   const car = result.data;
   if (!car) return { title: "Avtomobil topilmadi | Cardrive.uz" };
   const brand = car.brands?.name ?? "";
@@ -26,7 +26,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
   const locale = await getLocale();
   const x = t(locale);
   const catalog = new CatalogService();
-  const result = await catalog.getCarBySlug(slug);
+  const result = await catalog.getCarBySlug(slug, false);
   if (!result.data) notFound();
   const car = result.data;
   const customer = await getCurrentCustomer();
