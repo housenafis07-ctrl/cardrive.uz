@@ -6,6 +6,7 @@ export class CatalogService {
   constructor(private readonly repository = new CatalogRepository()) {}
   getCars(input: Record<string, string | string[] | undefined>) { return this.repository.getCars(catalogQuerySchema.parse(input)); }
   getCarBySlug(slug: string) { return this.repository.getCarBySlug(slug); }
+  getCarVariants(modelId: string) { return this.repository.getCarVariants(modelId); }
   getFeaturedCars(limit = 12) { return this.repository.getFeaturedCars(limit); }
   getAvailableCars(limit = 12) { return this.repository.getAvailableCars(limit); }
   getActiveBrands() { return this.repository.getActiveBrands(); }
