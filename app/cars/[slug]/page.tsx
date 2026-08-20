@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!car) return { title: "Avtomobil topilmadi | Cardrive.uz" };
   const brand = car.brands?.name ?? "";
   const model = car.car_models?.name ?? "";
-  return { title: `${brand} ${model} — ${car.name} ${car.year} | Cardrive.uz`, description: car.short_description ?? `${brand} ${model} — ${car.name}, ${car.year}. ${formatPrice(car.price, car.currency)}.` };
+  return { title: `${brand} ${model} — ${car.name} ${car.year} | Cardrive.uz`, description: car.description ?? `${brand} ${model} — ${car.name}, ${car.year}. ${formatPrice(car.price, car.currency)}.` };
 }
 
 export default async function CarDetailPage({ params }: { params: Promise<{ slug: string }> }) {
