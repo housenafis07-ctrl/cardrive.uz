@@ -1,8 +1,8 @@
 import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
 
-const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description";
-const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
+const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description";
+const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
 const RULE_SELECT = "id,financing_program_id,down_payment_percent,term_months,annual_interest_rate,is_available,display_order";
 
 type ProgramLink = { dealer_id?: string; car_id?: string };
@@ -52,9 +52,6 @@ export class FinancingRepository {
       return {...program,min_term_months:minTerm,max_term_months:Math.max(minTerm,maxTerm),financing_program_rules:rules,_specificity:specificity,_applicable:applicable&&dealerApplicable};
     }).filter(program=>program._applicable);
 
-    // Prefer the most specific financing scope for the car. This prevents a generic
-    // program from overriding a dedicated BYD/model/car program while preserving
-    // multiple programs at the same specificity (e.g. several banks for one model).
     const highestSpecificity=enriched.reduce((max,program)=>Math.max(max,program._specificity),0);
     const data=enriched.filter(program=>program._specificity===highestSpecificity).map(({_specificity,_applicable,...program})=>program);
     return {...result,data};
