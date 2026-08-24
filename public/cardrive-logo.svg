@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" role="img" aria-labelledby="title desc">
+  <title id="title">Cardrive.uz</title>
+  <desc id="desc">Cardrive.uz — drive your way</desc>
+  <defs>
+    <linearGradient id="g" x1="80" y1="105" x2="680" y2="105" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0877F9"/>
+      <stop offset="1" stop-color="#14DDE2"/>
+    </linearGradient>
+    <linearGradient id="w" x1="275" y1="305" x2="610" y2="305" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0877F9"/>
+      <stop offset="1" stop-color="#14AEEA"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(255 18) scale(1.0)" fill="none" stroke="url(#g)" stroke-width="36" stroke-linecap="butt" stroke-linejoin="round">
+    <path d="M121 20H72C39 20 20 40 20 70s19 50 52 50h49"/>
+    <path d="M139 20h39c33 0 52 20 52 50s-19 50-52 50h-39"/>
+  </g>
+  <g transform="translate(255 18)" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M53 78c20-2 37-5 55-17 9-6 19-9 30-9 17 0 29 8 42 17 10 7 19 9 27 10"/>
+    <path d="M64 77c8-6 16-9 26-10l16-3 19 1c12 1 22 4 31 9"/>
+    <path d="M70 80h111"/>
+  </g>
+  <g transform="translate(255 18)" fill="url(#g)">
+    <circle cx="78" cy="91" r="11"/>
+    <circle cx="174" cy="91" r="11"/>
+  </g>
+  <text x="380" y="310" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" letter-spacing="-4">
+    <tspan fill="#111827">car</tspan><tspan fill="url(#w)">drive</tspan>
+  </text>
+  <text x="380" y="365" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="300" letter-spacing="14" fill="#1F2937">DRIVE YOUR WAY</text>
+</svg>
