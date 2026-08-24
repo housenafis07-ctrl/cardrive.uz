@@ -11,8 +11,13 @@ export type FinancingProgram = {
   financing_program_rules?: FinancingRule[];
 };
 const LABEL:Record<string,string>={credit:"Kredit",installment:"Bo'lib to'lash",promotional:"Aksiya"};
+function isZeroPercentProgram(program:FinancingProgram){
+ const rules=Array.isArray(program.financing_program_rules)?program.financing_program_rules.filter(r=>r.is_available!==false):[];
+ if(rules.length) return rules.every(r=>Number(r.annual_interest_rate)===0);
+ return Number(program.annual_interest_rate??0)===0;
+}
 export function FinancingOptions({carPrice,currency,programs,selectedProgramId=null,onSelectProgram,purchaseType="credit"}:{carPrice:number;currency:string;programs:FinancingProgram[];selectedProgramId?:string|null;onSelectProgram?:(id:string)=>void;purchaseType:"credit"|"installment"}){
- const visiblePrograms=programs.filter(program=>purchaseType==="installment"?(program.financing_type==="installment"||(program.financing_type==="credit"&&Number(program.annual_interest_rate??0)===0)):program.financing_type==="credit");
+ const visiblePrograms=programs.filter(program=>purchaseType==="installment"?(program.financing_type==="installment"||(program.financing_type==="credit"&&isZeroPercentProgram(program))):program.financing_type==="credit");
  if(!visiblePrograms.length)return <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-600">{purchaseType==="installment"?"Bu avtomobilni bo‘lib to‘lashga sotib olib bo‘lmaydi":"Kredit shartlari hozircha mavjud emas."}</div>;
  return <div className="space-y-4"><div><p className="text-lg font-black">Kredit va bo&apos;lib to&apos;lash variantlari</p><p className="mt-1 text-sm text-slate-500">Tanlangan avtomobil uchun faqat bank yoki diler belgilagan boshlang&apos;ich to&apos;lov va muddat kombinatsiyalari ko&apos;rsatiladi.</p></div>{visiblePrograms.map(program=><div key={program.id}><div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span>{LABEL[program.financing_type]??program.financing_type}</span></div><FinancingCalculator carPrice={carPrice} currency={currency} program={program} selected={selectedProgramId===program.id} selectable={true} onSelect={()=>onSelectProgram?.(program.id)}/></div>)}</div>;
 }
