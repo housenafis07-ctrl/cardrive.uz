@@ -55,7 +55,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
     [x.color, locale === "ru" ? localizedCar.color_name_ru ?? car.color : localizedCar.color_name_uz ?? car.color]
   ];
   const pageUrl = `https://cardrive.uz/cars/${slug}`;
-  const imageUrl = car.car_images?.[0]?.image_url ?? undefined;
+  const imageUrl = car.car_images?.[0]?.public_url ?? undefined;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
