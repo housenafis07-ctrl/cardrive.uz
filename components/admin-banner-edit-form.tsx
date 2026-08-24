@@ -52,8 +52,8 @@ export default function AdminBannerEditForm({ banner, action }: Props) {
         <label className="text-sm font-semibold">Yangi rasm<input name="image" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { setFile(e.target.files?.[0] || null); setProcessed(null); }} className="mt-1 w-full rounded-lg border p-2" /></label>
         <BannerImageEditor file={file} onReady={setProcessed} />
         {preview ? <img src={preview} alt="Banner" className="h-28 w-full rounded-lg object-cover" /> : null}
-        <label className="text-sm font-semibold">Tugma UZ<input name="ctaUz" defaultValue={banner.cta_uz || ""} className="mt-1 w-full rounded-lg border p-2" /></label>
-        <label className="text-sm font-semibold">Tugma RU<input name="ctaRu" defaultValue={banner.cta_ru || ""} className="mt-1 w-full rounded-lg border p-2" /></label>
+        <label className="text-sm font-semibold">Tugma UZ<input name="ctaUz" defaultValue={banner.cta_uz || ""} placeholder="Ixtiyoriy: bo‘sh qoldirilsa rasmning o‘zi bosiladi" className="mt-1 w-full rounded-lg border p-2" /></label>
+        <label className="text-sm font-semibold">Tugma RU<input name="ctaRu" defaultValue={banner.cta_ru || ""} placeholder="Ixtiyoriy: bo‘sh qoldirilsa rasmning o‘zi bosiladi" className="mt-1 w-full rounded-lg border p-2" /></label>
         <label className="text-sm font-semibold">Havola<input name="href" defaultValue={banner.href || ""} className="mt-1 w-full rounded-lg border p-2" /></label>
         <label className="text-sm font-semibold">Tartib<input name="sortOrder" type="number" defaultValue={banner.sort_order || 0} className="mt-1 w-full rounded-lg border p-2" /></label>
         <label className="flex gap-2 text-sm"><input type="checkbox" name="isActive" defaultChecked={banner.is_active ?? false} /> Faol</label>

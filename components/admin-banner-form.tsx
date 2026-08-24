@@ -46,8 +46,8 @@ export default function AdminBannerForm({ action: _action }: { action: (formData
     <label className="text-sm font-semibold">Banner rasmi<input name="image" type="file" accept="image/jpeg,image/png,image/webp" required onChange={onFileChange} className="mt-1 block w-full rounded-lg border p-3"/><span className="mt-1 block text-xs text-slate-500">JPG, PNG yoki WEBP · maksimal 10 MB · tavsiya: istalgan o‘lcham, tizim 1920×600 ga moslaydi</span></label>
     <BannerImageEditor file={file} onReady={setProcessedFile} />
     {preview ? <div className="overflow-hidden rounded-xl border bg-slate-50 p-2"><p className="mb-2 text-xs font-semibold text-slate-500">Yakuniy preview</p><img src={preview} alt="Banner preview" className="h-40 w-full rounded-lg object-cover"/></div> : null}
-    <label className="text-sm font-semibold">Tugma — UZ<input name="ctaUz" className="mt-1 w-full rounded-lg border p-3"/></label>
-    <label className="text-sm font-semibold">Tugma — RU<input name="ctaRu" className="mt-1 w-full rounded-lg border p-3"/></label>
+    <label className="text-sm font-semibold">Tugma — UZ<input name="ctaUz" className="mt-1 w-full rounded-lg border p-3" placeholder="Ixtiyoriy: bo‘sh qoldirilsa rasmning o‘zi bosiladi"/></label>
+    <label className="text-sm font-semibold">Tugma — RU<input name="ctaRu" className="mt-1 w-full rounded-lg border p-3" placeholder="Ixtiyoriy: bo‘sh qoldirilsa rasmning o‘zi bosiladi"/></label>
     <label className="text-sm font-semibold">Havola<input name="href" className="mt-1 w-full rounded-lg border p-3"/></label>
     <label className="text-sm font-semibold">Tartib<input name="sortOrder" type="number" defaultValue={0} className="mt-1 w-full rounded-lg border p-3"/></label>
     <label className="flex gap-2 text-sm font-semibold"><input type="checkbox" name="isActive" defaultChecked/>Faol</label>
