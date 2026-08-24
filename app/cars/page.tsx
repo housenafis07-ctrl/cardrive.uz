@@ -4,8 +4,29 @@ import { CarGrid, EmptyState } from "@/components/catalog-ui";
 import { FilterPanel, Pagination } from "@/components/catalog-controls";
 import { catalogQuerySchema } from "@/features/catalog/catalog-query";
 import { CatalogService } from "@/services/catalog-service";
-import { getLocale,t } from "@/lib/i18n";
-export const dynamic="force-dynamic"; export const revalidate=0;
-export const metadata:Metadata={title:"Avtomobillar | Cardrive.uz",description:"Yangi avtomobillar katalogi."};
-type CarGridProps=Parameters<typeof CarGrid>[0];
-export default async function CarsPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){const raw=await searchParams;const query=catalogQuerySchema.parse(raw);const locale=await getLocale();const x=t(locale);const service=new CatalogService();const [result,brands,bodies]=await Promise.all([service.getCars(raw),service.getActiveBrands(),service.getBodyTypes()]);const bodyTypes=[...new Set((bodies.data??[]).map(item=>item.body_type).filter((item):item is string=>Boolean(item)))].sort();const cars=(result.data??[]) as CarGridProps["cars"];return <><Header/><main className="mx-auto max-w-7xl px-5 py-10"><div className="mb-8"><p className="text-sm font-bold text-amber-600">{x.categories}</p><h1 className="mt-2 text-4xl font-black">{x.newCars}</h1><p className="mt-2 text-slate-600">{x.findCar}</p></div><div className="grid gap-8 lg:grid-cols-[280px_1fr]"><aside className="hidden lg:block"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></aside><div><details className="mb-5 lg:hidden"><summary className="cursor-pointer rounded-xl border bg-white px-4 py-3 font-bold">{x.filters}</summary><div className="mt-3"><FilterPanel query={query} brands={brands.data??[]} bodyTypes={bodyTypes}/></div></details><p className="mb-5 text-sm text-slate-600">{result.count??0} {x.found}</p>{result.error?<EmptyState title={locale==="ru"?"Не удалось загрузить каталог. Попробуйте позже.":"Katalogni yuklab bo‘lmadi. Keyinroq urinib ko‘ring."} action={locale==="ru"?"Обновить":"Yangilash"}/>:result.data?.length?<><CarGrid cars={cars}/><Pagination page={query.page} total={result.count??0}/></>:<EmptyState title={query.q?x.noSearch:x.noMatch}/>}</div></div></main><Footer/></>}
+import { getLocale, t } from "@/lib/i18n";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Yangi avtomobillar katalogi — narxlar va komplektatsiyalar",
+  description:
+    "O‘zbekistondagi yangi avtomobillar katalogi. Chevrolet, BYD, Kia va boshqa avtomobillarni narxi, komplektatsiyasi, dvigateli va texnik xususiyatlari bo‘yicha tanlang.",
+  alternates: { canonical: "/cars" },
+};
+
+type CarGridProps = Parameters<typeof CarGrid>[0];
+
+export default async function CarsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const raw = await searchParams;
+  const query = catalogQuerySchema.parse(raw);
+  const locale = await getLocale();
+  const x = t(locale);
+  const service = new CatalogService();
+  const [result, brands, bodies] = await Promise.all([service.getCars(raw), service.getActiveBrands(), service.getBodyTypes()]);
+  const bodyTypes = [...new Set((bodies.data ?? []).map(item => item.body_type).filter((item): item is string => Boolean(item)))].sort();
+  const cars = (result.data ?? []) as CarGridProps["cars"];
+
+  return <><Header /><main className="mx-auto max-w-7xl px-5 py-10"><div className="mb-8"><p className="text-sm font-bold text-amber-600">{x.categories}</p><h1 className="mt-2 text-4xl font-black">O‘zbekistondagi yangi avtomobillar katalogi</h1><p className="mt-2 text-slate-600">Avtomobillarni narxi, komplektatsiyasi va texnik xususiyatlari bo‘yicha tanlang.</p></div><div className="grid gap-8 lg:grid-cols-[280px_1fr]"><aside className="hidden lg:block"><FilterPanel query={query} brands={brands.data ?? []} bodyTypes={bodyTypes} /></aside><div><details className="mb-5 lg:hidden"><summary className="cursor-pointer rounded-xl border bg-white px-4 py-3 font-bold">{x.filters}</summary><div className="mt-3"><FilterPanel query={query} brands={brands.data ?? []} bodyTypes={bodyTypes} /></div></details><p className="mb-5 text-sm text-slate-600">{result.count ?? 0} {x.found}</p>{result.error ? <EmptyState title={locale === "ru" ? "Не удалось загрузить каталог. Попробуйте позже." : "Katalogni yuklab bo‘lmadi. Keyinroq urinib ko‘ring."} action={locale === "ru" ? "Обновить" : "Yangilash"} /> : result.data?.length ? <><CarGrid cars={cars} /><Pagination page={query.page} total={result.count ?? 0} /></> : <EmptyState title={query.q ? x.noSearch : x.noMatch} />}</div></div></main><Footer /></>;
+}
