@@ -20,7 +20,9 @@ export class OrderService {
       const applicable = await this.financing.getApplicableProgramsForCar(value.carId);
       const program = applicable.data?.find((item) => item.id === value.financingProgramId);
       if (!program || !program.is_active) throw new Error("Tanlangan kredit dasturi bu avtomobil uchun mavjud emas");
-      if (program.financing_type !== value.purchaseType) throw new Error("Tanlangan kredit dasturi to'lov turiga mos emas");
+      const isZeroPercentCreditForInstallment = value.purchaseType === "installment" && program.financing_type === "credit" && Number(program.annual_interest_rate ?? 0) === 0;
+      const isCompatible = program.financing_type === value.purchaseType || isZeroPercentCreditForInstallment;
+      if (!isCompatible) throw new Error("Tanlangan kredit dasturi to'lov turiga mos emas");
     }
     const duplicate = await this.orders.findRecentDuplicate(customerId, value.carId, value.purchaseType);
     if (duplicate.data) return duplicate;
