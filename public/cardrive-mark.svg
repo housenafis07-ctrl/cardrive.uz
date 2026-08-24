@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 140" role="img" aria-labelledby="title desc">
+  <title id="title">Cardrive</title>
+  <desc id="desc">Cardrive avtomobil belgisi</desc>
+  <defs>
+    <linearGradient id="g" x1="18" y1="70" x2="232" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0877F9"/>
+      <stop offset="1" stop-color="#14DDE2"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#g)" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round">
+    <path d="M121 20H72C39 20 20 40 20 70s19 50 52 50h49"/>
+    <path d="M139 20h39c33 0 52 20 52 50s-19 50-52 50h-39"/>
+  </g>
+  <g fill="none" stroke="url(#g)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M53 78c20-2 37-5 55-17 9-6 19-9 30-9 17 0 29 8 42 17 10 7 19 9 27 10"/>
+    <path d="M64 77c8-6 16-9 26-10l16-3 19 1c12 1 22 4 31 9"/>
+    <path d="M70 80h111"/>
+  </g>
+  <g fill="url(#g)">
+    <circle cx="78" cy="91" r="6"/>
+    <circle cx="174" cy="91" r="6"/>
+  </g>
+</svg>
