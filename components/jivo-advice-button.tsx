@@ -67,7 +67,7 @@ export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, finan
     <button
       type="button"
       onClick={openAdvice}
-      className="rounded-full border border-slate-300 px-5 py-3 font-bold transition hover:border-slate-950 hover:bg-slate-50"
+      className="self-start shrink-0 rounded-full border border-slate-300 px-5 py-3 font-bold transition hover:border-slate-950 hover:bg-slate-50"
     >
       Maslahat olish
     </button>
