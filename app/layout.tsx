@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getLocale } from "@/lib/i18n";
+import Script from "next/script";
 
 const siteUrl = "https://cardrive.uz";
 
@@ -94,6 +95,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
         {children}
+        <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
       </body>
     </html>
   );
