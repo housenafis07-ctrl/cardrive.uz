@@ -56,15 +56,15 @@ export default async function HomePage() {
         <section className="overflow-hidden bg-gradient-to-r from-sky-50 via-white to-emerald-50">
           <div className="mx-auto flex min-h-[360px] max-w-7xl items-center px-5 py-14 sm:min-h-[400px] lg:px-10">
             <div className="max-w-2xl">
-              <p className="text-sm font-black uppercase tracking-wide text-sky-700">YANGI VA ISHONCHLI</p>
+              <p className="text-sm font-black uppercase tracking-wide text-sky-700">{x.heroEyebrow}</p>
               <h1 className="mt-4 text-4xl font-black leading-[.98] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                O‘zbekistonda yangi avtomobillar katalogi — <span className="text-amber-600">Cardrive.uz</span>
+                {x.heroTitle} — <span className="text-amber-600">Cardrive.uz</span>
               </h1>
               <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-600">
-                Chevrolet, BYD, Kia va boshqa yangi avtomobillarni narxi, komplektatsiyasi va texnik xususiyatlari bilan tanlang.
+                {x.heroDescription}
               </p>
               <Link href="/cars" className="mt-7 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-slate-800">
-                Katalogni ko‘rish <span className="ml-3">→</span>
+                {x.catalog} <span className="ml-3">→</span>
               </Link>
             </div>
           </div>
