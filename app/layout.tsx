@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/i18n";
 
@@ -93,6 +94,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
+        <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
         {children}
       </body>
     </html>
