@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
-import { getLocale } from "@/lib/i18n";
+import { getLocale } from "@/lib/locale";
 
 const siteUrl = "https://cardrive.uz";
 

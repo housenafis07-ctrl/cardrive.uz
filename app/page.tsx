@@ -5,7 +5,8 @@ import { HomeBannerCarousel } from "@/components/home-banner-carousel";
 import { EmptyState } from "@/components/catalog-ui";
 import { CatalogService } from "@/services/catalog-service";
 import { createPublicServerClient } from "@/supabase/public-server";
-import { getLocale, t } from "@/lib/i18n";
+import { getLocale } from "@/lib/locale";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -60,9 +61,7 @@ export default async function HomePage() {
               <h1 className="mt-4 text-4xl font-black leading-[.98] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
                 {x.heroTitle} — <span className="text-amber-600">Cardrive.uz</span>
               </h1>
-              <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-600">
-                {x.heroDescription}
-              </p>
+              <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-600">{x.heroDescription}</p>
               <Link href="/cars" className="mt-7 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-slate-800">
                 {x.catalog} <span className="ml-3">→</span>
               </Link>
