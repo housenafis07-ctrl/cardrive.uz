@@ -14,6 +14,7 @@ type Props = {
   priceText: string;
   pageUrl: string;
   financing: FinancingSummary[];
+  locale?: "uz" | "ru";
 };
 
 declare global {
@@ -26,7 +27,8 @@ declare global {
   }
 }
 
-export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, financing }: Props) {
+export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, financing, locale = "uz" }: Props) {
+  const isRu = locale === "ru";
   const openAdvice = () => {
     const run = () => {
       const api = window.jivo_api;
@@ -36,20 +38,20 @@ export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, finan
         ? financing
             .slice(0, 6)
             .map((item) => {
-              const rate = item.interest !== null ? `${item.interest}%` : "individual";
-              const term = item.maxTerm ? `${item.maxTerm} oy` : "mavjud shartlar bo‘yicha";
-              const down = item.minDown !== null ? `${item.minDown}% dan` : "mavjud shartlar bo‘yicha";
-              return `${item.bankName} — ${item.programName} — ${rate} — ${term} — avans ${down}`;
+              const rate = item.interest !== null ? `${item.interest}%` : isRu ? "индивидуально" : "individual";
+              const term = item.maxTerm ? `${item.maxTerm} ${isRu ? "мес." : "oy"}` : isRu ? "по доступным условиям" : "mavjud shartlar bo‘yicha";
+              const down = item.minDown !== null ? `${item.minDown}% ${isRu ? "от" : "dan"}` : isRu ? "по доступным условиям" : "mavjud shartlar bo‘yicha";
+              return `${item.bankName} — ${item.programName} — ${rate} — ${term} — ${isRu ? "первоначальный взнос" : "avans"} ${down}`;
             })
             .join("\n")
-        : "Hozircha kredit/rassrochka ma’lumotlari mavjud emas.";
+        : isRu ? "Информация о кредите/рассрочке пока недоступна." : "Hozircha kredit/rassrochka ma’lumotlari mavjud emas.";
 
       api.sendPageTitle(`${brandName} ${carName} — Cardrive.uz`, true, pageUrl);
       api.setCustomData([
-        { title: "🚗 Avtomobil", key: "Model", content: `${brandName} ${carName}` },
-        { title: "💰 Narx", key: "Narxi", content: priceText },
-        { title: "💳 Moliyalashtirish", key: "Variantlar", content: financingText },
-        { title: "🔗 Sahifa", content: "Avtomobil sahifasini ochish", link: pageUrl },
+        { title: "🚗 " + (isRu ? "Автомобиль" : "Avtomobil"), key: "Model", content: `${brandName} ${carName}` },
+        { title: "💰 " + (isRu ? "Цена" : "Narx"), key: "Narxi", content: priceText },
+        { title: "💳 " + (isRu ? "Финансирование" : "Moliyalashtirish"), key: "Variantlar", content: financingText },
+        { title: "🔗 " + (isRu ? "Страница" : "Sahifa"), content: isRu ? "Открыть страницу автомобиля" : "Avtomobil sahifasini ochish", link: pageUrl },
       ]);
       api.open({ start: "chat" });
       return true;
@@ -69,7 +71,7 @@ export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, finan
       onClick={openAdvice}
       className="self-start shrink-0 rounded-full border border-slate-300 px-5 py-3 font-bold transition hover:border-slate-950 hover:bg-slate-50"
     >
-      Maslahat olish
+      {isRu ? "Получить консультацию" : "Maslahat olish"}
     </button>
   );
 }
