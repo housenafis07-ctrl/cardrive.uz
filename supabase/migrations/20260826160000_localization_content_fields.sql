@@ -1,0 +1,14 @@
+alter table public.banks add column if not exists name_uz text;
+alter table public.dealers add column if not exists name_uz text;
+alter table public.dealers add column if not exists name_ru text;
+alter table public.dealers add column if not exists region_uz text;
+alter table public.dealers add column if not exists region_ru text;
+alter table public.dealers add column if not exists description_uz text;
+alter table public.dealers add column if not exists description_ru text;
+alter table public.financing_programs add column if not exists name_uz text;
+alter table public.financing_programs add column if not exists description_ru text;
+alter table public.financing_programs add column if not exists eligibility_notes_ru text;
+alter table public.financing_programs add column if not exists insurance_type_ru text;
+update public.banks set name_uz=coalesce(name_uz,name) where name_uz is null;
+update public.dealers set name_uz=coalesce(name_uz,name),name_ru=coalesce(name_ru,name),region_uz=coalesce(region_uz,region),description_uz=coalesce(description_uz,description) where name_uz is null or name_ru is null or region_uz is null or description_uz is null;
+update public.financing_programs set name_uz=coalesce(name_uz,name) where name_uz is null;
