@@ -1,5 +1,6 @@
 "use client";
 import { FinancingCalculator } from "@/components/financing-calculator";
+import type { FormatterLocale } from "@/lib/formatters";
 
 type Bank = { id:string; name:string; code:string; logo_url:string|null; website_url:string|null; integration_status:string; display_order:number };
 export type FinancingRule = { id:string; down_payment_percent:number; term_months:number; annual_interest_rate:number; is_available:boolean; display_order:number };
@@ -10,14 +11,15 @@ export type FinancingProgram = {
   insurance_type:string|null; insurance_amount:number|null; insurance_percent:number|null; benefits_uz:string|null; benefits_ru:string|null; banks:Bank|null;
   financing_program_rules?: FinancingRule[];
 };
-const LABEL:Record<string,string>={credit:"Kredit",installment:"Bo'lib to'lash",promotional:"Aksiya"};
+const LABEL={uz:{credit:"Kredit",installment:"Bo‘lib to‘lash",promotional:"Aksiya",title:"Kredit va bo‘lib to‘lash variantlari",hint:"Tanlangan avtomobil uchun faqat bank yoki diler belgilagan boshlang‘ich to‘lov va muddat kombinatsiyalari ko‘rsatiladi.",unavailableInstallment:"Bu avtomobilni bo‘lib to‘lashga sotib olib bo‘lmaydi",unavailableCredit:"Kredit shartlari hozircha mavjud emas."},ru:{credit:"Кредит",installment:"Рассрочка",promotional:"Акция",title:"Варианты кредита и рассрочки",hint:"Для выбранного автомобиля отображаются только комбинации первоначального взноса и срока, установленные банком или дилером.",unavailableInstallment:"Этот автомобиль нельзя приобрести в рассрочку",unavailableCredit:"Условия кредита пока недоступны."}} as const;
 function isZeroPercentProgram(program:FinancingProgram){
  const rules=Array.isArray(program.financing_program_rules)?program.financing_program_rules.filter(r=>r.is_available!==false):[];
  if(rules.length) return rules.every(r=>Number(r.annual_interest_rate)===0);
  return Number(program.annual_interest_rate??0)===0;
 }
-export function FinancingOptions({carPrice,currency,programs,selectedProgramId=null,onSelectProgram,purchaseType="credit"}:{carPrice:number;currency:string;programs:FinancingProgram[];selectedProgramId?:string|null;onSelectProgram?:(id:string)=>void;purchaseType:"credit"|"installment"}){
+export function FinancingOptions({carPrice,currency,programs,selectedProgramId=null,onSelectProgram,purchaseType="credit",locale="uz"}:{carPrice:number;currency:string;programs:FinancingProgram[];selectedProgramId?:string|null;onSelectProgram?:(id:string)=>void;purchaseType:"credit"|"installment";locale?:FormatterLocale}){
+ const l=LABEL[locale];
  const visiblePrograms=programs.filter(program=>purchaseType==="installment"?(program.financing_type==="installment"||(program.financing_type==="credit"&&isZeroPercentProgram(program))):program.financing_type==="credit");
- if(!visiblePrograms.length)return <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-600">{purchaseType==="installment"?"Bu avtomobilni bo‘lib to‘lashga sotib olib bo‘lmaydi":"Kredit shartlari hozircha mavjud emas."}</div>;
- return <div className="space-y-4"><div><p className="text-lg font-black">Kredit va bo&apos;lib to&apos;lash variantlari</p><p className="mt-1 text-sm text-slate-500">Tanlangan avtomobil uchun faqat bank yoki diler belgilagan boshlang&apos;ich to&apos;lov va muddat kombinatsiyalari ko&apos;rsatiladi.</p></div>{visiblePrograms.map(program=><div key={program.id}><div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span>{LABEL[program.financing_type]??program.financing_type}</span></div><FinancingCalculator carPrice={carPrice} currency={currency} program={program} selected={selectedProgramId===program.id} selectable={true} onSelect={()=>onSelectProgram?.(program.id)}/></div>)}</div>;
+ if(!visiblePrograms.length)return <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-600">{purchaseType==="installment"?l.unavailableInstallment:l.unavailableCredit}</div>;
+ return <div className="space-y-4"><div><p className="text-lg font-black">{l.title}</p><p className="mt-1 text-sm text-slate-500">{l.hint}</p></div>{visiblePrograms.map(program=><div key={program.id}><div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span>{l[program.financing_type as keyof typeof l]??program.financing_type}</span></div><FinancingCalculator carPrice={carPrice} currency={currency} program={program} selected={selectedProgramId===program.id} selectable={true} onSelect={()=>onSelectProgram?.(program.id)} locale={locale}/></div>)}</div>;
 }
