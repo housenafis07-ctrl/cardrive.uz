@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { getLocale, t } from "@/lib/i18n";
+import { getLocale } from "@/lib/locale";
+import { t } from "@/lib/i18n";
 import { getCurrentCustomer } from "@/lib/customer-session";
 import { signOutCustomerAction } from "@/app/account/sign-out-action";
 
