@@ -2,11 +2,7 @@ import "server-only";
 import { createServiceRoleClient } from "@/supabase/server";
 import type { PurchaseType } from "@/types/domain";
 
-/**
- * Creates the immutable sales record for an order that has reached the
- * existing `completed` state. Existing order status flow is intentionally
- * left untouched.
- */
+/** Creates the sales record for an order already marked completed. */
 export class SalesCompletionService {
   async completeSale(orderId: string, actorId: string) {
     const client = createServiceRoleClient();
@@ -22,29 +18,34 @@ export class SalesCompletionService {
 
     const purchaseType = order.purchase_type as PurchaseType;
     const car = Array.isArray(order.cars) ? order.cars[0] : order.cars;
-    const dealer = car && Array.isArray(car.dealers) ? car.dealers[0] : car?.dealers;
+    const dealerRelation = car?.dealers;
+    const dealer = Array.isArray(dealerRelation) ? dealerRelation[0] : dealerRelation;
     const program = Array.isArray(order.financing_programs) ? order.financing_programs[0] : order.financing_programs;
-    const bank = program && Array.isArray(program.banks) ? program.banks[0] : program?.banks;
+    const bankRelation = program?.banks;
+    const bank = Array.isArray(bankRelation) ? bankRelation[0] : bankRelation;
 
-    const { data: existing } = await client.from("sales").select("id").eq("order_id", orderId).maybeSingle();
+    const { data: existing, error: existingError } = await client
+      .from("sales")
+      .select("id")
+      .eq("order_id", orderId)
+      .maybeSingle();
+    if (existingError) throw new Error("Sotuv yozuvini tekshirishda xatolik.");
     if (existing) return existing;
 
     const isCredit = purchaseType === "credit";
     const isInstallment = purchaseType === "installment";
-    const financedAmount = isCredit ? Number(order.total_amount) : 0;
-    const dealerFinancedAmount = isInstallment ? Number(order.total_amount) : 0;
 
     const { data, error } = await client.from("sales").insert({
       order_id: order.id,
       car_id: car?.id ?? null,
       dealer_id: dealer?.id ?? null,
       bank_id: isCredit ? bank?.id ?? null : null,
-      financing_program_id: (isCredit || isInstallment) ? program?.id ?? null : null,
-      purchase_type: purchaseType === "online" ? "cash" : purchaseType,
+      financing_program_id: isCredit || isInstallment ? program?.id ?? null : null,
+      purchase_type: purchaseType,
       sale_status: "confirmed",
       sale_price: Number(order.total_amount),
-      financed_amount: financedAmount,
-      dealer_financed_amount: dealerFinancedAmount,
+      financed_amount: isCredit ? Number(order.total_amount) : 0,
+      dealer_financed_amount: isInstallment ? Number(order.total_amount) : 0,
       bank_name_snapshot: bank?.name ?? null,
       financing_program_name_snapshot: program?.name ?? null,
       dealer_name_snapshot: dealer?.name ?? null,
