@@ -53,7 +53,7 @@ type CalculatorProgram = {
   interestRate: number;
   downPaymentPercent: number;
   termMonths: number;
-  currency?: string | null;
+  currency: string;
 };
 
 export const metadata: Metadata = {
@@ -97,7 +97,7 @@ export default async function CreditCalculatorPage({ searchParams }: { searchPar
       interestRate: Number(rule?.annual_interest_rate ?? program.annual_interest_rate ?? 0),
       downPaymentPercent: Number(rule?.down_payment_percent ?? program.min_down_payment_percent ?? 0),
       termMonths: Number(rule?.term_months ?? program.max_term_months ?? program.min_term_months ?? 0),
-      currency: program.currency,
+      currency: program.currency ?? "UZS",
     };
   });
   return <><Header /><main className="mx-auto max-w-7xl px-5 py-10"><div className="max-w-3xl"><p className="text-sm font-black uppercase tracking-wide text-amber-600">CARDRIVE.UZ</p><h1 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">{ru ? "Кредитный калькулятор автомобиля" : "Avtomobil krediti kalkulyatori"}</h1><p className="mt-4 text-lg leading-8 text-slate-600">{ru ? "Выберите марку, модель и модификацию. Система покажет только действующие банковские программы, доступные для выбранного автомобиля." : "Brend, model va modifikatsiyani tanlang. Tizim aynan shu avtomobil uchun faol va ruxsat etilgan bank kredit dasturlarini ko‘rsatadi."}</p></div><div className="mt-8"><CreditCalculatorSelector cars={cars} selectedCar={selectedCar} programs={programs} locale={locale} /></div></main><Footer /></>;
