@@ -1,0 +1,1 @@
+Manager edits are intentionally scoped to the order. Shared catalog, dealer, customer profile, bank and financing-program records remain unchanged, preventing a correction for one customer from changing other orders.
