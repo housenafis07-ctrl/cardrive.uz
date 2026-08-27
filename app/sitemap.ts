@@ -25,12 +25,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .range(from, from + BATCH_SIZE - 1);
-    if (error) throw new Error(`Failed to build sitemap: ${error.message}`);
+
+    // Sitemap should remain build-safe even when the database is temporarily
+    // unavailable (for example, CI uses placeholder Supabase credentials).
+    // Static public URLs above are still returned in that case.
+    if (error) break;
+
     for (const car of data ?? []) {
       if (!car.slug) continue;
-      urls.push({ url: `${baseUrl}/cars/${car.slug}`, lastModified: car.created_at ? new Date(car.created_at) : now, changeFrequency: "daily", priority: 0.8 });
+      urls.push({
+        url: `${baseUrl}/cars/${car.slug}`,
+        lastModified: car.created_at ? new Date(car.created_at) : now,
+        changeFrequency: "daily",
+        priority: 0.8,
+      });
     }
+
     if (!data || data.length < BATCH_SIZE) break;
   }
+
   return urls;
 }
