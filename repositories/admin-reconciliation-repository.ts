@@ -4,6 +4,15 @@ import { createServiceRoleClient } from "@/supabase/server";
 type Relation<T> = T | T[] | null;
 const first = <T>(v: Relation<T> | undefined): T | null => Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
 
+type ManagerOverrides = { finance?: { downPaymentPercent?: number; downPaymentAmount?: number; financedAmount?: number; interestRate?: number; termMonths?: number }; customer?: { fullName?: string; phone?: string }; car?: { color?: string } };
+type ReconciliationDbRow = {
+  id: string; order_number: string; created_at: string; status: string; purchase_type: string; total_amount: number | string | null; manager_overrides: ManagerOverrides | null;
+  profiles: Relation<{ full_name: string | null; phone: string | null }>;
+  cars: Relation<{ name: string | null; color: string | null; price: number | string | null; car_models: Relation<{ name: string | null }>; dealers: Relation<{ name: string | null }> }>;
+  financing_programs: Relation<{ name: string | null; down_payment_percent: number | string | null; term_months: number | string | null; interest_rate: number | string | null; banks: Relation<{ name: string | null }> }>;
+  credit_applications: Relation<{ status: string | null; created_at: string | null; oneid_consent_confirmed_at: string | null; submitted_at: string | null }>;
+};
+
 export type ReconciliationFilters = { dateFrom?: string; dateTo?: string; bank?: string; dealer?: string; program?: string; purchaseType?: string; status?: string };
 export type ReconciliationRow = {
   id:string; orderNumber:string; createdAt:string; customerName:string; phone:string; car:string; color:string; price:number;
@@ -16,7 +25,7 @@ export class AdminReconciliationRepository {
     const client = createServiceRoleClient();
     const r = await client.from("orders").select("id,order_number,created_at,status,purchase_type,total_amount,manager_overrides,profiles!orders_customer_id_fkey(full_name,phone),cars(name,color,price,car_models(name),dealers(name)),financing_programs(name,down_payment_percent,term_months,interest_rate,banks(name)),credit_applications(status,created_at,oneid_consent_confirmed_at,submitted_at)").order("created_at", { ascending:false });
     if (r.error) throw r.error;
-    const rows = (r.data ?? []) as any[];
+    const rows = (r.data ?? []) as ReconciliationDbRow[];
     const result: ReconciliationRow[] = [];
     for (const row of rows) {
       const p = first(row.financing_programs); const b = first(p?.banks); const car = first(row.cars); const model = first(car?.car_models); const dealer = first(car?.dealers); const profile = first(row.profiles); const app = first(row.credit_applications); const ov = row.manager_overrides ?? {};
