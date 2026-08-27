@@ -9,6 +9,7 @@ export class CatalogService {
   getCarVariants(modelId: string) { return this.repository.getCarVariants(modelId); }
   getFeaturedCars(limit = 12) { return this.repository.getFeaturedCars(limit); }
   getAvailableCars(limit = 12) { return this.repository.getAvailableCars(limit); }
+  getCalculatorCars() { return this.repository.getCalculatorCars(); }
   getActiveBrands() { return this.repository.getActiveBrands(); }
   getModelsByBrand(brand?: string) { return this.repository.getModelsByBrand(brand); }
   getBodyTypes() { return this.repository.getBodyTypes(); }

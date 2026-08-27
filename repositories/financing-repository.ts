@@ -12,6 +12,23 @@ export class FinancingRepository {
     return createPublicServerClient().from("banks").select(BANK_SELECT).eq("is_active", true).neq("integration_status", "disabled").order("display_order", { ascending: true }).order("name", { ascending: true });
   }
 
+  async getActiveProgramsWithCars() {
+    const client = createPublicServerClient();
+    const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true });
+    if (programsResult.error || !programsResult.data?.length) return programsResult;
+    const ids = programsResult.data.map((program) => program.id);
+    const linksResult = await client.from("financing_program_cars").select("financing_program_id,car_id").in("financing_program_id", ids);
+    if (linksResult.error) return { ...programsResult, data: null, error: linksResult.error };
+    const carIds = [...new Set((linksResult.data ?? []).map((link) => link.car_id))];
+    if (!carIds.length) return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: [] })) };
+    const carsResult = await client.from("cars").select("id,slug,name,name_uz,name_ru,price,currency,year,stock_status,is_active,brands(name,name_uz,name_ru,slug,logo_url),car_models(name,name_uz,name_ru,slug)").in("id", carIds).eq("is_active", true).order("name", { ascending: true });
+    if (carsResult.error) return { ...programsResult, data: null, error: carsResult.error };
+    const carsById = new Map((carsResult.data ?? []).map((car) => [car.id, car]));
+    const linksByProgram = new Map<string, string[]>();
+    for (const link of linksResult.data ?? []) linksByProgram.set(link.financing_program_id, [...(linksByProgram.get(link.financing_program_id) ?? []), link.car_id]);
+    return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: (linksByProgram.get(program.id) ?? []).map((id) => carsById.get(id)).filter(Boolean) })) };
+  }
+
   async getApplicableProgramsForCar(carId: string) {
     const client=createPublicServerClient();
     const carResult=await client.from("cars").select("id,brand_id,model_id,price,dealer_id").eq("id",carId).maybeSingle();
