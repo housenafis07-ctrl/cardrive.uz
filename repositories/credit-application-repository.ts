@@ -1,7 +1,7 @@
 import "server-only";
 import { createServiceRoleClient } from "@/supabase/server";
 
-type CreditApplicationRow={id:string;order_id:string;bank_id:string;financing_program_id:string|null;external_application_id:string|null;status:string;created_at:string;updated_at:string};
+type CreditApplicationRow={id:string;order_id:string;bank_id:string;financing_program_id:string|null;external_application_id:string|null;status:string;oneid_consent_confirmed:boolean;oneid_consent_confirmed_at:string|null;created_at:string;updated_at:string};
 type DbResponse<T>={data:T|null;error:unknown};
 const row=(data:unknown):CreditApplicationRow|null=>{if(!data||Array.isArray(data)||typeof data!=="object")return null;const value=data as Record<string,unknown>;if(typeof value.id!=="string"||typeof value.order_id!=="string"||typeof value.bank_id!=="string"||typeof value.status!=="string")return null;return value as unknown as CreditApplicationRow;};
 export class CreditApplicationRepository {
@@ -9,5 +9,5 @@ export class CreditApplicationRepository {
   async findById(applicationId:string):Promise<DbResponse<CreditApplicationRow>>{const result=await createServiceRoleClient().from("credit_applications").select("*").eq("id",applicationId).maybeSingle();return{data:row(result.data),error:result.error};}
   async updateStatus(applicationId:string,status:string):Promise<DbResponse<CreditApplicationRow>>{const result=await createServiceRoleClient().from("credit_applications").update({status}).eq("id",applicationId).select().single();return{data:row(result.data),error:result.error};}
   async markSubmitted(applicationId:string,externalApplicationId:string,status:string="submitted"):Promise<DbResponse<CreditApplicationRow>>{const result=await createServiceRoleClient().from("credit_applications").update({external_application_id:externalApplicationId,status}).eq("id",applicationId).select().single();return{data:row(result.data),error:result.error};}
-  async create(input:{orderId:string;bankId:string;financingProgramId:string;externalApplicationId?:string|null;status:string}):Promise<DbResponse<CreditApplicationRow>>{const result=await createServiceRoleClient().from("credit_applications").insert({order_id:input.orderId,bank_id:input.bankId,financing_program_id:input.financingProgramId,external_application_id:input.externalApplicationId??null,status:input.status}).select().single();return{data:row(result.data),error:result.error};}
+  async create(input:{orderId:string;bankId:string;financingProgramId:string;externalApplicationId?:string|null;status:string;oneidConsentConfirmed:boolean}):Promise<DbResponse<CreditApplicationRow>>{const result=await createServiceRoleClient().from("credit_applications").insert({order_id:input.orderId,bank_id:input.bankId,financing_program_id:input.financingProgramId,external_application_id:input.externalApplicationId??null,status:input.status,oneid_consent_confirmed:input.oneidConsentConfirmed,oneid_consent_confirmed_at:input.oneidConsentConfirmed?new Date().toISOString():null}).select().single();return{data:row(result.data),error:result.error};}
 }
