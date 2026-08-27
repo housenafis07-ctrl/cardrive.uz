@@ -1,1 +1,0 @@
-Order edits are scoped to the selected order and do not modify shared catalog, dealer, customer profile, bank, or financing-program records.
