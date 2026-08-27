@@ -1,0 +1,3 @@
+import { z } from "zod";
+import { idSchema } from "@/schemas/common";
+export const updateManagerOrderInputSchema=z.object({orderId:idSchema,fullName:z.string().trim().max(160).optional(),phone:z.string().trim().max(40).optional(),color:z.string().trim().max(80).optional(),downPaymentPercent:z.coerce.number().min(0).max(100).optional(),downPaymentAmount:z.coerce.number().min(0).optional(),financedAmount:z.coerce.number().min(0).optional(),interestRate:z.coerce.number().min(0).max(100).optional(),termMonths:z.coerce.number().int().min(1).max(120).optional(),notes:z.string().trim().max(2000).optional()});
