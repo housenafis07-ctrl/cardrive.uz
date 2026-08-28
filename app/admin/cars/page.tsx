@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AdminTable } from "@/components/admin-ui";
-import { createCarAction, deactivateAction } from "@/app/admin/actions";
+import { createCarAction, deactivateAction, setCarActiveAction } from "@/app/admin/actions";
 import { AdminCatalogService } from "@/services/admin-catalog-service";
 import { createServiceRoleClient } from "@/supabase/server";
 import { CarSpecsFields } from "@/components/car-specs-fields";
@@ -14,8 +14,13 @@ export default async function CarsPage({ searchParams }: { searchParams: Promise
   ]);
   return <div>
     <h1 className="text-3xl font-black">Avtomobillar va modifikatsiyalar</h1>
+    <form method="get" className="mt-6 flex gap-3 rounded-2xl border bg-white p-4 shadow-sm">
+      <input name="q" defaultValue={p.q ?? ""} placeholder="Brend, model yoki modifikatsiya bo‘yicha qidirish" className="min-w-0 flex-1 rounded-lg border p-2" />
+      <button className="rounded-lg bg-slate-950 px-5 py-2 font-bold text-white">Qidirish</button>
+      {p.q ? <Link href="/admin/cars" className="rounded-lg border px-5 py-2 font-bold">Tozalash</Link> : null}
+    </form>
     <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_420px]">
-      <section>{result.data?.length ? <AdminTable><thead className="border-b bg-slate-50"><tr><th className="p-3">Brend · Model · Modifikatsiya</th><th className="p-3">Narx</th><th className="p-3">Holat</th><th className="p-3" /></tr></thead><tbody>{result.data.map(car=><tr key={car.id} className="border-b last:border-0"><td className="p-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{car.brands?.name} · {car.car_models?.name}</p><p className="mt-1 font-semibold">{car.name}</p></td><td className="p-3">{car.price} {car.currency}</td><td className="p-3">{car.stock_status}</td><td className="p-3"><form action={deactivateAction}><input type="hidden" name="kind" value="cars"/><input type="hidden" name="id" value={car.id}/><div className="flex flex-wrap gap-3"><Link className="text-sm font-bold text-slate-900 underline" href={`/admin/cars/${car.id}/edit`}>Tahrirlash</Link><Link className="text-sm font-bold text-slate-900 underline" href={`/admin/cars/${car.id}/images`}>Rasmlar · ranglar</Link><button className="text-sm font-bold text-red-700">Faolsizlantirish</button></div></form></td></tr>)}</tbody></AdminTable> : <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Avtomobillar hali mavjud emas.</p>}</section>
+      <section>{result.data?.length ? <AdminTable><thead className="border-b bg-slate-50"><tr><th className="p-3">Brend · Model · Modifikatsiya</th><th className="p-3">Narx</th><th className="p-3">Holat</th><th className="p-3" /></tr></thead><tbody>{result.data.map(car=><tr key={car.id} className="border-b last:border-0"><td className="p-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{car.brands?.name} · {car.car_models?.name}</p><p className="mt-1 font-semibold">{car.name}</p></td><td className="p-3">{car.price} {car.currency}</td><td className="p-3">{car.stock_status} · {car.is_active ? "Faol" : "Faol emas"}</td><td className="p-3"><div className="flex flex-wrap gap-3"><Link className="text-sm font-bold text-slate-900 underline" href={`/admin/cars/${car.id}/edit`}>Tahrirlash</Link><Link className="text-sm font-bold text-slate-900 underline" href={`/admin/cars/${car.id}/images`}>Rasmlar · ranglar</Link><form action={setCarActiveAction}><input type="hidden" name="id" value={car.id}/><input type="hidden" name="active" value={String(!car.is_active)}/><button className="text-sm font-bold underline">{car.is_active ? "Faolsizlantirish" : "Faollashtirish"}</button></form></div></td></tr>)}</tbody></AdminTable> : <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Avtomobillar hali mavjud emas.</p>}</section>
       <section>
         {p.error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-bold">Modifikatsiya saqlanmadi.</p><p className="mt-1">{p.error}</p></div> : null}
         <form action={createCarAction} className="grid gap-4 rounded-2xl border bg-white p-5 shadow-sm sm:grid-cols-2">
