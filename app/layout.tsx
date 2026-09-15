@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/locale";
+import { PwaRegister } from "./pwa-register";
 
 const siteUrl = "https://cardrive.uz";
 
@@ -41,6 +42,19 @@ export const metadata: Metadata = {
     "Kia",
   ],
   alternates: { canonical: "/" },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Cardrive",
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     type: "website",
     url: siteUrl,
@@ -68,6 +82,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0EA5FF",
+};
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
   const organization = {
@@ -75,7 +96,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     "@type": "Organization",
     name: "Cardrive.uz",
     url: siteUrl,
-    logo: `${siteUrl}/icon.png`,
+    logo: `${siteUrl}/icons/icon-512.png`,
   };
   const website = {
     "@context": "https://schema.org",
@@ -94,6 +115,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
+        <PwaRegister />
         <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
         {children}
       </body>
