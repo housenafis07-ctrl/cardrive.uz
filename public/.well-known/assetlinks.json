@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "uz.cardrive.twa",
+      "sha256_cert_fingerprints": [
+        "05:52:17:13:DC:5F:16:D5:E6:38:F0:6E:45:25:92:B0:14:99:16:6D:8D:71:60:4F:7D:EA:92:87:8E:2B:9F:40"
+      ]
+    }
+  }
+]
