@@ -116,15 +116,23 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
         <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
-        <Script id="cardrive-pwa-register" strategy="afterInteractive">
-          {`
-            if ("serviceWorker" in navigator) {
-              window.addEventListener("load", function () {
-                navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
-              });
-            }
-          `}
-        </Script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                if (!('serviceWorker' in navigator)) return;
+                function registerCardriveServiceWorker() {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                }
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', registerCardriveServiceWorker, { once: true });
+                } else {
+                  registerCardriveServiceWorker();
+                }
+              })();
+            `,
+          }}
+        />
         {children}
       </body>
     </html>
