@@ -121,9 +121,31 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             __html: `
               (function () {
                 if (!('serviceWorker' in navigator)) return;
+
+                var hadController = !!navigator.serviceWorker.controller;
+                var reloading = false;
+
                 function registerCardriveServiceWorker() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                  navigator.serviceWorker
+                    .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+                    .then(function (registration) {
+                      registration.update().catch(function () {});
+
+                      document.addEventListener('visibilitychange', function () {
+                        if (document.visibilityState === 'visible') {
+                          registration.update().catch(function () {});
+                        }
+                      });
+                    })
+                    .catch(function () {});
                 }
+
+                navigator.serviceWorker.addEventListener('controllerchange', function () {
+                  if (!hadController || reloading) return;
+                  reloading = true;
+                  window.location.reload();
+                });
+
                 if (document.readyState === 'loading') {
                   document.addEventListener('DOMContentLoaded', registerCardriveServiceWorker, { once: true });
                 } else {
