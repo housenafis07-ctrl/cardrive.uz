@@ -1,9 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/locale";
 
 const siteUrl = "https://cardrive.uz";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0877F9",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -14,6 +21,19 @@ export const metadata: Metadata = {
   description:
     "Cardrive.uz — O‘zbekistonda yangi avtomobil sotib olish uchun onlayn katalog. Chevrolet, BYD, Kia va boshqa avtomobillar narxi, komplektatsiyasi, avtokredit, rassrochka va moliyalashtirish takliflarini solishtiring.",
   applicationName: "Cardrive.uz",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/cardrive-app-icon.svg", type: "image/svg+xml" },
+      { url: "/cardrive-mark.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/cardrive-app-icon.svg" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Cardrive",
+    statusBarStyle: "black-translucent",
+  },
   keywords: [
     "Cardrive",
     "cardrive.uz",
@@ -75,7 +95,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     "@type": "Organization",
     name: "Cardrive.uz",
     url: siteUrl,
-    logo: `${siteUrl}/icon.png`,
+    logo: `${siteUrl}/cardrive-app-icon.svg`,
   };
   const website = {
     "@context": "https://schema.org",
@@ -95,6 +115,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
         <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
+        <Script id="cardrive-pwa-register" strategy="afterInteractive">
+          {`
+            if ("serviceWorker" in navigator) {
+              window.addEventListener("load", function () {
+                navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
+              });
+            }
+          `}
+        </Script>
         {children}
       </body>
     </html>
