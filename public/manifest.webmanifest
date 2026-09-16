@@ -1,0 +1,36 @@
+{
+  "name": "Cardrive.uz",
+  "short_name": "Cardrive",
+  "description": "Cardrive.uz — O‘zbekistonda yangi avtomobillar, avtokredit va rassrochka uchun onlayn platforma.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#03050f",
+  "theme_color": "#0877F9",
+  "lang": "uz-UZ",
+  "dir": "ltr",
+  "categories": ["shopping", "business", "automotive"],
+  "icons": [
+    {
+      "src": "/cardrive-app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/cardrive-app-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/cardrive-app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
