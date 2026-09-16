@@ -1,4 +1,4 @@
-const CACHE_NAME = "cardrive-static-v1";
+const CACHE_NAME = "cardrive-static-v2";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -40,7 +40,15 @@ function isCacheableAsset(request, url) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        APP_SHELL.map((url) =>
+          cache.add(url).catch(() => {
+            // A single unavailable shell asset must not make the service worker install fail.
+          })
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
