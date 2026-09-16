@@ -2,6 +2,10 @@ const CACHE_NAME = "cardrive-static-v1";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.svg",
+  "/apple-touch-icon.png",
   "/cardrive-app-icon.svg",
   "/cardrive-mark.svg",
 ];
@@ -24,6 +28,10 @@ function isCacheableAsset(request, url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname === "/manifest.webmanifest" ||
+    url.pathname === "/icon-192.png" ||
+    url.pathname === "/icon-512.png" ||
+    url.pathname === "/icon-maskable-512.svg" ||
+    url.pathname === "/apple-touch-icon.png" ||
     url.pathname === "/cardrive-app-icon.svg" ||
     url.pathname === "/cardrive-mark.svg" ||
     url.pathname === "/cardrive-logo.svg"
