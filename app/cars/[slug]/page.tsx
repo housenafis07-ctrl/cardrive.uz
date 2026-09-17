@@ -13,6 +13,9 @@ import { getCurrentCustomer } from "@/lib/customer-session";
 import { getLocale } from "@/lib/locale";
 import { t } from "@/lib/i18n";
 
+const specLabels={uz:{body:{sedan:"Sedan",suv:"SUV",hatchback:"Xetchbek",crossover:"Krossover",universal:"Universal",minivan:"Miniven",coupe:"Kupe",pickup:"Pikap"},fuel:{petrol:"Benzin",gasoline:"Benzin",benzin:"Benzin",diesel:"Dizel",electric:"Elektr",hybrid:"Gibrid"},transmission:{manual:"Mexanika",mechanic:"Mexanika",mexanika:"Mexanika",automatic:"Avtomat",avtomat:"Avtomat",cvt:"CVT"},drive:{fwd:"Old yuritma",front:"Old yuritma",rwd:"Orqa yuritma",rear:"Orqa yuritma",awd:"To‘liq yuritma",4wd:"To‘liq yuritma",4x4:"To‘liq yuritma"}},ru:{body:{sedan:"Седан",suv:"SUV",hatchback:"Хэтчбек",crossover:"Кроссовер",universal:"Универсал",minivan:"Минивэн",coupe:"Купе",pickup:"Пикап"},fuel:{petrol:"Бензин",gasoline:"Бензин",benzin:"Бензин",diesel:"Дизель",electric:"Электро",hybrid:"Гибрид"},transmission:{manual:"Механика",mechanic:"Механика",mexanika:"Механика",automatic:"Автомат",avtomat:"Автомат",cvt:"CVT"},drive:{fwd:"Передний привод",front:"Передний привод",rwd:"Задний привод",rear:"Задний привод",awd:"Полный привод",4wd:"Полный привод",4x4:"Полный привод"}}} as const;
+function localSpec(group:keyof typeof specLabels.uz,value:string|null|undefined,locale:"uz"|"ru"){if(!value)return null;return specLabels[locale][group][value.trim().toLowerCase() as keyof typeof specLabels.uz[typeof group]]??value}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const result = await new CatalogService().getCarBySlug(slug, false);
@@ -43,7 +46,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ slug
   const engineVolume = car.engine_volume !== null && car.engine_volume !== undefined && car.engine_volume !== "" ? `${car.engine_volume} L` : null;
   const engineLabel = engineVolume && car.engine_type ? `${engineVolume} ${car.engine_type}` : engineVolume;
   const specs = [
-    [x.body, car.body_type], [x.fuel, car.fuel_type], [x.transmission, car.transmission], [x.drive, car.drive_type], [x.engine, engineLabel],
+    [x.body, localSpec("body",car.body_type,locale)], [x.fuel, localSpec("fuel",car.fuel_type,locale)], [x.transmission, localSpec("transmission",car.transmission,locale)], [x.drive, localSpec("drive",car.drive_type,locale)], [x.engine, engineLabel],
     [x.power, car.engine_power ? `${car.engine_power} ${locale === "ru" ? "л.с." : "ot kuchi"}` : null],
     [x.battery, car.battery_capacity_kwh !== null && car.battery_capacity_kwh !== undefined ? `${car.battery_capacity_kwh} kWh` : null],
     [x.electricRange, car.range_km ? `${car.range_km} km` : null], [x.zeroToHundred, car.acceleration_0_100_sec ? `${car.acceleration_0_100_sec} s` : null],
