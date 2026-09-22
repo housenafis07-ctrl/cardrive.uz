@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { getCurrentCustomer } from "@/lib/customer-session";
 import { getLocale } from "@/lib/locale";
 import { signOutCustomerAction } from "@/app/account/sign-out-action";
 
 function Icon({ name }: { name: string }) {
   const common = "h-7 w-7";
-  const paths: Record<string, React.ReactNode> = {
+  const paths: Record<string, ReactNode> = {
     heart: <path d="M20.8 8.7c0 5.5-8.8 10.2-8.8 10.2S3.2 14.2 3.2 8.7A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.5Z" />,
     bell: <><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
     chat: <><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-4 2v-4.5A7.5 7.5 0 1 1 20 11.5Z" /><path d="M8 11h8M8 14h5" /></>,
