@@ -44,3 +44,10 @@ Important limitations:
 - Run `preflight` first. Only after it passes and the three secrets are configured, manually run `backup`.
 - Confirm the artifact exists, decrypts, and contains SQL files, Auth metadata, and the Storage manifest.
 - Perform a restore drill to a separate isolated project before relying on this backup for disaster recovery.
+
+
+## Latest execution status — 2026-11-17
+
+The secrets-free preflight passed. The approved one-time backup execution was started from the PR branch but stopped before connecting to Supabase because the runner received empty values for all three required repository Actions secrets: SUPABASE_DB_URL, SUPABASE_SERVICE_ROLE_KEY, and BACKUP_ENCRYPTION_PASSPHRASE. No database dump, Auth export, Storage download, or backup artifact was produced. Add the exact names under Repository Settings → Secrets and variables → Actions → Repository secrets (not chat, not a client-side env file), then run the backup mode again. The workflow logs do not expose secret values.
+
+The repository is public, so keep the archive encrypted before upload and store the passphrase separately in an offline password manager. Never place the passphrase in the repository or in the artifact.
