@@ -64,7 +64,7 @@ export async function verifyCustomerOtpAction(
       }
 
       const customer = await getCurrentCustomer();
-      if (customer) {
+      if (customer?.phone === phone.trim()) {
         return { status: "verified" };
       }
 
@@ -97,7 +97,7 @@ export async function verifyCustomerOtpAction(
 
     const verifiedOtp = await new OtpService(new SmsService(smsProvider)).verifyOtp({ phone, code, purpose });
     const customer = await getCurrentCustomer();
-    if (customer) return { status: "verified" };
+    if (customer?.phone === verifiedOtp.phone) return { status: "verified" };
 
     const check = await import("@/supabase/server").then(({ createServiceRoleClient }) =>
       createServiceRoleClient()
