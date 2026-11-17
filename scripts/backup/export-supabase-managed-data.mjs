@@ -50,10 +50,10 @@ async function exportAuthUsers() {
   console.log(`Exported ${users.length} Auth user records (metadata only; no password hashes/sessions).`);
 }
 
-async function listAll(pathPrefix = "") {
+async function listAll(bucketName, pathPrefix = "") {
   const all = [];
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase.storage.from("car-images").list(pathPrefix, {
+    const { data, error } = await supabase.storage.from(bucketName).list(pathPrefix, {
       limit: 1000,
       offset,
       sortBy: { column: "name", order: "asc" },
@@ -70,41 +70,39 @@ async function exportStorage() {
   if (bucketError) throw new Error(`Storage bucket export failed: ${bucketError.message}`);
 
   await writeJson("storage/buckets.json", buckets);
-  const bucket = buckets.find((item) => item.name === "car-images");
-  if (!bucket) {
-    console.log("Bucket car-images not found; no Storage files to export.");
-    return;
-  }
 
-  let downloaded = 0;
-  async function walk(folder = "") {
-    const entries = await listAll(folder);
-    for (const entry of entries) {
-      const objectPath = folder ? `${folder}/${entry.name}` : entry.name;
-      if (entry.id == null) {
-        await walk(objectPath);
-        continue;
+  for (const bucket of buckets) {
+    let downloaded = 0;
+
+    async function walk(folder = "") {
+      const entries = await listAll(bucket.name, folder);
+      for (const entry of entries) {
+        const objectPath = folder ? `${folder}/${entry.name}` : entry.name;
+        if (entry.id == null) {
+          await walk(objectPath);
+          continue;
+        }
+
+        const { data, error } = await supabase.storage.from(bucket.name).download(objectPath);
+        if (error) throw new Error(`Storage download failed for ${bucket.name}/${objectPath}: ${error.message}`);
+
+        const relativePath = path.posix.join("storage", bucket.name, objectPath);
+        const destination = safeDestination(relativePath);
+        await mkdir(path.dirname(destination), { recursive: true });
+        await writeFile(destination, Buffer.from(await data.arrayBuffer()), { mode: 0o600 });
+        downloaded += 1;
       }
-
-      const { data, error } = await supabase.storage.from("car-images").download(objectPath);
-      if (error) throw new Error(`Storage download failed for ${objectPath}: ${error.message}`);
-
-      const relativePath = path.posix.join("storage", "car-images", objectPath);
-      const destination = safeDestination(relativePath);
-      await mkdir(path.dirname(destination), { recursive: true });
-      await writeFile(destination, Buffer.from(await data.arrayBuffer()), { mode: 0o600 });
-      downloaded += 1;
     }
-  }
 
-  await walk();
-  await writeJson("storage/manifest.json", {
-    bucket: "car-images",
-    exportedAt: new Date().toISOString(),
-    objectCount: downloaded,
-    public: bucket.public,
-  });
-  console.log(`Downloaded ${downloaded} objects from car-images.`);
+    await walk();
+    await writeJson(`storage/manifests/${bucket.name}.json`, {
+      bucket: bucket.name,
+      exportedAt: new Date().toISOString(),
+      objectCount: downloaded,
+      public: bucket.public,
+    });
+    console.log(`Downloaded ${downloaded} objects from storage bucket ${bucket.name}.`);
+  }
 }
 
 await mkdir(root, { recursive: true, mode: 0o700 });
