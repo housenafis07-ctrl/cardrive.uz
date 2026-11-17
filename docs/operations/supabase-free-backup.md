@@ -12,7 +12,7 @@ Add these repository Actions secrets before enabling the workflow:
 
 Workflow: `.github/workflows/supabase-free-backup.yml`
 
-Runs daily at 02:00 UTC and on manual dispatch. The encrypted archive is retained as a private GitHub Actions artifact for 14 days. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
+Runs daily at 02:00 UTC and on manual dispatch. The encrypted archive is retained as a private GitHub Actions artifact for 7 days. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
 
 ## Backup contents and limitations
 
