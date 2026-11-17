@@ -1,18 +1,24 @@
 import "server-only";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 
 const OTP_HASH_ALGORITHM = "sha256";
+
+function otpPepper(): string {
+  const value = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!value) throw new Error("OTP hashing secret is not configured");
+  return value;
+}
 
 function normalizeOtpCode(code: string): string {
   return code.trim();
 }
 
 export function generateOtpCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1_000_000));
 }
 
 export function hashOtpCode(code: string): string {
-  return createHash(OTP_HASH_ALGORITHM).update(normalizeOtpCode(code), "utf8").digest("hex");
+  return createHmac(OTP_HASH_ALGORITHM, otpPepper()).update(normalizeOtpCode(code), "utf8").digest("hex");
 }
 
 export function verifyOtpCode(code: string, expectedHash: string): boolean {
