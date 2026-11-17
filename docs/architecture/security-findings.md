@@ -9,14 +9,14 @@ Audit scope: current GitHub `main`, Supabase project `cardrive`, and Supabase Se
 - `lib/otp-hash.ts` generates six-digit codes with `Math.random()`; use a cryptographically secure generator.
 - OTP hashes are plain SHA-256 of a six-digit code. A database-only compromise permits trivial offline brute force; use a server-side HMAC pepper.
 - `createCustomerProfileAction(phone, fullName)` currently calls `createCustomerProfile` without requiring evidence that the phone's OTP was verified. A caller can invoke the Server Action directly and attempt to create/update a profile for a phone number without completing the UI OTP step.
-- Existing OTP records track expiry and attempt count, but the repository does not currently implement a one-time consumed state for registration proof.
+- Existing OTP records track expiry and attempt count. The branch adds a one-time consumed state, a database expiry check at consumption, atomic attempt increments, and an attempt-ceiling condition on the successful verification update.
 - The customer cookie is an HMAC-signed phone value with a 30-day browser lifetime. It has no signed issued-at/expiry claim and no server-side session revocation identifier. Treat this as a separate session-hardening task; do not change the cookie format without a migration/compatibility plan.
 
 ### Database security advisor
 
 Observed findings:
 
-- RLS is enabled but there are no policies on `public.audit_logs`, `public.otp_verifications`, and `public.promo_codes`.
+- RLS is enabled but there are no policies on `public.audit_logs`, `public.otp_verifications`, and `public.promo_codes`. A read-only grant audit additionally confirmed that `anon`/`authenticated` still hold broad table privileges on `audit_logs` and `otp_verifications` despite the lack of policies; the pending migration revokes those grants.
 - `public.set_updated_at()` has no fixed `search_path`.
 - `public.redeem_promo_code(text)` is `SECURITY DEFINER` and executable by `anon` and `authenticated`.
 - `public.sync_all_car_category_items()`, `public.sync_car_category_items(uuid)`, and `public.sync_car_category_items_trigger()` are `SECURITY DEFINER` and executable by `anon` and `authenticated`.
@@ -34,7 +34,8 @@ Observed findings:
 7. Pin `search_path` for every SECURITY DEFINER function and schema-qualify referenced objects.
 8. Review promo-code RPC callers, then restrict it to the intended server-side role or implement an authenticated, rate-limited redemption API.
 9. Add tests for OTP replay, OTP expiry, wrong phone, wrong purpose, direct Server Action invocation, attempt exhaustion and concurrent proof consumption.
-10. Run Supabase Security Advisor after the migration and confirm that no new public execution or RLS gaps remain.
+10. Add a server-side rate limit for OTP issuance by normalized phone and a trusted network identity; the current 60-second resend cooldown alone is not a sustained rate limit.
+11. Run Supabase Security Advisor after the migration and confirm that no new public execution or RLS gaps remain.
 
 ## Session hardening follow-up
 
