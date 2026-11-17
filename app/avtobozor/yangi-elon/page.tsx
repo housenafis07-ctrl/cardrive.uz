@@ -17,7 +17,7 @@ export default async function NewUsedCarListingPage({ searchParams }: { searchPa
     <h1 className="mt-3 text-3xl font-black">{ru ? "Разместить объявление" : "Avtomobil e'lonini joylashtirish"}</h1>
     <p className="mt-2 text-slate-600">{ru ? "Заполните данные автомобиля. После проверки модератором объявление появится в каталоге." : "Avtomobil ma'lumotlarini kiriting. Moderator tekshiruvidan so'ng e'lon Avtobozorda ko'rinadi."}</p>
     {!customer ? <div className="mt-6 rounded-2xl border p-5"><AccountLoginGate locale={locale} /></div> : <>
-      {params.error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{decodeURIComponent(params.error)}</p> : null}
+      {params.error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{params.error}</p> : null}
       <form action={createUsedCarListingAction} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
         <label className="text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 w-full rounded-xl border p-3" /></label>
