@@ -18,10 +18,8 @@ This is a logical export workaround, not equivalent to Supabase-managed physical
 
 Observed configuration:
 
-- `.nvmrc` = Node 22.
-- GitHub Actions CI uses Node 22 and `npm install`.
-- Vercel project runtime = Node 24.x.
-- The repository has no package-lock file in the inspected root tree.
+- `.nvmrc` and GitHub Actions CI have been aligned to Node 24, matching the observed Vercel project runtime.
+- CI currently uses `npm install`; the repository has no committed root `package-lock.json` in the inspected branch, so deterministic `npm ci` is not yet available.
 
 Remediation:
 - Align `.nvmrc`, CI and Vercel to Node 24 (the current Vercel project runtime).
