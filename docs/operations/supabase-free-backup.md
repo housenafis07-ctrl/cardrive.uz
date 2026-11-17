@@ -12,7 +12,7 @@ Add these repository Actions secrets before enabling the workflow:
 
 Workflow: `.github/workflows/supabase-free-backup.yml`
 
-Runs daily at 02:00 UTC and on manual dispatch. The encrypted archive is retained as a private GitHub Actions artifact for 7 days. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
+Runs daily at 02:00 UTC and on manual dispatch. The encrypted archive is retained as a GitHub Actions artifact for 7 days. Important: the Cardrive GitHub repository is currently public, so treat workflow artifacts as potentially downloadable by anyone with repository read access. The archive must be encrypted before upload, and the encryption passphrase must have high entropy (at least 32 cryptographically random bytes) and never be committed or placed in the same artifact. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
 
 ## Backup contents and limitations
 
@@ -26,7 +26,7 @@ Important limitations:
 - The CLI dump excludes Supabase-managed `auth` and `storage` schemas. The Auth export is an identity/metadata inventory only; it does not export password hashes, active sessions, MFA secrets, provider credentials, or all Auth service configuration. Users may need to reauthenticate or reset passwords after a recovery.
 - Storage objects are downloaded separately. Review `storage/manifest.json` after a run and compare object count with the live bucket.
 - Supabase Edge Functions, Auth provider settings, SMTP settings, secrets, API keys, DNS/custom domains, and Vercel environment variables are not included. Keep a separate secure inventory of configuration, never plaintext secrets in Git.
-- GitHub Actions artifacts are a short-retention recovery copy, not a substitute for independent long-term object storage or Supabase-managed physical backups. For stronger resilience, periodically copy the encrypted archive to an independently controlled storage provider.
+- GitHub Actions artifacts are a short-retention recovery copy, not a substitute for independent long-term object storage or Supabase-managed physical backups. Because the repository is public, encryption is mandatory and artifact confidentiality must not rely on GitHub repository visibility. For stronger resilience, periodically copy the encrypted archive to an independently controlled storage provider.
 
 ## Restore outline
 
