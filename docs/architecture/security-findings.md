@@ -34,7 +34,7 @@ Observed findings:
 7. Pin `search_path` for every SECURITY DEFINER function and schema-qualify referenced objects.
 8. Review promo-code RPC callers, then restrict it to the intended server-side role or implement an authenticated, rate-limited redemption API.
 9. Add tests for OTP replay, OTP expiry, wrong phone, wrong purpose, direct Server Action invocation, attempt exhaustion and concurrent proof consumption.
-10. Add a server-side rate limit for OTP issuance by normalized phone and a trusted network identity; the current 60-second resend cooldown alone is not a sustained rate limit.
+10. The PR adds an atomic database-backed issuance cap of 5 OTP requests per phone/purpose per rolling hour, with a 60-second minimum interval. This is a per-phone control; trusted-IP/device-level throttling remains a follow-up because the current action boundary does not yet establish a trusted client IP.
 11. Run Supabase Security Advisor after the migration and confirm that no new public execution or RLS gaps remain.
 
 ## Session hardening follow-up
