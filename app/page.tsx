@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header, Footer } from "@/components/site-chrome";
+import { MarketplaceEntryCards } from "@/components/marketplace-entry-cards";
 import { HomeCarCarousel } from "@/components/home-car-carousel";
 import { HomeBannerCarousel } from "@/components/home-banner-carousel";
 import { EmptyState } from "@/components/catalog-ui";
@@ -12,9 +13,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Cardrive.uz — Yangi avtomobillar katalogi",
+  title: "Cardrive.uz — Yangi avtomobillar va Avtobozor",
   description:
-    "Cardrive.uz — O‘zbekistonda yangi avtomobillarni tanlash uchun zamonaviy katalog. Chevrolet, BYD, Kia va boshqa avtomobillar narxi, komplektatsiyasi va texnik xususiyatlari.",
+    "Cardrive.uz — O‘zbekistonda yangi avtomobillar katalogi va Avtobozor. Avtomobil sotib oling yoki o‘z e’loningizni joylashtiring.",
   alternates: { canonical: "/" },
 };
 
@@ -41,7 +42,7 @@ export default async function HomePage() {
     "@type": "WebSite",
     name: "Cardrive.uz",
     url: siteUrl,
-    description: "O‘zbekistondagi yangi avtomobillar katalogi",
+    description: "O‘zbekistondagi yangi avtomobillar va Avtobozor marketplace’i",
     potentialAction: {
       "@type": "SearchAction",
       target: `${siteUrl}/cars?q={search_term_string}`,
@@ -54,20 +55,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <Header />
       <main>
-        <section className="overflow-hidden bg-gradient-to-r from-sky-50 via-white to-emerald-50">
-          <div className="mx-auto flex min-h-[360px] max-w-7xl items-center px-5 py-14 sm:min-h-[400px] lg:px-10">
-            <div className="max-w-2xl">
-              <p className="text-sm font-black uppercase tracking-wide text-sky-700">{x.heroEyebrow}</p>
-              <h1 className="mt-4 text-4xl font-black leading-[.98] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                {x.heroTitle} — <span className="text-amber-600">Cardrive.uz</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-600">{x.heroDescription}</p>
-              <Link href="/cars" className="mt-7 inline-flex rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white shadow-lg transition hover:bg-slate-800">
-                {x.catalog} <span className="ml-3">→</span>
-              </Link>
-            </div>
-          </div>
-        </section>
+        <MarketplaceEntryCards locale={locale} />
         {banners.data?.length ? <HomeBannerCarousel banners={banners.data} locale={locale} /> : null}
         <section className="mx-auto max-w-7xl px-5 py-10">
           <div className="flex items-center justify-between"><h2 className="text-2xl font-black">{x.categories}</h2><Link href="/cars" className="text-sm font-bold underline">{x.all}</Link></div>
