@@ -29,7 +29,7 @@ begin
     return false;
   end if;
 
-  if p_purpose not in ('login', 'order') then
+  if p_purpose is null or p_purpose not in ('login', 'order') then
     return false;
   end if;
 
