@@ -115,7 +115,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/cardrive-backup-output"
-          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/cardrive-backup.tar.gz" cardrive-backup
+          tar -C /tmp -czf "$RUNNER_TEMP/cardrive-backup.tar.gz" cardrive-backup
           printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
             --passphrase-fd 0 \
             --output "$RUNNER_TEMP/cardrive-backup-output/cardrive-${{ github.run_id }}.tar.gz.gpg" \
