@@ -111,7 +111,6 @@ export async function consumeOtpRegistrationProof(phone: string): Promise<boolea
     .eq("purpose", payload.purpose)
     .not("verified_at", "is", null)
     .is("consumed_at", null)
-    .gt("expires_at", now)
     .select("id")
     .maybeSingle();
 
