@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import { createServiceRoleClient } from "@/supabase/server";
 import { moderateUsedCarListingAction } from "@/app/admin/used-listings/actions";
 
