@@ -18,7 +18,7 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
   const images = [...(listing.used_car_listing_images ?? [])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);
   const fmt = new Intl.NumberFormat(ru?"ru-RU":"uz-UZ",{maximumFractionDigits:0}).format(Number(listing.price));
   const price = listing.currency === "USD" ? "$" + fmt : fmt + " so'm";
-  const specs = [
+  const specs: Array<[string, string | null | undefined]> = [
     [ru?"Год выпуска":"Ishlab chiqarilgan yil",String(listing.year)],
     [ru?"Пробег":"Yurgan masofasi",Number(listing.mileage_km).toLocaleString() + " km"],
     [ru?"Регион":"Hudud",listing.region],
