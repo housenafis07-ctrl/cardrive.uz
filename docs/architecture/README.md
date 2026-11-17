@@ -18,7 +18,7 @@ Use a **modular monolith** on the existing stack. Do not introduce microservices
 
 - Next.js App Router + TypeScript for public, account, dealer and admin surfaces.
 - Supabase PostgreSQL for transactional data and shared reference catalogs.
-- Supabase Auth/session layer for identity; privileged operations remain server-side.
+- Supabase Auth user records plus the current application-managed signed customer session; privileged operations remain server-side. Session migration/revocation hardening is tracked separately.
 - Supabase Storage for listing and vehicle media with explicit access policies.
 - Vercel for Preview and Production deployment.
 - Domain modules own their schemas, validation, services and repositories.
