@@ -11,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${baseUrl}/cars`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/avtobozor`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${baseUrl}/avtomobil-sotib-olish`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${baseUrl}/avtokredit`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${baseUrl}/avtokredit/kalkulyator`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
@@ -44,5 +45,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!data || data.length < BATCH_SIZE) break;
   }
 
-  return urls;
+  for (let from = 0; ; from += BATCH_SIZE) {\n    const { data, error } = await client.from("used_car_listings").select("slug, created_at").eq("status", "active").gt("expires_at", now.toISOString()).order("created_at", { ascending: false }).range(from, from + BATCH_SIZE - 1);\n    if (error) break;\n    for (const listing of data ?? []) {\n      if (!listing.slug) continue;\n      urls.push({ url: `${baseUrl}/avtobozor/${listing.slug}`, lastModified: listing.created_at ? new Date(listing.created_at) : now, changeFrequency: "daily", priority: 0.7 });\n    }\n    if (!data || data.length < BATCH_SIZE) break;\n  }\n\n  return urls;
 }
