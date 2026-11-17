@@ -56,7 +56,7 @@ jobs:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
-      BACKUP_DIR: ${{ runner.temp }}/cardrive-backup
+      BACKUP_DIR: /tmp/cardrive-backup
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -121,7 +121,7 @@ jobs:
             --output "$RUNNER_TEMP/cardrive-backup-output/cardrive-${{ github.run_id }}.tar.gz.gpg" \
             "$RUNNER_TEMP/cardrive-backup.tar.gz"
           cd "$RUNNER_TEMP/cardrive-backup-output"
-          sha256sum *.gpg > SHA256SUMS
+          sha256sum -- *.gpg > SHA256SUMS
           gpg --batch --yes --pinentry-mode loopback --decrypt --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
             --output /dev/null *.gpg
           sha256sum --check SHA256SUMS
