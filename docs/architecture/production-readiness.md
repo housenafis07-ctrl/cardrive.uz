@@ -31,8 +31,8 @@ Remediation:
 ## Monitoring
 
 Observed:
-- No Vercel log/trace drain is configured for this project.
-- Vercel Observability Plus is not enabled for the team.
+- No Vercel log/trace drain is configured for this project; a fresh drain inventory returned no configured drains.
+- Vercel Observability Plus is not enabled for the team (the configuration endpoint reports the feature is not enabled). No paid observability feature or external drain has been activated.
 - Supabase project logs/advisors are accessible, but current Free-plan log retention is limited.
 
 Minimum monitoring baseline:
@@ -42,6 +42,7 @@ Minimum monitoring baseline:
 - Alerts for OTP send/verify failures, failed order creation, payment failures, 5xx rate and database connection saturation.
 - Dashboard KPIs: active listings, pending moderation, leads, lead response time, orders, credit applications and service bookings.
 - Keep personal data and secrets out of log payloads.
+- The GitHub backup workflow has not yet passed workflow validation: current push-triggered runs report failure with no job records. Treat backup automation as pending until a valid workflow run completes, an encrypted artifact is produced, and a restore drill succeeds.
 
 Paid log drains and third-party monitoring should be evaluated only after estimating cost and selecting a destination. Do not create a drain without a confirmed endpoint and owner.
 
