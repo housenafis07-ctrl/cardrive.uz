@@ -21,7 +21,7 @@ Observed findings:
 - `public.redeem_promo_code(text)` is `SECURITY DEFINER` and executable by `anon` and `authenticated`.
 - `public.sync_all_car_category_items()`, `public.sync_car_category_items(uuid)`, and `public.sync_car_category_items_trigger()` are `SECURITY DEFINER` and executable by `anon` and `authenticated`.
 - The three category sync functions are used by database triggers. Their privileged execution may be required for trigger-maintained category rows; the fix is to revoke direct client execution while preserving trigger behavior, not blindly convert them to invoker functions.
-- `redeem_promo_code` requires a call-site review before changing its execute grants, because a client-facing redemption flow may depend on it.
+- No direct `redeem_promo_code` caller was found in the inspected repository. The proposed migration restricts it to `service_role`; verify no external client or out-of-repository integration depends on the RPC before applying it.
 
 ## Remediation controls
 
