@@ -16,7 +16,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: OTP cryptographic unit tests
+        run: npm run test:otp:unit
+
       - name: Type check
         run: npm run typecheck
 
@@ -41,3 +44,38 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  otp-database-migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cardrive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cardrive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply OTP rate-limit migration to disposable PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d cardrive_test -v ON_ERROR_STOP=1 -f tests/integration/otp-rate-limit.sql
+
+  workflow-static-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate GitHub Actions workflow syntax
+        uses: rhysd/actionlint@v1.7.7
