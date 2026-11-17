@@ -8,6 +8,103 @@ BEGIN
 END
 $$;
 
+-- Minimal disposable fixtures matching the objects touched by the security migration.
+CREATE TABLE public.otp_verifications (
+  id bigint generated always as identity primary key,
+  phone text not null,
+  purpose text not null,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts integer not null default 0,
+  verified_at timestamptz
+);
+CREATE TABLE public.audit_logs (id bigint generated always as identity primary key);
+CREATE TABLE public.promo_codes (
+  code text primary key,
+  used boolean not null default false,
+  used_at timestamptz
+);
+ALTER TABLE public.otp_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE FUNCTION public.set_updated_at()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END $$;
+CREATE FUNCTION public.sync_all_car_category_items()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+AS $$ BEGIN RETURN; END $$;
+CREATE FUNCTION public.sync_car_category_items(uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+AS $$ BEGIN RETURN; END $$;
+CREATE FUNCTION public.sync_car_category_items_trigger()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+AS $$ BEGIN RETURN NEW; END $$;
+CREATE FUNCTION public.redeem_promo_code(text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER
+AS $$ BEGIN RETURN false; END $$;
+
+\ir ../../supabase/migrations/20261117090000_cardrive_security_foundation.sql
+
+DO $$
+DECLARE
+  config text[];
+BEGIN
+  IF has_table_privilege('anon', 'public.otp_verifications', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.otp_verifications', 'SELECT')
+     OR has_table_privilege('anon', 'public.audit_logs', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.audit_logs', 'SELECT')
+     OR has_table_privilege('anon', 'public.promo_codes', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.promo_codes', 'SELECT') THEN
+    RAISE EXCEPTION 'Client roles must not read protected Cardrive tables';
+  END IF;
+
+  IF NOT has_table_privilege('service_role', 'public.otp_verifications', 'SELECT')
+     OR NOT has_table_privilege('service_role', 'public.audit_logs', 'SELECT') THEN
+    RAISE EXCEPTION 'service_role must retain server access to protected tables';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.redeem_promo_code(text)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.redeem_promo_code(text)', 'EXECUTE')
+     OR NOT has_function_privilege('service_role', 'public.redeem_promo_code(text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Promo redemption RPC grants are incorrect';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.sync_all_car_category_items()', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.sync_car_category_items(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Internal category sync functions must not be public RPCs';
+  END IF;
+
+  SELECT proconfig INTO config
+    FROM pg_proc
+   WHERE oid = 'public.redeem_promo_code(text)'::regprocedure;
+
+  IF config IS NULL OR NOT (config @> ARRAY['search_path=""']) THEN
+    RAISE EXCEPTION 'Promo redemption function must have an empty search_path';
+  END IF;
+
+  INSERT INTO public.promo_codes(code, used) VALUES ('TEST-CODE', false);
+  IF public.redeem_promo_code('TEST-CODE') IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'Server-side promo redemption should continue to work';
+  END IF;
+END
+$$;
+
+-- Trigger execution must remain functional even though clients cannot call the trigger function directly.
+CREATE TABLE public.trigger_probe (updated_at timestamptz);
+CREATE TRIGGER trigger_probe_updated_at
+BEFORE UPDATE ON public.trigger_probe
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+INSERT INTO public.trigger_probe(updated_at) VALUES ('2000-01-01T00:00:00Z');
+UPDATE public.trigger_probe SET updated_at = '2001-01-01T00:00:00Z';
+DO $$
+BEGIN
+  IF (SELECT updated_at FROM public.trigger_probe) <= '2001-01-01T00:00:00Z' THEN
+    RAISE EXCEPTION 'set_updated_at trigger did not execute';
+  END IF;
+END
+$$;
+
 \ir ../../supabase/migrations/20261117100000_otp_request_rate_limit.sql
 
 DO $$
@@ -72,4 +169,4 @@ BEGIN
 END
 $$;
 
-SELECT 'OTP rate-limit migration tests passed' AS result;
+SELECT 'Cardrive security and OTP migration tests passed' AS result;
