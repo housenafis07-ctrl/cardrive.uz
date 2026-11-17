@@ -134,6 +134,10 @@ BEGIN
     RAISE EXCEPTION 'Invalid purpose must be rejected';
   END IF;
 
+  IF public.consume_otp_request_slot('+998901234567', NULL) IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'Null purpose must be rejected';
+  END IF;
+
   FOR current_count IN 1..5 LOOP
     allowed := public.consume_otp_request_slot('+998901234567', 'login');
     IF allowed IS DISTINCT FROM true THEN
