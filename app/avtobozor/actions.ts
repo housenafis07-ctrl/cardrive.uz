@@ -97,7 +97,7 @@ export async function updateMyUsedCarListingStatusAction(form: FormData) {
   const db = createServiceRoleClient();
   const result = await db.from("used_car_listings")
     .update({ status, sold_at: status === "sold" ? new Date().toISOString() : null })
-    .eq("id", id).eq("owner_profile_id", customer.id).in("status", ["active", "reserved", "rejected"]);
+    .eq("id", id).eq("owner_profile_id", customer.id).in("status", ["active", "reserved"]);
   if (result.error) redirect("/account/my-listings?error=Holatni+ozgartirib+bolmadi");
   await db.from("audit_logs").insert({
     actor_id: customer.id, action: `used_car_listing.${status}`,
