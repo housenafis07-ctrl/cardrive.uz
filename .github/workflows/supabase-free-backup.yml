@@ -1,0 +1,77 @@
+name: Supabase Free Backup
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-free-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: https://wgfvnnapobfdevgjhfin.supabase.co
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      BACKUP_DIR: ${{ runner.temp }}/cardrive-backup
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate backup secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_DB_URL" || (echo "::error::Missing SUPABASE_DB_URL secret" && exit 1)
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || (echo "::error::Missing SUPABASE_SERVICE_ROLE_KEY secret" && exit 1)
+          test -n "$BACKUP_ENCRYPTION_PASSPHRASE" || (echo "::error::Missing BACKUP_ENCRYPTION_PASSPHRASE secret" && exit 1)
+
+      - name: Install pinned backup tools
+        run: |
+          npm install --global supabase@2.81.3
+          npm install --no-save --package-lock=false @supabase/supabase-js@2.49.1
+
+      - name: Export database roles
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/roles.sql" --role-only
+
+      - name: Export database schema
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/schema.sql"
+
+      - name: Export database data
+        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/data.sql" --use-copy --data-only -x storage.buckets_vectors -x storage.vector_indexes
+
+      - name: Export Auth user metadata and Storage objects
+        run: node scripts/backup/export-supabase-managed-data.mjs
+
+      - name: Create encrypted archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cardrive-backup-output"
+          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/cardrive-backup.tar.gz" cardrive-backup
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
+            --output "$RUNNER_TEMP/cardrive-backup-output/cardrive-${{ github.run_id }}.tar.gz.gpg" \
+            "$RUNNER_TEMP/cardrive-backup.tar.gz"
+          cd "$RUNNER_TEMP/cardrive-backup-output"
+          sha256sum *.gpg > SHA256SUMS
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cardrive-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/cardrive-backup-output/*
+          if-no-files-found: error
+          retention-days: 14
