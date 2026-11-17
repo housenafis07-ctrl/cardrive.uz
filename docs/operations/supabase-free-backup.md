@@ -10,7 +10,7 @@ Add these repository Actions secrets before enabling the workflow:
 - `SUPABASE_SERVICE_ROLE_KEY`: Cardrive server-side service-role key. Never add it to repository files or frontend environment variables.
 - `BACKUP_ENCRYPTION_PASSPHRASE`: a long, randomly generated passphrase (at least 45 random bytes (60 Base64 characters)). Keep a separate copy in an offline password manager; without it the artifacts cannot be decrypted.
 
-Workflow: `.github/workflows/supabase-free-backup.yml`
+Workflow: `.github/workflows/supabase-free-backup.yml`. It installs the supported Supabase CLI through `supabase/setup-cli@v3` and pins the `v2.stable` maintenance channel; global `npm install -g supabase` is unsupported. CLI v3 is deliberately not used for the dump until its local/remote command changes are migrated and tested.
 
 Runs daily at 02:00 UTC after the workflow is merged into the default branch. Manual dispatch has two modes: `preflight` (default; validates tools and scripts without connecting to Supabase) and `backup` (requires all three secrets and performs the real export). The encrypted archive is retained as a GitHub Actions artifact for 7 days. Important: the Cardrive GitHub repository is currently public, so treat workflow artifacts as potentially downloadable by anyone with repository read access. The archive must be encrypted before upload, and the encryption passphrase must have high entropy (at least 32 cryptographically random bytes) and never be committed or placed in the same artifact. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
 
