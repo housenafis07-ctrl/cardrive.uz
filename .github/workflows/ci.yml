@@ -79,3 +79,35 @@ jobs:
 
       - name: Validate GitHub Actions workflow syntax
         uses: rhysd/actionlint@v1.7.7
+
+  backup-static-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax-check managed-data export script
+        run: node --check scripts/backup/export-supabase-managed-data.mjs
+
+      - name: Validate GPG encryption and checksum round-trip
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'Cardrive backup test payload\n' > /tmp/cardrive-backup-test.txt
+          printf '%s' 'ci-only-test-passphrase' | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 --passphrase-fd 0 --output /tmp/cardrive-backup-test.txt.gpg /tmp/cardrive-backup-test.txt
+          printf '%s' 'ci-only-test-passphrase' | gpg --batch --yes --pinentry-mode loopback --decrypt --passphrase-fd 0 --output /tmp/cardrive-backup-test-restored.txt /tmp/cardrive-backup-test.txt.gpg
+          cmp /tmp/cardrive-backup-test.txt /tmp/cardrive-backup-test-restored.txt
+          sha256sum -- /tmp/cardrive-backup-test.txt.gpg > /tmp/SHA256SUMS
+          sha256sum --check /tmp/SHA256SUMS
+
+      - name: Validate pinned Supabase CLI commands
+        run: |
+          npm install --global supabase@2.81.3
+          supabase --version
+          supabase db dump --help >/dev/null
