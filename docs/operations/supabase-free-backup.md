@@ -8,29 +8,29 @@ Add these repository Actions secrets before enabling the workflow:
 
 - `SUPABASE_DB_URL`: Cardrive Production database connection string. Prefer the Supabase Session Pooler URI if the runner/network cannot use IPv6. Store the password only in this secret.
 - `SUPABASE_SERVICE_ROLE_KEY`: Cardrive server-side service-role key. Never add it to repository files or frontend environment variables.
-- `BACKUP_ENCRYPTION_PASSPHRASE`: a long, randomly generated passphrase (at least 32 random bytes). Keep a separate copy in an offline password manager; without it the artifacts cannot be decrypted.
+- `BACKUP_ENCRYPTION_PASSPHRASE`: a long, randomly generated passphrase (at least 45 random bytes (60 Base64 characters)). Keep a separate copy in an offline password manager; without it the artifacts cannot be decrypted.
 
 Workflow: `.github/workflows/supabase-free-backup.yml`
 
-Runs daily at 02:00 UTC and on manual dispatch. The encrypted archive is retained as a GitHub Actions artifact for 7 days. Important: the Cardrive GitHub repository is currently public, so treat workflow artifacts as potentially downloadable by anyone with repository read access. The archive must be encrypted before upload, and the encryption passphrase must have high entropy (at least 32 cryptographically random bytes) and never be committed or placed in the same artifact. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
+Runs daily at 02:00 UTC after the workflow is merged into the default branch. Manual dispatch has two modes: `preflight` (default; validates tools and scripts without connecting to Supabase) and `backup` (requires all three secrets and performs the real export). The encrypted archive is retained as a GitHub Actions artifact for 7 days. Important: the Cardrive GitHub repository is currently public, so treat workflow artifacts as potentially downloadable by anyone with repository read access. The archive must be encrypted before upload, and the encryption passphrase must have high entropy (at least 32 cryptographically random bytes) and never be committed or placed in the same artifact. GitHub artifact storage/retention quotas still apply; monitor the Actions storage quota.
 
 ## Backup contents and limitations
 
 - PostgreSQL roles, application schema, and application data via the pinned Supabase CLI `db dump`.
 - Auth user records and identity metadata via the Auth Admin list-users API.
-- Files in the `car-images` Storage bucket, plus bucket metadata.
+- Files from every Storage bucket returned by the Storage API, plus per-bucket manifests and bucket metadata.
 - Archive is encrypted with GPG AES-256 before upload.
 
 Important limitations:
 
 - The CLI dump excludes Supabase-managed `auth` and `storage` schemas. The Auth export is an identity/metadata inventory only; it does not export password hashes, active sessions, MFA secrets, provider credentials, or all Auth service configuration. Users may need to reauthenticate or reset passwords after a recovery.
-- Storage objects are downloaded separately. Review `storage/manifest.json` after a run and compare object count with the live bucket.
+- Storage objects are downloaded separately. Review `storage/manifests/<bucket>.json` after a run and compare every object count with its live bucket.
 - Supabase Edge Functions, Auth provider settings, SMTP settings, secrets, API keys, DNS/custom domains, and Vercel environment variables are not included. Keep a separate secure inventory of configuration, never plaintext secrets in Git.
 - GitHub Actions artifacts are a short-retention recovery copy, not a substitute for independent long-term object storage or Supabase-managed physical backups. Because the repository is public, encryption is mandatory and artifact confidentiality must not rely on GitHub repository visibility. For stronger resilience, periodically copy the encrypted archive to an independently controlled storage provider.
 
 ## Restore outline
 
-1. Download the encrypted artifact from the private repository's Actions run.
+1. Download the encrypted artifact from the public repository's Actions run. The archive is encrypted before upload; do not upload plaintext backups.
 2. Verify it with `sha256sum -c SHA256SUMS`.
 3. Decrypt using the offline passphrase: `gpg --decrypt --output cardrive-backup.tar.gz cardrive-*.tar.gz.gpg`.
 4. Extract into an isolated restore target first; never restore directly over Production as an initial test.
@@ -41,6 +41,6 @@ Important limitations:
 
 ## Operational checks
 
-- Run the workflow manually after adding secrets.
+- Run `preflight` first. Only after it passes and the three secrets are configured, manually run `backup`.
 - Confirm the artifact exists, decrypts, and contains SQL files, Auth metadata, and the Storage manifest.
 - Perform a restore drill to a separate isolated project before relying on this backup for disaster recovery.
