@@ -106,8 +106,12 @@ jobs:
           sha256sum -- /tmp/cardrive-backup-test.txt.gpg > /tmp/SHA256SUMS
           sha256sum --check /tmp/SHA256SUMS
 
+      - name: Set up supported Supabase CLI v2
+        uses: supabase/setup-cli@v3
+        with:
+          version: v2.stable
+
       - name: Validate pinned Supabase CLI commands
         run: |
-          npm install --global supabase@2.81.3
           supabase --version
           supabase db dump --help >/dev/null
