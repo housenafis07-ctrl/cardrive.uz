@@ -16,7 +16,7 @@ type Item = {
 const items: Item[] = [
   { href: "/", uz: "Asosiy", ru: "Главная", icon: "home" },
   { href: "/avtokredit", uz: "Kredit", ru: "Кредит", icon: "credit" },
-  { href: "/cars", uz: "Qidiruv", ru: "Поиск", icon: "search" },
+  { href: "/avtobozor", uz: "Avtobozor", ru: "Авторынок", icon: "search" },
   { href: "/account/orders", uz: "Buyurtmalarim", ru: "Мои заказы", icon: "orders" },
   { href: "/account", uz: "Profil", ru: "Профиль", icon: "profile" },
 ];
