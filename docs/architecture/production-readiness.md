@@ -2,24 +2,17 @@
 
 ## Supabase plan and backups
 
-The connected Supabase project is currently presented under a Free organization/account context. Free projects do not receive automatic daily database backups and can pause after a week of low activity. A Production marketplace should move to at least Pro once the owner approves the recurring cost.
+Owner decision: Cardrive will remain on Supabase Free; no Pro upgrade or paid PITR is authorized. Accept the Free-tier limitations explicitly: no Supabase-managed daily database backups, possible pausing after a week of low activity, and limited log retention.
 
-Current public pricing checked 2026-11-17:
+Free-tier continuity plan:
+1. Run the repository's encrypted GitHub Actions logical backup daily (after the three repository secrets are configured).
+2. Keep encrypted artifacts private with 7-day retention; GitHub artifact quota and availability are additional dependencies.
+3. Export PostgreSQL roles, schema and data; export Auth user metadata separately; download Storage objects separately.
+4. Keep the encryption passphrase in an independent password manager/offline recovery location, never in the same artifact or repository.
+5. Complete a restore drill against an isolated target before treating the workflow as a verified disaster-recovery control.
+6. Keep an independent second copy of encrypted backups in a separately controlled storage destination when one is approved.
 
-- Supabase Pro starts at **$25/month**.
-- Pro includes daily database backups with **7-day retention**.
-- Compute and usage beyond included allowances can add charges.
-- PITR is a separate add-on; the published 7-day PITR rate is approximately **$100/month**, so do not enable it by default for this MVP.
-
-Before any plan change:
-1. Confirm billing owner and payment method.
-2. Review current database size, compute size, egress, Storage and expected usage.
-3. Upgrade the organization to Pro.
-4. Verify the first available daily backup in Dashboard → Database → Backups.
-5. Perform a restore drill to a separate project before relying on the backup.
-6. Keep Storage object backups separately; database backups do not include Storage object bytes.
-
-Until the upgrade is approved, schedule a manual encrypted logical database export and off-site storage. Store the backup encryption key separately from the backup. A database dump does not back up Storage object files.
+This is a logical export workaround, not equivalent to Supabase-managed physical backups or point-in-time recovery. Auth export is metadata-only and does not preserve password hashes, active sessions, MFA secrets or provider credentials. Storage object bytes are not included in the database dump.
 
 ## Node.js / CI / Vercel
 
