@@ -23,7 +23,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   let query = db.from("used_car_listings")
     .select("id,slug,brand,model,year,mileage_km,price,currency,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
     .eq("status", "active").gt("expires_at", new Date().toISOString());
-  const q = value("q").replace(/[,%()]/g, " ").trim();
+  const q = value("q").replace(/[^\\p{L}\\p{N} .-]/gu, " ").trim();
   if (q) query = query.or("brand.ilike.%" + q + "%,model.ilike.%" + q + "%");
   if (value("region")) query = query.eq("region", value("region"));
   if (value("fuel")) query = query.eq("fuel_type", value("fuel"));
