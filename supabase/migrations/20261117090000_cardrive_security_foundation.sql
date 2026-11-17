@@ -7,6 +7,7 @@ alter table public.otp_verifications
 -- OTP hashes and audit records are accessed only through trusted server code.
 revoke all on table public.otp_verifications from public, anon, authenticated;
 revoke all on table public.audit_logs from public, anon, authenticated;
+grant all on table public.otp_verifications, public.audit_logs, public.promo_codes to service_role;
 
 -- Promo rows are not directly exposed. The RPC privilege is handled separately
 -- after its callers have been audited; see docs/architecture/security-findings.md.
@@ -32,8 +33,10 @@ revoke execute on function public.sync_all_car_category_items() from public, ano
 revoke execute on function public.sync_car_category_items(uuid) from public, anon, authenticated;
 revoke execute on function public.sync_car_category_items_trigger() from public, anon, authenticated;
 
--- Pin the remaining promo-code function's search_path. Its EXECUTE grants
--- remain unchanged until all application call sites are verified.
+-- The repository has no direct RPC caller for this function. Keep it server-only
+-- until a dedicated authenticated, rate-limited redemption action is introduced.
+revoke execute on function public.redeem_promo_code(text) from public, anon, authenticated;
+grant execute on function public.redeem_promo_code(text) to service_role;
 alter function public.redeem_promo_code(text) set search_path = '';
 create or replace function public.redeem_promo_code(p_code text)
 returns boolean
