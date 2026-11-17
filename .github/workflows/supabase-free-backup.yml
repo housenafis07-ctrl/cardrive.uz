@@ -74,4 +74,4 @@ jobs:
           name: cardrive-supabase-backup-${{ github.run_id }}
           path: ${{ runner.temp }}/cardrive-backup-output/*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
