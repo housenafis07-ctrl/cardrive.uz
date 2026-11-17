@@ -53,7 +53,7 @@ This is a read-only comparison of the repository branch `feat/cardrive-architect
 
 ## Findings
 
-1. The remote history and repository filenames do not reconcile by migration version. Only two older local filenames have version strings that exactly match a remote entry; several others have similar names but different timestamps.
+1. The remote history and repository filenames do not reconcile by migration version. Only one older local filename (20260818061953_financing_management_v2.sql) has a version string that exactly matches a remote entry; the other remote entries have different version IDs.
 2. The repository contains two separate Phase 6 foundation migrations. The remote history contains one Phase 6 migration with a different timestamp. These must not be treated as interchangeable without a schema/content comparison.
 3. The remote history contains entries for Storage write policies, category synchronization, extended car specifications, manager order overrides, and an order audit index for which there is no same-version file in this branch.
 4. The repository has earlier foundation and financing migrations that do not appear as same-version entries in the remote history.
@@ -75,3 +75,10 @@ This is a read-only comparison of the repository branch `feat/cardrive-architect
 - The current repository does not contain all exact historical SQL files corresponding to the remote history.
 - No verified encrypted backup artifact or restore drill is yet available.
 - Consequently, migration repair, `supabase db push`, and all Production DDL remain prohibited at this stage.
+
+
+## Free-tier test project availability — 2026-11-17
+
+The Cardrive Supabase organization is on the Free plan. The account currently has two active Free projects (cardrive and prohouse), which is the organization's active Free-project limit. A new isolated project request for cardrive-otp-test was rejected by Supabase with the explicit two-active-project quota error. No existing project was paused, deleted, upgraded, or modified to bypass this limit.
+
+Safe alternative: keep using disposable PostgreSQL 17 in GitHub Actions for database migration/privilege tests, and add a local Supabase CLI/Auth stack with a mocked SMS adapter for OTP end-to-end tests. This provides an isolated test environment without a new Supabase bill or Production credentials. A separate hosted Supabase Free project remains blocked unless the owner explicitly authorizes pausing one of the two active projects or obtains a separate Free organization.
