@@ -38,6 +38,11 @@ jobs:
         with:
           node-version: 24
 
+      - name: Set up supported Supabase CLI v2
+        uses: supabase/setup-cli@v3
+        with:
+          version: v2.stable
+
       - name: Validate backup toolchain and scripts
         run: |
           set -euo pipefail
@@ -45,7 +50,6 @@ jobs:
           command -v tar
           command -v gpg
           gpg --version
-          npm install --global supabase@2.81.3
           supabase --version
           supabase db dump --help >/dev/null
           echo "Backup preflight passed. No Supabase connection or data export was attempted."
@@ -81,10 +85,13 @@ jobs:
             exit 1
           fi
 
-      - name: Install pinned backup tools
-        run: |
-          npm install --global supabase@2.81.3
-          npm install --no-save --package-lock=false @supabase/supabase-js@2.49.1
+      - name: Set up supported Supabase CLI v2
+        uses: supabase/setup-cli@v3
+        with:
+          version: v2.stable
+
+      - name: Install pinned backup SDK
+        run: npm install --no-save --package-lock=false @supabase/supabase-js@2.49.1
 
       - name: Prepare backup directory
         run: mkdir -p "$BACKUP_DIR"
