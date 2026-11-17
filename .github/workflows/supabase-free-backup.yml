@@ -121,9 +121,9 @@ jobs:
             --output "$RUNNER_TEMP/cardrive-backup-output/cardrive-${{ github.run_id }}.tar.gz.gpg" \
             "$RUNNER_TEMP/cardrive-backup.tar.gz"
           cd "$RUNNER_TEMP/cardrive-backup-output"
-          sha256sum -- *.gpg > SHA256SUMS
-          gpg --batch --yes --pinentry-mode loopback --decrypt --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
-            --output /dev/null *.gpg
+          sha256sum -- ./*.gpg > SHA256SUMS
+          printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --decrypt --passphrase-fd 0 \
+            --output /dev/null ./*.gpg
           sha256sum --check SHA256SUMS
 
       - name: Upload encrypted backup artifact
