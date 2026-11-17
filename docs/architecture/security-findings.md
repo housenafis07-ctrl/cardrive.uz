@@ -48,3 +48,27 @@ Observed findings:
 ## Release rule
 
 The SQL migration is not to be applied to Production from this PR. First run it against an isolated test database, validate function/trigger behavior, verify the OTP one-time challenge flow, and complete the migration reconciliation plan.
+
+
+## Fresh Supabase Security Advisor snapshot — 2026-11-17
+
+A read-only advisor scan of the active Cardrive project reported:
+
+- RLS enabled with no policies on public.audit_logs, public.otp_verifications, and public.promo_codes (3 findings).
+- Mutable function search path on public.set_updated_at().
+- public.redeem_promo_code(text) is SECURITY DEFINER and executable by anon and authenticated.
+- The three category synchronization helpers (sync_all_car_category_items(), sync_car_category_items(uuid), and sync_car_category_items_trigger()) are SECURITY DEFINER and have client-role EXECUTE grants. The direct RPC exposure must be removed while preserving trigger execution.
+- Leaked-password protection is disabled in Supabase Auth.
+- Performance advisor additionally reports two unindexed foreign keys, five RLS policies with per-row auth-function evaluation, unused-index candidates, and duplicate permissive policies. These are optimization findings, not a reason to blindly drop indexes or policies.
+
+Read-only function-definition inspection confirmed that redeem_promo_code updates public.promo_codes under a definer context, and that the category sync functions update public.car_category_items. No Production grants, policies, functions, or Auth settings were changed during this scan.
+
+Remediation order:
+1. Reconcile the historical migrations and complete an encrypted backup + restore drill.
+2. Validate the existing PR security migration on disposable PostgreSQL and local Supabase/Auth.
+3. Confirm trigger-owner behavior and remove only direct client EXECUTE privileges from trigger-only functions.
+4. Restrict promo redemption to a server-only pathway after checking external consumers.
+5. Enable leaked-password protection after reviewing Auth settings and user impact.
+6. Re-run Security Advisor and retain before/after evidence.
+
+Do not execute the pending Production migration until the release gates above are satisfied.
