@@ -7,7 +7,6 @@ import type { Locale } from "@/lib/i18n";
 
 export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale: Locale; isAuthenticated: boolean; error?: string }) {
   const ru = locale === "ru";
-  const formRef = useRef<HTMLFormElement>(null);
   const pendingForm = useRef<FormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
@@ -43,7 +42,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   return (
     <>
       {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      <form ref={formRef} onSubmit={handleSubmit} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
         <label className="text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 w-full rounded-xl border p-3" /></label>
         <label className="text-sm font-semibold">{ru ? "Модель" : "Model"} *<input name="model" required maxLength={100} placeholder="Cobalt" className="mt-1 w-full rounded-xl border p-3" /></label>
