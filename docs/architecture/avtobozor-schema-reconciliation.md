@@ -28,8 +28,9 @@ The reconciliation migration is idempotent for repeatable policy/index/column se
 - The existing car-images bucket and new-car media policies remain unchanged.
 
 ## Release gates
-- Merge the Avtobozor application branch only after CI and Vercel Preview pass.
-- Run migrations against a disposable PostgreSQL 17 database and assert:
+- The GitHub Actions workflow .github/workflows/avtobozor-db-smoke.yml provisions disposable PostgreSQL 17, applies the base and reconciliation migrations, and runs tests/sql/avtobozor-assertions.sql.
+- Merge the Avtobozor application branch only after CI, the PostgreSQL smoke test and Vercel Preview pass.
+- The smoke test asserts:
   - mileage 0 is accepted; negative mileage and NULL are rejected;
   - each condition enum value is accepted and an unknown value rejected;
   - anon can read only active, unexpired listing rows and related images;
