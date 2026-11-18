@@ -16,9 +16,5 @@ export default async function NewUsedCarListingPage({ searchParams }: { searchPa
     <h1 className="mt-3 text-3xl font-black">{ru ? "Разместить объявление" : "Avtomobil e'lonini joylashtirish"}</h1>
     <p className="mt-2 text-slate-600">{ru ? "Заполните данные автомобиля. После проверки модератором объявление появится в каталоге." : "Avtomobil ma'lumotlarini kiriting. Moderator tekshiruvidan so'ng e'lon Avtobozorda ko'rinadi."}</p>
     <UsedCarListingForm locale={locale} isAuthenticated={!!customer} error={params.error} />
-    {/* The phone is requested only after a guest has completed the listing form. */}
-    {false ? <>
-
-    </> : null}
   </main><Footer /></>;
 }
