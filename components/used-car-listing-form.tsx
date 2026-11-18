@@ -122,7 +122,8 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const pendingForm = useRef<FormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
-  const [submitting, setSubmitting] = useState(false);\n  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
@@ -176,7 +177,8 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
 
   return (
     <>
-      {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}\n      {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
+      {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
       <form onSubmit={handleSubmit} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
         <label className="text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 w-full rounded-xl border p-3" /></label>
