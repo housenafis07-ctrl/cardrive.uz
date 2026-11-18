@@ -5,7 +5,15 @@ import { PhoneOtpAuth } from "@/components/phone-otp-auth";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 import type { Locale } from "@/lib/i18n";
 
-const conditions = [
+type VehicleCondition = {
+  value: string;
+  uz: string;
+  ru: string;
+  uzTemplate: string;
+  ruTemplate: string;
+};
+
+const conditions: VehicleCondition[] = [
   {
     value: "ideal",
     uz: "Ideal holat",
@@ -48,7 +56,7 @@ const conditions = [
     uzTemplate: "Avtomobil asosan ehtiyot qismlar uchun taklif qilinadi. Ta'mirlash qiymati avtomobil qiymatining 50 foizidan yuqori bo'lishi mumkin.",
     ruTemplate: "Автомобиль предлагается преимущественно на запчасти. Стоимость ремонта может превышать 50% стоимости автомобиля.",
   },
-] as const;
+];
 
 const colors = [
   { value: "Oq", ru: "Белый", hex: "#f8fafc", border: true },
@@ -70,7 +78,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [submitting, setSubmitting] = useState(false);
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
-  const [conditionDescription, setConditionDescription] = useState(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
+  const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
 
   async function submitListing(data: FormData) {
