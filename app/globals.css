@@ -1,3 +1,89 @@
 @import "tailwindcss";
+
 :root { color-scheme: light; }
-body { margin: 0; min-height: 100vh; background: #f1f3f5; color: #0f172a; font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; min-height: 100vh; background: #f7f9fc; color: #0f172a; font-family: Arial, Helvetica, sans-serif; }
+
+@property --neon-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.marketplace-home { isolation: isolate; }
+.marketplace-card {
+  --accent: #38a8ff;
+  position: relative;
+  display: flex;
+  min-height: clamp(330px, 43vw, 540px);
+  overflow: hidden;
+  align-items: flex-end;
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 30px;
+  background: #071b36;
+  color: #fff;
+  box-shadow: 0 22px 55px rgba(15, 35, 62, .13), 0 3px 10px rgba(15, 35, 62, .06);
+  text-decoration: none;
+  transform: translateZ(0);
+  transition: transform .45s cubic-bezier(.2,.75,.25,1), box-shadow .45s ease;
+}
+.marketplace-card--used { --accent: #31f0b0; background: #062b27; }
+.marketplace-card:hover { transform: translateY(-6px); box-shadow: 0 30px 70px rgba(15, 35, 62, .19), 0 0 0 1px rgba(255,255,255,.75); }
+.marketplace-card::before {
+  position: absolute; inset: 0; z-index: 1; content: ""; pointer-events: none;
+  background: linear-gradient(90deg, rgba(3,17,39,.96) 0%, rgba(4,30,63,.84) 32%, rgba(4,27,54,.22) 72%, rgba(4,22,44,.12) 100%), linear-gradient(0deg, rgba(2,13,30,.45), transparent 55%);
+}
+.marketplace-card--used::before {
+  background: linear-gradient(90deg, rgba(2,30,27,.97) 0%, rgba(3,52,44,.83) 32%, rgba(3,46,40,.22) 72%, rgba(2,32,29,.12) 100%), linear-gradient(0deg, rgba(1,18,16,.48), transparent 55%);
+}
+.marketplace-card__car {
+  position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; transition: transform .8s cubic-bezier(.2,.7,.2,1), filter .5s ease;
+}
+.marketplace-card__car--new { object-position: 58% center; }
+.marketplace-card__car--used { object-position: 55% center; }
+.marketplace-card:hover .marketplace-card__car { transform: scale(1.055); }
+.marketplace-card__light { position: absolute; z-index: 1; width: 310px; height: 310px; border-radius: 50%; filter: blur(80px); opacity: .24; pointer-events: none; }
+.marketplace-card__light--blue { right: 4%; top: -30%; background: #078bff; }
+.marketplace-card__light--green { right: 3%; top: -28%; background: #00e6a0; }
+.marketplace-card__content { position: relative; z-index: 2; display: flex; width: min(70%, 470px); flex-direction: column; align-items: flex-start; gap: 18px; padding: clamp(25px, 3.3vw, 48px); }
+.marketplace-card__eyebrow { color: rgba(220,239,255,.8); font-size: 10px; font-weight: 800; letter-spacing: .19em; }
+.marketplace-card--used .marketplace-card__eyebrow { color: rgba(206,255,237,.82); }
+.marketplace-card__title { max-width: 470px; font-size: clamp(30px, 3.4vw, 50px); font-weight: 850; line-height: 1.03; letter-spacing: -.045em; text-wrap: balance; text-shadow: 0 3px 25px rgba(0,0,0,.2); }
+.marketplace-cta {
+  position: relative; display: inline-flex; min-width: 148px; min-height: 54px; align-items: center; justify-content: center; gap: 18px;
+  overflow: visible; border: 1px solid rgba(255,255,255,.72); border-radius: 999px; padding: 0 23px;
+  background: rgba(5,18,35,.56); color: #fff; font-size: 14px; font-weight: 800; letter-spacing: .01em;
+  box-shadow: inset 0 0 18px rgba(255,255,255,.06), 0 0 22px color-mix(in srgb, var(--accent) 28%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  transition: transform .3s ease, box-shadow .3s ease, background .3s ease;
+}
+.marketplace-cta::before {
+  position: absolute; inset: -3px; z-index: -1; content: ""; border-radius: inherit; padding: 2px;
+  background: conic-gradient(from var(--neon-angle), transparent 0deg, transparent 210deg, var(--accent) 258deg, #fff 278deg, var(--accent) 300deg, transparent 340deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  filter: drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 12px var(--accent));
+  animation: neon-orbit 2.8s linear infinite;
+}
+.marketplace-cta::after {
+  position: absolute; inset: -8px; content: ""; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: inherit;
+  opacity: .55; filter: blur(5px); animation: neon-pulse 2.2s ease-in-out infinite;
+}
+.marketplace-cta--blue { --accent: #37b6ff; }
+.marketplace-cta--green { --accent: #2fffc0; }
+.marketplace-card:hover .marketplace-cta { transform: translateY(-2px); background: rgba(8,26,43,.82); box-shadow: inset 0 0 22px rgba(255,255,255,.1), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent); }
+.marketplace-card__index { position: absolute; z-index: 2; top: 24px; right: 28px; color: rgba(255,255,255,.72); font-size: 11px; font-weight: 800; letter-spacing: .18em; }
+@keyframes neon-orbit { to { --neon-angle: 360deg; } }
+@keyframes neon-pulse { 0%,100% { opacity: .3; transform: scale(.99); } 50% { opacity: .8; transform: scale(1.025); } }
+@media (max-width: 639px) {
+  .marketplace-home { min-height: 100svh; padding-top: max(18px, env(safe-area-inset-top)); padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .marketplace-card { min-height: clamp(250px, 39svh, 360px); border-radius: 23px; }
+  .marketplace-card__content { width: 76%; gap: 15px; padding: 23px; }
+  .marketplace-card__eyebrow { font-size: 8px; letter-spacing: .14em; }
+  .marketplace-card__title { font-size: clamp(27px, 8vw, 36px); }
+  .marketplace-cta { min-width: 132px; min-height: 48px; font-size: 13px; }
+  .marketplace-card__index { top: 18px; right: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketplace-card, .marketplace-card__car, .marketplace-cta, .marketplace-cta::before, .marketplace-cta::after { animation: none !important; transition: none !important; }
+}

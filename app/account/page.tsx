@@ -36,6 +36,7 @@ export default async function AccountPage() {
 
           <section className="mt-5 grid grid-cols-2 gap-3">
             <Tile href="/account/orders" icon="📋" title={x.orders} />
+            <Tile href="/account/my-listings" icon="🚗" title={locale === "ru" ? "Мои объявления" : "Mening e’lonlarim"} />
             <Tile href="/cars" icon="❤️" title={locale === "ru" ? "Избранное" : "Sevimlilar"} />
             <Tile href="/avtokredit/kalkulyator" icon="🧮" title={x.creditCalculator} />
             <Tile href="/avtokredit" icon="🏦" title={x.creditPrograms} />
