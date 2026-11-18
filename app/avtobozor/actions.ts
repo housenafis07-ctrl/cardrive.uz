@@ -31,7 +31,7 @@ export async function createUsedCarListingAction(form: FormData) {
 
   if (!brand || brand.length > 80 || !model || model.length > 100) redirect("/avtobozor/yangi-elon?error=Brend+va+modelni+tekshiring");
   if (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1) redirect("/avtobozor/yangi-elon?error=Ishlab+chiqarilgan+yil+notogri");
-  if (!Number.isInteger(mileage) || mileage < 0 || mileage > 2_000_000) redirect("/avtobozor/yangi-elon?error=Yurgan+masofani+tekshiring");
+  if (!Number.isInteger(mileage) || mileage <= 0 || mileage > 2_000_000) redirect("/avtobozor/yangi-elon?error=Yurgan+masofani+tekshiring");
   if (!Number.isFinite(price) || price <= 0 || price > 10_000_000_000_000) redirect("/avtobozor/yangi-elon?error=Narxni+tekshiring");
   if (!["UZS", "USD"].includes(currency)) redirect("/avtobozor/yangi-elon?error=Valyuta+notogri");
   if (!region || region.length > 80 || description.length < 20 || description.length > 5000 || !contactName || contactName.length > 100) redirect("/avtobozor/yangi-elon?error=Majburiy+maydonlarni+tolldiring");
