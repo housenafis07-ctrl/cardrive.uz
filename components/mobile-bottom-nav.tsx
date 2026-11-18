@@ -5,32 +5,18 @@ import { usePathname } from "next/navigation";
 import type { Locale } from "@/lib/i18n";
 
 type Props = { locale: Locale };
-
-type Item = {
-  href: string;
-  uz: string;
-  ru: string;
-  icon: "home" | "credit" | "search" | "orders" | "profile";
-};
+type Item = { href: string; uz: string; ru: string; icon: "home" | "credit" | "search" | "orders" | "profile" };
 
 const items: Item[] = [
   { href: "/", uz: "Asosiy", ru: "Главная", icon: "home" },
   { href: "/avtokredit", uz: "Kredit", ru: "Кредит", icon: "credit" },
-  { href: "/avtobozor", uz: "Avtobozor", ru: "Авторынок", icon: "search" },
+  { href: "/cars", uz: "Qidiruv", ru: "Поиск", icon: "search" },
   { href: "/account/orders", uz: "Buyurtmalarim", ru: "Мои заказы", icon: "orders" },
   { href: "/account", uz: "Profil", ru: "Профиль", icon: "profile" },
 ];
 
 function Icon({ name, active }: { name: Item["icon"]; active: boolean }) {
-  const common = {
-    className: `h-5 w-5 ${active ? "text-[#0877F9]" : "text-slate-400"}`,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.9,
-    viewBox: "0 0 24 24",
-    "aria-hidden": true,
-  } as const;
-
+  const common = { className: `h-5 w-5 ${active ? "text-[#0877F9]" : "text-slate-400"}`, fill: "none", stroke: "currentColor", strokeWidth: 1.9, viewBox: "0 0 24 24", "aria-hidden": true } as const;
   if (name === "home") return <svg {...common}><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></svg>;
   if (name === "credit") return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>;
   if (name === "search") return <svg {...common}><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 5 5" strokeLinecap="round" /></svg>;
@@ -40,33 +26,22 @@ function Icon({ name, active }: { name: Item["icon"]; active: boolean }) {
 
 export function MobileBottomNav({ locale }: Props) {
   const pathname = usePathname();
+  const searchHref = pathname === "/avtobozor" || pathname.startsWith("/avtobozor/") ? "/avtobozor" : "/cars";
+  const navItems = items.map(item => item.icon === "search" ? { ...item, href: searchHref } : item);
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
       <div className="h-[82px] md:hidden" aria-hidden="true" />
-      <nav
-        aria-label={locale === "ru" ? "Основная навигация" : "Asosiy navigatsiya"}
-        className="fixed inset-x-0 bottom-0 z-[100] border-t border-white/10 bg-[#0b0f14]/95 shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur-xl md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
+      <nav aria-label={locale === "ru" ? "Основная навигация" : "Asosiy navigatsiya"} className="fixed inset-x-0 bottom-0 z-[100] border-t border-white/10 bg-[#0b0f14]/95 shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur-xl md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="mx-auto grid h-[68px] max-w-xl grid-cols-5 px-1">
-          {items.map((item) => {
+          {navItems.map(item => {
             const active = isActive(item.href);
             const label = locale === "ru" ? item.ru : item.uz;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition ${active ? "text-white" : "text-slate-400"}`}
-                aria-current={active ? "page" : undefined}
-              >
-                <span className={`flex h-8 w-10 items-center justify-center rounded-full ${active ? "bg-[#0877F9]/15" : ""}`}>
-                  <Icon name={item.icon} active={active} />
-                </span>
-                <span className="truncate max-w-full">{label}</span>
-              </Link>
-            );
+            return <Link key={item.icon} href={item.href} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition ${active ? "text-white" : "text-slate-400"}`} aria-current={active ? "page" : undefined}>
+              <span className={`flex h-8 w-10 items-center justify-center rounded-full ${active ? "bg-[#0877F9]/15" : ""}`}><Icon name={item.icon} active={active} /></span>
+              <span className="max-w-full truncate">{label}</span>
+            </Link>;
           })}
         </div>
       </nav>
