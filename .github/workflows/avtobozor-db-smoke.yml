@@ -1,0 +1,58 @@
+name: Avtobozor database smoke test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "tests/sql/**"
+      - ".github/workflows/avtobozor-db-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "tests/sql/**"
+      - ".github/workflows/avtobozor-db-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-migration-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cardrive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cardrive_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: cardrive_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Create minimal Supabase-compatible fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/avtobozor-fixture.sql
+      - name: Apply Avtobozor migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117120000_used_car_marketplace_mvp.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261118130000_avtobozor_schema_reconciliation.sql
+      - name: Verify mileage, condition, RLS, grants and Storage
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/avtobozor-assertions.sql
