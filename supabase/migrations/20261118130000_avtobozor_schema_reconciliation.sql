@@ -44,11 +44,11 @@ begin
   if not exists (
     select 1 from pg_constraint
     where conrelid = 'public.used_car_listings'::regclass
-      and conname = 'used_car_listings_condition_description_length_check'
+      and conname = 'used_car_listings_condition_description_check'
   ) then
     alter table public.used_car_listings
-      add constraint used_car_listings_condition_description_length_check
-      check (char_length(condition_description) between 10 and 1200);
+      add constraint used_car_listings_condition_description_check
+      check (char_length(condition_description) <= 1200);
   end if;
 end
 $$;
