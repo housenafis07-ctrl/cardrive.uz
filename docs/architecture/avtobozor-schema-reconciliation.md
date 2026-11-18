@@ -1,0 +1,96 @@
+# Avtobozor schema reconciliation
+
+## Scope
+This forward-only reconciliation is limited to the user-generated Avtobozor marketplace. It does not alter the curated new-car inventory tables (brands, car_models, cars, car_images), dealer inventory, orders, financing, or existing new-car media.
+
+## Verified Production state (read-only inspection, 2026-11-18)
+- Supabase project: cardrive (wgfvnnapobfdevgjhfin), PostgreSQL 17.
+- Production migration history contains 13 entries, ending at 20260827095337.
+- No Avtobozor tables were present in public: used_car_listings, used_car_listing_images, used_car_favorites, used_car_inquiries.
+- The used-car-images Storage bucket was absent. Existing car-images bucket and its policies are not modified.
+- The new-car catalog remains separate and is not touched.
+
+## ER diagram
+
+```mermaid
+erDiagram
+  PROFILES ||--o{ USED_CAR_LISTINGS : owns
+  USED_CAR_LISTINGS ||--o{ USED_CAR_LISTING_IMAGES : contains
+  PROFILES ||--o{ USED_CAR_FAVORITES : saves
+  USED_CAR_LISTINGS ||--o{ USED_CAR_FAVORITES : favorited
+  PROFILES ||--o{ USED_CAR_INQUIRIES : buyer
+  PROFILES ||--o{ USED_CAR_INQUIRIES : seller
+  USED_CAR_LISTINGS ||--o{ USED_CAR_INQUIRIES : receives
+
+  PROFILES {
+    uuid id PK
+    user_role role
+    boolean is_active
+  }
+  USED_CAR_LISTINGS {
+    uuid id PK
+    uuid owner_profile_id FK
+    text slug UK
+    text brand
+    text model
+    smallint year
+    integer mileage_km
+    numeric price
+    text currency
+    text status
+    text vehicle_condition
+    text condition_description
+    timestamptz expires_at
+  }
+  USED_CAR_LISTING_IMAGES {
+    uuid id PK
+    uuid listing_id FK
+    text storage_path UK
+    text public_url
+    smallint sort_order
+    boolean is_primary
+  }
+  USED_CAR_FAVORITES {
+    uuid profile_id PK, FK
+    uuid listing_id PK, FK
+    timestamptz created_at
+  }
+  USED_CAR_INQUIRIES {
+    uuid id PK
+    uuid listing_id FK
+    uuid seller_profile_id FK
+    uuid buyer_profile_id FK
+    text message
+    text status
+  }
+```
+
+## Migration order
+1. 20261117120000_used_car_marketplace_mvp.sql — creates the four Avtobozor tables, indexes, trigger, RLS policies and image bucket.
+2. 20261118100000_used_car_condition_and_mileage.sql — from the in-progress UI branch; allows 0 km and adds structured condition fields. This migration is additive and idempotent.
+3. 20261118130000_avtobozor_schema_reconciliation.sql — independently reasserts 0 km, condition fields, indexes, RLS policies, read-only grants and bucket configuration. It also provides the expected final state if the UI-branch migration is not merged.
+
+If step 3 is applied before the earlier-timestamp step 2 is merged, Supabase may later report step 2 as pending. Its operations are intentionally idempotent: the constraint is dropped/recreated, existing columns are preserved, and the same named condition constraint is not duplicated. Review the remote migration ledger before any later db push.
+
+The reconciliation migration is idempotent for repeatable policy/index/column setup. It is not a substitute for repairing unrelated historical migration-version mismatches. Do not mark historical migrations as applied or rewrite the remote migration ledger without a separately reviewed reconciliation.
+
+## Access model
+- Anonymous and authenticated SQL roles have read-only table privileges for listings and images; RLS limits public rows to non-expired active, reserved, or sold listings.
+- Owners and active admin/manager accounts receive only their explicitly scoped read access.
+- Favorites and inquiries are not exposed to anonymous users; authenticated reads are limited to the owner/participants.
+- Direct client writes remain disabled. Current Cardrive customer sessions are signed HttpOnly cookies, not Supabase Auth JWTs; server actions use the server-only service-role client after verifying the session and ownership.
+- used-car-images is public-read, limited to JPEG/PNG/WEBP and 8 MB. Upload and delete operations remain server-only. No public Storage write policy is added.
+- The existing car-images bucket and new-car media policies remain unchanged.
+
+## Release gates
+- The GitHub Actions workflow .github/workflows/avtobozor-db-smoke.yml provisions disposable PostgreSQL 17, applies the base and reconciliation migrations, and runs tests/sql/avtobozor-assertions.sql.
+- Merge the Avtobozor application branch only after CI, the PostgreSQL smoke test and Vercel Preview pass.
+- The smoke test asserts:
+  - mileage 0 is accepted; negative mileage and NULL are rejected;
+  - each condition enum value is accepted and an unknown value rejected;
+  - anon can read only active, unexpired listing rows and related images;
+  - anon cannot read favorites/inquiries or write to any marketplace table;
+  - authenticated users cannot read another owner's pending listing or another buyer/seller's inquiry;
+  - service-role server actions can create pending listings and upload images.
+- Run Supabase Security and Performance Advisors after the migration.
+- Production migration application is a separate release operation requiring a verified backup and an explicit deployment window. This PR does not apply SQL to Production, alter billing, or change Vercel Production.
