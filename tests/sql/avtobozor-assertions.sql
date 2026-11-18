@@ -66,12 +66,12 @@ reset role;
 -- Owners can read their own pending listing; other customers cannot.
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',false);
 set role authenticated;
-select public.assert_equal((select count(*) from public.used_car_listings where status='pending_review'), 1, 'owner pending listing visibility');
+select public.assert_equal((select count(*) from public.used_car_listings where slug='pending-owner'), 1, 'owner pending listing visibility');
 reset role;
 
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',false);
 set role authenticated;
-select public.assert_equal((select count(*) from public.used_car_listings where status='pending_review'), 0, 'other customer cannot read pending listing');
+select public.assert_equal((select count(*) from public.used_car_listings where slug='pending-owner'), 0, 'other customer cannot read pending listing');
 reset role;
 
 -- Admin sees all listings through the explicit admin policy.
