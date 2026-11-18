@@ -59,15 +59,31 @@ const conditions: VehicleCondition[] = [
 ];
 
 const colors = [
-  { value: "Oq", ru: "Белый", hex: "#f8fafc", border: true },
-  { value: "Qora", ru: "Чёрный", hex: "#262626" },
-  { value: "Kulrang", ru: "Серый", hex: "#a3a3a3" },
+  { value: "Marvarid oq", ru: "Жемчужно-белый", hex: "#f8fafc", border: true },
+  { value: "Oq", ru: "Белый", hex: "#ffffff", border: true },
+  { value: "Qora", ru: "Чёрный", hex: "#202124" },
+  { value: "Grafit", ru: "Графитовый", hex: "#45484d" },
+  { value: "Kulrang", ru: "Серый", hex: "#92979d" },
+  { value: "Kumushrang", ru: "Серебристый", hex: "#c0c6cc" },
+  { value: "Metallik kulrang", ru: "Серый металлик", hex: "#737b84" },
+  { value: "To'q ko'k", ru: "Тёмно-синий", hex: "#102f58" },
   { value: "Ko'k", ru: "Синий", hex: "#2563eb" },
-  { value: "Qizil", ru: "Красный", hex: "#ef4444" },
-  { value: "Yashil", ru: "Зелёный", hex: "#16a34a" },
-  { value: "To'q sariq", ru: "Оранжевый", hex: "#ea580c" },
-  { value: "Sariq", ru: "Жёлтый", hex: "#eab308" },
-  { value: "Jigarrang", ru: "Коричневый", hex: "#854d0e" },
+  { value: "Havorang", ru: "Голубой", hex: "#65b9e8" },
+  { value: "Qizil", ru: "Красный", hex: "#dc2626" },
+  { value: "Olcha rang", ru: "Вишнёвый", hex: "#8f1d35" },
+  { value: "Bordo", ru: "Бордовый", hex: "#651b32" },
+  { value: "Yashil", ru: "Зелёный", hex: "#16834a" },
+  { value: "Zaytunrang", ru: "Оливковый", hex: "#747b38" },
+  { value: "Feruza", ru: "Бирюзовый", hex: "#26a6a1" },
+  { value: "Binafsha", ru: "Фиолетовый", hex: "#7650a8" },
+  { value: "Pushti", ru: "Розовый", hex: "#e78aa7" },
+  { value: "Bej", ru: "Бежевый", hex: "#cbb99b" },
+  { value: "Kremrang", ru: "Кремовый", hex: "#eee0c2" },
+  { value: "Jigarrang", ru: "Коричневый", hex: "#80543b" },
+  { value: "Bronza", ru: "Бронзовый", hex: "#9a6846" },
+  { value: "Oltinrang", ru: "Золотистый", hex: "#c5a34d" },
+  { value: "To'q sariq", ru: "Оранжевый", hex: "#ea7a24" },
+  { value: "Sariq", ru: "Жёлтый", hex: "#eabf32" },
   { value: "Boshqa", ru: "Другой", hex: "conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)" },
 ] as const;
 
@@ -80,6 +96,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
+  const [showCondition, setShowCondition] = useState(false);
 
   async function submitListing(data: FormData) {
     setSubmitting(true);
@@ -133,30 +150,52 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
         <fieldset className="col-span-full">
           <legend className="mb-3 text-sm font-bold">{ru ? "Цвет автомобиля" : "Avtomobil rangi"} *</legend>
           <input type="hidden" name="color" value={color} />
-          <div className="flex flex-wrap gap-3">
-            {colors.map(item => {
-              const selected = color === item.value;
-              return <button key={item.value} type="button" aria-label={ru ? item.ru : item.value} aria-pressed={selected} title={ru ? item.ru : item.value} onClick={() => setColor(item.value)} className={"h-12 w-12 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 " + (selected ? "border-blue-600 ring-2 ring-blue-200 ring-offset-2" : "border-slate-200")} style={{ background: item.hex }}><span className="sr-only">{ru ? item.ru : item.value}</span></button>;
-            })}
+          <div className="-mx-1 overflow-x-auto px-1 pb-3 sm:mx-0 sm:overflow-visible sm:px-0">
+            <div className="flex w-max gap-3 sm:w-auto sm:flex-wrap">
+              {colors.map(item => {
+                const selected = color === item.value;
+                return <button key={item.value} type="button" aria-label={ru ? item.ru : item.value} aria-pressed={selected} title={ru ? item.ru : item.value} onClick={() => setColor(item.value)} className={"h-12 w-12 shrink-0 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 " + (selected ? "border-blue-600 ring-2 ring-blue-200 ring-offset-2" : "border-slate-200")} style={{ background: item.hex }}><span className="sr-only">{ru ? item.ru : item.value}</span></button>;
+              })}
+            </div>
           </div>
+          <p className="mt-1 text-[11px] text-slate-400 sm:hidden">{ru ? "Проведите в сторону, чтобы увидеть другие цвета" : "Boshqa ranglarni ko‘rish uchun yon tomonga suring"}</p>
           <p className="mt-2 text-xs text-slate-500">{ru ? "Выбранный цвет: " : "Tanlangan rang: "}{ru ? colors.find(item => item.value === color)?.ru : color}</p>
         </fieldset>
 
-        <fieldset className="col-span-full">
-          <legend className="mb-3 text-sm font-bold">{ru ? "Состояние автомобиля" : "Avtomobil holati"} *</legend>
+        <fieldset className="col-span-full min-w-0">
           <input type="hidden" name="vehicleCondition" value={condition} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            {conditions.map(item => {
-              const selected = condition === item.value;
-              return <button key={item.value} type="button" aria-pressed={selected} onClick={() => { setCondition(item.value); setConditionDescription(item[ru ? "ruTemplate" : "uzTemplate"]); }} className={"rounded-2xl border p-4 text-left transition " + (selected ? "border-blue-600 bg-blue-50 ring-1 ring-blue-200" : "border-slate-200 bg-white hover:border-slate-400")}>
-                <span className="block font-bold">{ru ? item.ru : item.uz}</span>
-                <span className="mt-1 block text-sm leading-5 text-slate-600">{ru ? item.ruTemplate : item.uzTemplate}</span>
-              </button>;
-            })}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <button
+              type="button"
+              aria-expanded={showCondition}
+              onClick={() => setShowCondition(value => !value)}
+              className="flex w-full items-center justify-between gap-3 p-4 text-left"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-bold">{ru ? "Состояние автомобиля" : "Avtomobil holati"}</span>
+                <span className="mt-1 block truncate text-sm text-slate-500">{ru ? conditions.find(item => item.value === condition)?.ru : conditions.find(item => item.value === condition)?.uz}</span>
+              </span>
+              <svg aria-hidden="true" viewBox="0 0 20 20" className={"h-5 w-5 shrink-0 text-blue-600 transition-transform " + (showCondition ? "rotate-180" : "")} fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            {showCondition ? (
+              <div className="border-t border-slate-100 p-3 sm:p-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {conditions.map(item => {
+                    const selected = condition === item.value;
+                    return <button key={item.value} type="button" aria-pressed={selected} onClick={() => { setCondition(item.value); setConditionDescription(item[ru ? "ruTemplate" : "uzTemplate"]); }} className={"rounded-xl border p-3 text-left transition " + (selected ? "border-blue-600 bg-blue-50 ring-1 ring-blue-200" : "border-slate-200 bg-white hover:border-slate-400")}>
+                      <span className="block text-sm font-bold">{ru ? item.ru : item.uz}</span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-600">{ru ? item.ruTemplate : item.uzTemplate}</span>
+                    </button>;
+                  })}
+                </div>
+                <label className="mt-3 block text-sm font-semibold">{ru ? "Шаблон состояния (можно отредактировать)" : "Avto holati shabloni (tahrirlash mumkin)"}
+                  <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={event => setConditionDescription(event.target.value)} className="mt-1 w-full rounded-xl border p-3 font-normal" />
+                </label>
+              </div>
+            ) : (
+              <input type="hidden" name="conditionDescription" value={conditionDescription} />
+            )}
           </div>
-          <label className="mt-4 block text-sm font-semibold">{ru ? "Шаблон состояния (можно отредактировать)" : "Avto holati shabloni (tahrirlash mumkin)"}
-            <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={event => setConditionDescription(event.target.value)} className="mt-1 w-full rounded-xl border p-3 font-normal" />
-          </label>
         </fieldset>
 
         <label className="col-span-full text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
