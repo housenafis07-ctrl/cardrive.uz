@@ -12,8 +12,10 @@ This forward-only reconciliation is limited to the user-generated Avtobozor mark
 
 ## Migration order
 1. 20261117120000_used_car_marketplace_mvp.sql — creates the four Avtobozor tables, indexes, trigger, RLS policies and image bucket.
-2. 20261118130000_avtobozor_schema_reconciliation.sql — ensures 0 km is valid, adds structured vehicle-condition fields, reasserts indexes/RLS policies/read-only grants and bucket configuration.
-3. 20261118100000_used_car_condition_and_mileage.sql (from the in-progress UI branch) may also be present. It is additive and idempotent; its condition/mileage changes are reasserted by step 2. If it is merged after step 2, verify the remote migration ledger and run the pending migration as a separate controlled operation.
+2. 20261118100000_used_car_condition_and_mileage.sql — from the in-progress UI branch; allows 0 km and adds structured condition fields. This migration is additive and idempotent.
+3. 20261118130000_avtobozor_schema_reconciliation.sql — independently reasserts 0 km, condition fields, indexes, RLS policies, read-only grants and bucket configuration. It also provides the expected final state if the UI-branch migration is not merged.
+
+If step 3 is applied before the earlier-timestamp step 2 is merged, Supabase may later report step 2 as pending. Its operations are intentionally idempotent: the constraint is dropped/recreated, existing columns are preserved, and the same named condition constraint is not duplicated. Review the remote migration ledger before any later db push.
 
 The reconciliation migration is idempotent for repeatable policy/index/column setup. It is not a substitute for repairing unrelated historical migration-version mismatches. Do not mark historical migrations as applied or rewrite the remote migration ledger without a separately reviewed reconciliation.
 
