@@ -164,6 +164,14 @@ grant select on table
   public.used_car_inquiries
 to authenticated;
 
+-- The server-only service-role client is the sole writer for marketplace records.
+grant all on table
+  public.used_car_listings,
+  public.used_car_listing_images,
+  public.used_car_favorites,
+  public.used_car_inquiries
+to service_role;
+
 -- Public-read images; uploads/deletes are performed only by the server-role client.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
