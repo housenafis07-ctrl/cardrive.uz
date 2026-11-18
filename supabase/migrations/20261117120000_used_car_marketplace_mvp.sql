@@ -6,7 +6,7 @@ create table if not exists public.used_car_listings (
   brand text not null check (char_length(brand) between 1 and 80),
   model text not null check (char_length(model) between 1 and 100),
   year smallint not null check (year between 1950 and 2100),
-  mileage_km integer not null check (mileage_km between 0 and 2000000),
+  mileage_km integer not null check (mileage_km between 1 and 2000000),
   price numeric(14,2) not null check (price > 0),
   currency char(3) not null default 'UZS' check (currency in ('UZS','USD')),
   region text not null,
