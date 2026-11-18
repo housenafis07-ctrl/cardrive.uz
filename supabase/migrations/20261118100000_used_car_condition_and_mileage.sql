@@ -12,5 +12,9 @@ alter table public.used_car_listings
   check (vehicle_condition in ('ideal','good','minor_defects','body_repair','major_repair','parts_only'));
 
 alter table public.used_car_listings
-  add column if not exists condition_description text not null default ''
+  add column if not exists condition_description text not null default 'Avtomobilda foydalanish bilan bog‘liq tabiiy izlar bor. Jiddiy shikastlanishlar mavjud emas.'
   check (char_length(condition_description) <= 1200);
+
+update public.used_car_listings
+set condition_description = 'Avtomobilda foydalanish bilan bog‘liq tabiiy izlar bor. Jiddiy shikastlanishlar mavjud emas.'
+where condition_description = '';
