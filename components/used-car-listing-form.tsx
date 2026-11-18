@@ -87,12 +87,42 @@ const colors = [
   { value: "Boshqa", ru: "Другой", hex: "conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)" },
 ] as const;
 
+
+async function compressListingImage(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    let width = Math.max(1, Math.round(bitmap.width * scale));
+    let height = Math.max(1, Math.round(bitmap.height * scale));
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Rasmni qayta ishlash uchun canvas ochilmadi.");
+      context.drawImage(bitmap, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", Math.max(0.52, 0.82 - attempt * 0.08)));
+      if (!blob) throw new Error("Rasmni siqib bo‘lmadi. Boshqa rasm tanlang.");
+      if (blob.size <= 220 * 1024) {
+        const name = file.name.replace(/\.[^.]+$/, "") + ".webp";
+        return new File([blob], name, { type: "image/webp", lastModified: Date.now() });
+      }
+      width = Math.round(width * 0.82);
+      height = Math.round(height * 0.82);
+    }
+    throw new Error("Rasm hajmi juda katta. Kichikroq rasm tanlang.");
+  } finally {
+    bitmap.close();
+  }
+}
+
 export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale: Locale; isAuthenticated: boolean; error?: string }) {
   const ru = locale === "ru";
   const pendingForm = useRef<FormData | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);\n  const [submitError, setSubmitError] = useState("");
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
@@ -100,8 +130,27 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
 
   async function submitListing(data: FormData) {
     setSubmitting(true);
-    await createUsedCarListingAction(data);
-    setSubmitting(false);
+    setSubmitError("");
+    try {
+      const originalFiles = data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
+      data.delete("photos");
+      let totalBytes = 0;
+      for (const original of originalFiles) {
+        const compressed = await compressListingImage(original);
+        totalBytes += compressed.size;
+        if (totalBytes > 2_400 * 1024) {
+          throw new Error("Rasmlarning umumiy hajmi katta. Rasmlar sonini yoki sifatini kamaytiring.");
+        }
+        data.append("photos", compressed, compressed.name);
+      }
+      await createUsedCarListingAction(data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setSubmitError(message.includes("Body exceeded") || message.includes("413")
+        ? "Rasmlar hajmi server chegarasidan oshdi. Rasmlarni kichraytirib qayta yuboring."
+        : message || "E'lon yuborilmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring.");
+      setSubmitting(false);
+    }
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -127,7 +176,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
 
   return (
     <>
-      {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}\n      {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
       <form onSubmit={handleSubmit} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
         <label className="text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 w-full rounded-xl border p-3" /></label>
