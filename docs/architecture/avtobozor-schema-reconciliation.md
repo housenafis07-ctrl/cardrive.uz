@@ -10,6 +10,61 @@ This forward-only reconciliation is limited to the user-generated Avtobozor mark
 - The used-car-images Storage bucket was absent. Existing car-images bucket and its policies are not modified.
 - The new-car catalog remains separate and is not touched.
 
+## ER diagram
+
+```mermaid
+erDiagram
+  PROFILES ||--o{ USED_CAR_LISTINGS : owns
+  USED_CAR_LISTINGS ||--o{ USED_CAR_LISTING_IMAGES : contains
+  PROFILES ||--o{ USED_CAR_FAVORITES : saves
+  USED_CAR_LISTINGS ||--o{ USED_CAR_FAVORITES : favorited
+  PROFILES ||--o{ USED_CAR_INQUIRIES : buyer
+  PROFILES ||--o{ USED_CAR_INQUIRIES : seller
+  USED_CAR_LISTINGS ||--o{ USED_CAR_INQUIRIES : receives
+
+  PROFILES {
+    uuid id PK
+    user_role role
+    boolean is_active
+  }
+  USED_CAR_LISTINGS {
+    uuid id PK
+    uuid owner_profile_id FK
+    text slug UK
+    text brand
+    text model
+    smallint year
+    integer mileage_km
+    numeric price
+    text currency
+    text status
+    text vehicle_condition
+    text condition_description
+    timestamptz expires_at
+  }
+  USED_CAR_LISTING_IMAGES {
+    uuid id PK
+    uuid listing_id FK
+    text storage_path UK
+    text public_url
+    smallint sort_order
+    boolean is_primary
+  }
+  USED_CAR_FAVORITES {
+    uuid profile_id PK, FK
+    uuid listing_id PK, FK
+    timestamptz created_at
+  }
+  USED_CAR_INQUIRIES {
+    uuid id PK
+    uuid listing_id FK
+    uuid seller_profile_id FK
+    uuid buyer_profile_id FK
+    text message
+    text status
+  }
+```
+
 ## Migration order
 1. 20261117120000_used_car_marketplace_mvp.sql — creates the four Avtobozor tables, indexes, trigger, RLS policies and image bucket.
 2. 20261118100000_used_car_condition_and_mileage.sql — from the in-progress UI branch; allows 0 km and adds structured condition fields. This migration is additive and idempotent.
