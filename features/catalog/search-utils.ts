@@ -45,6 +45,10 @@ function levenshtein(a: string, b: string): number {
 function tokenSimilarity(queryToken: string, candidateToken: string): number {
   if (queryToken === candidateToken) return 1;
   if (candidateToken.includes(queryToken)) return 0.96;
+  // Uzbek Cyrillic "к" is commonly used for English model names beginning with C (e.g. кобал -> Cobalt).
+  if (queryToken.length >= 4 && candidateToken.length >= queryToken.length &&
+      (queryToken[0] === "k" && candidateToken[0] === "c" || queryToken[0] === "c" && candidateToken[0] === "k") &&
+      candidateToken.slice(1).startsWith(queryToken.slice(1))) return 0.97;
 
   const distance = levenshtein(queryToken, candidateToken);
   const maxLength = Math.max(queryToken.length, candidateToken.length);
@@ -70,6 +74,6 @@ export function searchRelevance(query: string, fields: string[]): number {
     Math.max(...candidateTokens.map((candidateToken) => tokenSimilarity(queryToken, candidateToken))),
   );
 
-  if (scores.some((score) => score < 0.84)) return 0;
+  if (scores.some((score) => score < 0.65)) return 0;
   return scores.reduce((sum, score) => sum + score, 0) / scores.length;
 }
