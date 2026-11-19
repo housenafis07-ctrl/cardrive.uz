@@ -9,6 +9,25 @@ body { margin: 0; min-height: 100vh; background: #f7f9fc; color: #0f172a; font-f
   inherits: false;
 }
 
+.marketplace-search {
+  isolation: isolate;
+  border-radius: 999px;
+  padding: 2px;
+  background: conic-gradient(from var(--neon-angle), #dbeafe 0deg, #dbeafe 205deg, #38bdf8 250deg, #fff 275deg, #2563eb 300deg, #dbeafe 340deg);
+  animation: neon-orbit 3.2s linear infinite;
+  box-shadow: 0 0 7px rgba(56,189,248,.45), 0 0 17px rgba(37,99,235,.22);
+}
+.marketplace-search > input {
+  border-color: transparent !important;
+  background: #f8fafc;
+}
+.marketplace-search:focus-within {
+  box-shadow: 0 0 9px rgba(56,189,248,.7), 0 0 22px rgba(37,99,235,.38);
+}
+.marketplace-search > button {
+  box-shadow: 0 0 10px rgba(56,189,248,.4);
+}
+
 .marketplace-home { isolation: isolate; }
 .marketplace-card {
   --accent: #38a8ff;
