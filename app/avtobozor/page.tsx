@@ -4,6 +4,7 @@ import { Header, Footer } from "@/components/site-chrome";
 import { getLocale } from "@/lib/locale";
 import { createPublicServerClient } from "@/supabase/public-server";
 import { normalizeSearchText, searchRelevance } from "@/features/catalog/search-utils";
+import { CollapsibleFilters } from "@/components/collapsible-filters";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -67,8 +68,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   return <><Header/><main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
     <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.2em] text-blue-700">CARDRIVE MARKETPLACE</p><h1 className="mt-2 text-4xl font-black tracking-tight">{labels.title}</h1><p className="mt-2 text-slate-600">{labels.sub}</p></div><Link href="/avtobozor/yangi-elon" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg">{labels.add} +</Link></div>
     <div className="mt-7 grid gap-6 lg:grid-cols-[280px_1fr]">
-      <aside><form action="/avtobozor" className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="font-black">{ru?"Фильтры":"Filtrlar"}</h2>
+      <aside><CollapsibleFilters title={ru ? "Фильтры" : "Filtrlar"}><form action="/avtobozor" className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <input name="q" defaultValue={value("q")} placeholder={labels.search} className="rounded-xl border p-3 text-sm"/>
         <select name="region" defaultValue={value("region")} className="rounded-xl border p-3 text-sm"><option value="">{labels.all}</option>{regions.map(r=><option key={r}>{r}</option>)}</select>
         <div className="grid grid-cols-2 gap-2"><input name="minPrice" type="number" defaultValue={value("minPrice")} placeholder={labels.priceMin} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="maxPrice" type="number" defaultValue={value("maxPrice")} placeholder={labels.priceMax} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
@@ -81,7 +81,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
         <select name="sort" defaultValue={sort} className="rounded-xl border p-3 text-sm"><option value="newest">{labels.newest}</option><option value="price_asc">{labels.cheap}</option><option value="price_desc">{labels.expensive}</option></select>
         <button className="rounded-full bg-blue-700 px-4 py-3 text-sm font-bold text-white">{labels.apply}</button>
         <Link href="/avtobozor" className="text-center text-xs font-semibold text-slate-500 underline">{ru?"Сбросить":"Filtrlarni tozalash"}</Link>
-      </form></aside>
+      </form></CollapsibleFilters></aside>
       <section>
         <p className="mb-4 text-sm text-slate-500">{resultCount} {labels.found}</p>
         {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{listings.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);return <Link key={item.id} href={"/avtobozor/"+item.slug} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{images[0]?.public_url?<img src={images[0].public_url} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span></div><div className="p-4"><h2 className="font-black">{item.brand} {item.model} · {item.year}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></div></Link>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
