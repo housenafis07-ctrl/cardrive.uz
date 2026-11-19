@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Header, Footer } from "@/components/site-chrome";
 import { getLocale } from "@/lib/locale";
 import { createPublicServerClient } from "@/supabase/public-server";
+import { normalizeSearchText, searchRelevance } from "@/features/catalog/search-utils";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -24,7 +25,9 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     .select("id,slug,brand,model,year,mileage_km,price,currency,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
     .eq("status", "active").gt("expires_at", new Date().toISOString());
   const q = value("q").replace(/[^\p{L}\p{N} .-]/gu, " ").trim();
-  if (q) { const tokens = q.split(/\\s+/).filter(Boolean).slice(0, 5); const clauses = tokens.map(token => "or(brand.ilike.%"+token+"%,model.ilike.%"+token+"%)"); query = query.or("and("+clauses.join(",")+")"); }
+  const normalizedQ = normalizeSearchText(q);
+  // Search both brand and model after Latin/Cyrillic normalization; typo tolerance is ranked below.
+  if (normalizedQ) { const tokens = normalizedQ.split(/\s+/).filter(Boolean).slice(0, 5); const clauses = tokens.map(token => "or(brand.ilike.%"+token+"%,model.ilike.%"+token+"%)"); query = query.or("and("+clauses.join(",")+")"); }
   if (value("region")) query = query.eq("region", value("region"));
   if (value("fuel")) query = query.eq("fuel_type", value("fuel"));
   if (value("transmission")) query = query.eq("transmission", value("transmission"));
