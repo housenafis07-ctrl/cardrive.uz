@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/site-chrome";
@@ -5,6 +6,48 @@ import { getLocale } from "@/lib/locale";
 import { createPublicServerClient } from "@/supabase/public-server";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const locale = await getLocale();
+  const ru = locale === "ru";
+  const db = createPublicServerClient();
+  const { data: listing } = await db.from("used_car_listings")
+    .select("slug,brand,model,year,description,condition_description,used_car_listing_images(public_url,sort_order,is_primary)")
+    .eq("slug", slug).eq("status", "active").gt("expires_at", new Date().toISOString()).maybeSingle();
+
+  if (!listing) return { title: ru ? "Объявление не найдено" : "E’lon topilmadi" };
+
+  const images = [...(listing.used_car_listing_images ?? [])]
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order);
+  const imageUrl = images[0]?.public_url;
+  const title = `${listing.brand} ${listing.model} · ${listing.year}`;
+  const rawDescription = listing.description?.trim() || listing.condition_description?.trim() ||
+    (ru ? "Подробности и фотографии автомобиля на Cardrive.uz." : "Avtomobil rasmlari va batafsil ma’lumot Cardrive.uz’da.");
+  const description = rawDescription.replace(/\\s+/g, " ").slice(0, 300);
+  const url = `https://cardrive.uz/avtobozor/${listing.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      siteName: "Cardrive.uz",
+      title,
+      description,
+      locale: ru ? "ru_RU" : "uz_UZ",
+      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : [],
+    },
+  };
+}
 
 export default async function UsedCarDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
