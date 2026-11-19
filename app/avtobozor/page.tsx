@@ -50,7 +50,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     : await query.range((page - 1) * 12, page * 12 - 1);
   const rankedListings = normalizedQ
     ? (data ?? []).map(item => ({ item, score: searchRelevance(q, [item.brand, item.model]) }))
-        .filter(entry => entry.score >= 0.8)
+        .filter(entry => entry.score >= 0.68)
         .sort((a, b) => b.score - a.score || new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime())
         .map(entry => entry.item)
     : null;
