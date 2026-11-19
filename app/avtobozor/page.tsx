@@ -30,8 +30,8 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   if (value("transmission")) query = query.eq("transmission", value("transmission"));
   if (value("body")) query = query.eq("body_type", value("body"));
   if (value("currency") === "USD" || value("currency") === "UZS") query = query.eq("currency", value("currency"));
-  if (value("minPrice") && Number.isFinite(Number(value("minPrice")))) query = query.gte("price", Number(value("minPrice")));
-  if (value("maxPrice") && Number.isFinite(Number(value("maxPrice")))) query = query.lte("price", Number(value("maxPrice")));
+  if ((value("currency") === "USD" || value("currency") === "UZS") && value("minPrice") && Number.isFinite(Number(value("minPrice")))) query = query.gte("price", Number(value("minPrice")));
+  if ((value("currency") === "USD" || value("currency") === "UZS") && value("maxPrice") && Number.isFinite(Number(value("maxPrice")))) query = query.lte("price", Number(value("maxPrice")));
   if (value("mileageFrom") && Number.isFinite(Number(value("mileageFrom")))) query = query.gte("mileage_km", Number(value("mileageFrom")));
   if (value("mileageTo") && Number.isFinite(Number(value("mileageTo")))) query = query.lte("mileage_km", Number(value("mileageTo")));
   if (value("yearFrom") && Number.isFinite(Number(value("yearFrom")))) query = query.gte("year", Number(value("yearFrom")));
