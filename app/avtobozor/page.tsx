@@ -27,7 +27,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   const q = value("q").replace(/[^\p{L}\p{N} .-]/gu, " ").trim();
   const normalizedQ = normalizeSearchText(q);
   // Search both brand and model after Latin/Cyrillic normalization; typo tolerance is ranked below.
-  if (normalizedQ) { const tokens = normalizedQ.split(/\s+/).filter(Boolean).slice(0, 5); const clauses = tokens.map(token => "or(brand.ilike.%"+token+"%,model.ilike.%"+token+"%)"); query = query.or("and("+clauses.join(",")+")"); }
+
   if (value("region")) query = query.eq("region", value("region"));
   if (value("fuel")) query = query.eq("fuel_type", value("fuel"));
   if (value("transmission")) query = query.eq("transmission", value("transmission"));
@@ -45,9 +45,18 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   else if (sort === "year_desc") query = query.order("year", { ascending: false });
   else query = query.order("created_at", { ascending: false });
   const page = Math.max(1, Math.min(1000, Number(value("page")) || 1));
-  const { data, count, error } = await query.range((page - 1) * 12, page * 12 - 1);
-  const listings = data ?? [];
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / 12));
+  const { data, count, error } = normalizedQ
+    ? await query.range(0, 499)
+    : await query.range((page - 1) * 12, page * 12 - 1);
+  const rankedListings = normalizedQ
+    ? (data ?? []).map(item => ({ item, score: searchRelevance(q, [item.brand, item.model]) }))
+        .filter(entry => entry.score >= 0.8)
+        .sort((a, b) => b.score - a.score || new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime())
+        .map(entry => entry.item)
+    : null;
+  const listings = rankedListings ? rankedListings.slice((page - 1) * 12, page * 12) : data ?? [];
+  const resultCount = rankedListings ? rankedListings.length : count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
   for (const key of ["q","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo","sort"]) if (value(key)) params.set(key, value(key));
   const pageHref = (n: number) => { const p = new URLSearchParams(params); p.set("page", String(n)); return "/avtobozor?" + p.toString(); };
@@ -62,7 +71,9 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
         <h2 className="font-black">{ru?"Фильтры":"Filtrlar"}</h2>
         <input name="q" defaultValue={value("q")} placeholder={labels.search} className="rounded-xl border p-3 text-sm"/>
         <select name="region" defaultValue={value("region")} className="rounded-xl border p-3 text-sm"><option value="">{labels.all}</option>{regions.map(r=><option key={r}>{r}</option>)}</select>
-        <div className="grid grid-cols-2 gap-2"><input name="minPrice" type="number" defaultValue={value("minPrice")} placeholder={labels.priceMin} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="maxPrice" type="number" defaultValue={value("maxPrice")} placeholder={labels.priceMax} className="min-w-0 rounded-xl border p-3 text-sm"/></div>\n        <select name="currency" defaultValue={value("currency")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Любая валюта":"Barcha valyutalar"}</option><option value="USD">USD ($)</option><option value="UZS">UZS (so‘m)</option></select>\n        <div className="grid grid-cols-2 gap-2"><input name="mileageFrom" type="number" min="0" defaultValue={value("mileageFrom")} placeholder={labels.mileageFrom} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="mileageTo" type="number" min="0" defaultValue={value("mileageTo")} placeholder={labels.mileageTo} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
+        <div className="grid grid-cols-2 gap-2"><input name="minPrice" type="number" defaultValue={value("minPrice")} placeholder={labels.priceMin} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="maxPrice" type="number" defaultValue={value("maxPrice")} placeholder={labels.priceMax} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
+        <select name="currency" defaultValue={value("currency")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Любая валюта":"Barcha valyutalar"}</option><option value="USD">USD ($)</option><option value="UZS">UZS (so‘m)</option></select>
+        <div className="grid grid-cols-2 gap-2"><input name="mileageFrom" type="number" min="0" defaultValue={value("mileageFrom")} placeholder={labels.mileageFrom} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="mileageTo" type="number" min="0" defaultValue={value("mileageTo")} placeholder={labels.mileageTo} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
         <div className="grid grid-cols-2 gap-2"><input name="yearFrom" type="number" defaultValue={value("yearFrom")} placeholder={labels.yearFrom} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="yearTo" type="number" defaultValue={value("yearTo")} placeholder={labels.yearTo} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
         <select name="fuel" defaultValue={value("fuel")} className="rounded-xl border p-3 text-sm"><option value="">{labels.fuel}</option>{["Benzin","Gaz","Benzin/Gaz","Dizel","Gibrid","Elektr"].map(v=><option key={v}>{v}</option>)}</select>
         <select name="transmission" defaultValue={value("transmission")} className="rounded-xl border p-3 text-sm"><option value="">{labels.transmission}</option>{["Mexanika","Avtomat","CVT","Robot"].map(v=><option key={v}>{v}</option>)}</select>
@@ -72,7 +83,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
         <Link href="/avtobozor" className="text-center text-xs font-semibold text-slate-500 underline">{ru?"Сбросить":"Filtrlarni tozalash"}</Link>
       </form></aside>
       <section>
-        <p className="mb-4 text-sm text-slate-500">{count ?? 0} {labels.found}</p>
+        <p className="mb-4 text-sm text-slate-500">{resultCount} {labels.found}</p>
         {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{listings.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);return <Link key={item.id} href={"/avtobozor/"+item.slug} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{images[0]?.public_url?<img src={images[0].public_url} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span></div><div className="p-4"><h2 className="font-black">{item.brand} {item.model} · {item.year}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></div></Link>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
         {totalPages>1?<nav className="mt-8 flex items-center justify-center gap-3"><Link aria-disabled={page<=1} className="rounded-lg border px-4 py-2" href={pageHref(Math.max(1,page-1))}>{ru?"Назад":"Oldingi"}</Link><span className="text-sm text-slate-600">{page} / {totalPages}</span><Link aria-disabled={page>=totalPages} className="rounded-lg border px-4 py-2" href={pageHref(Math.min(totalPages,page+1))}>{ru?"Далее":"Keyingi"}</Link></nav>:null}
       </section>
