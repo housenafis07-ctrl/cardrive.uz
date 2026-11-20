@@ -10,7 +10,7 @@ export type UsedCarCreditProgram = {
   name_uz?: string | null;
   name_ru?: string | null;
   currency?: string | null;
-  calculator_price?: number | null;
+  calculator_price?: number | null;\n  exchange_rate_to_uzs?: number | null;
   annual_interest_rate?: number | null;
   min_down_payment_percent?: number | null;
   max_term_months?: number | null;
@@ -65,5 +65,5 @@ export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackP
       });
     }
   }
-  return offers.sort((a, b) => a.monthlyPayment - b.monthlyPayment || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0] ?? null;
+  return offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0] ? (() => { const best = offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0]; const { comparisonPaymentUzs: _comparisonPaymentUzs, ...visible } = best; return visible; })() : null;
 }
