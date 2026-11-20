@@ -76,7 +76,7 @@ export class FinancingRepository {
     return {...result,data};
   }
 
-  async getBankCreditProgramsForUsedCar(price: number, currency: string, vehicle: {year:number;origin:string;fuelType:string|null}) {
+  async getBankCreditProgramsForUsedCar(price: number, currency: string, vehicle: {year:number;origin:string;fuelType:string|null;brand:string}) {
     const client = createPublicServerClient();
     const listingCurrency = currency === "USD" ? "USD" : "UZS";
     const result = await client
@@ -118,6 +118,8 @@ export class FinancingRepository {
       if (program.max_vehicle_age_years != null && age > Number(program.max_vehicle_age_years)) return [];
       const origins = Array.isArray(program.eligible_vehicle_origins) ? program.eligible_vehicle_origins as string[] : [];
       if (origins.length && !origins.includes(vehicle.origin)) return [];
+      const eligibleBrands = Array.isArray(program.eligible_brand_names) ? (program.eligible_brand_names as string[]).map((brand) => brand.trim().toUpperCase()) : [];
+      if (eligibleBrands.length && !eligibleBrands.includes(vehicle.brand.trim().toUpperCase())) return [];
       const programCurrency = program.currency === "USD" ? "USD" : "UZS";
       let calculatorPrice = price;
       if (programCurrency !== listingCurrency) {
