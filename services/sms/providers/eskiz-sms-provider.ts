@@ -72,9 +72,12 @@ export class EskizSmsProvider implements SmsProvider {
       response = await sendWithToken(token, input);
     }
 
-    if (!response.ok) {
-      const data = await readJson(response);
-      throw new Error(data?.message || "SMS yuborilmadi");
+    const data = await readJson(response.clone());
+    const status = String(data?.status ?? data?.data?.status ?? "").toLowerCase();
+    const messageId = data?.id ?? data?.data?.id ?? data?.data?.message_id;
+    if (!response.ok || data?.success === false || ["error", "failed", "rejected"].includes(status) ||
+        (!messageId && !["success", "waiting", "queued", "sent"].includes(status))) {
+      throw new Error(data?.message || data?.error || "Eskiz SMS so‘rovini qabul qilmadi");
     }
   }
 
@@ -104,9 +107,12 @@ export class EskizSmsProvider implements SmsProvider {
       });
     }
 
-    if (!response.ok) {
-      const data = await readJson(response);
-      throw new Error(data?.message || "SMS yuborilmadi");
+    const data = await readJson(response.clone());
+    const status = String(data?.status ?? data?.data?.status ?? "").toLowerCase();
+    const messageId = data?.id ?? data?.data?.id ?? data?.data?.message_id;
+    if (!response.ok || data?.success === false || ["error", "failed", "rejected"].includes(status) ||
+        (!messageId && !["success", "waiting", "queued", "sent"].includes(status))) {
+      throw new Error(data?.message || data?.error || "Eskiz SMS so‘rovini qabul qilmadi");
     }
   }
 }
