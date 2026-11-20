@@ -10,7 +10,8 @@ export type UsedCarCreditProgram = {
   name_uz?: string | null;
   name_ru?: string | null;
   currency?: string | null;
-  calculator_price?: number | null;\n  exchange_rate_to_uzs?: number | null;
+  calculator_price?: number | null;
+  exchange_rate_to_uzs?: number | null;
   annual_interest_rate?: number | null;
   min_down_payment_percent?: number | null;
   max_term_months?: number | null;
@@ -33,8 +34,8 @@ function monthlyPayment(principal: number, annualRate: number, months: number) {
   if (monthlyRate === 0) return Math.round(principal / months);
   return Math.round(principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months)));
 }
-export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackPrice: number, fallbackCurrency: string, locale: "uz" | "ru" = "uz"): UsedCarBestCredit | null {
-  const offers: UsedCarBestCredit[] = [];
+export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackPrice: number, _fallbackCurrency: string, locale: "uz" | "ru" = "uz"): UsedCarBestCredit | null {
+  const offers: Array<UsedCarBestCredit & { comparisonPaymentUzs: number }> = [];
   for (const program of programs) {
     const price = Number(program.calculator_price ?? fallbackPrice);
     if (!Number.isFinite(price) || price <= 0) continue;
@@ -53,6 +54,8 @@ export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackP
       if (![down, term, rate].every(Number.isFinite) || down < 0 || down >= 100 || term <= 0 || rate < 0) continue;
       const payment = monthlyPayment(price * (1 - down / 100), rate, term);
       if (!payment) continue;
+      const exchangeRate = Number(program.exchange_rate_to_uzs ?? 0);
+      if (currency === "USD" && exchangeRate <= 0) continue;
       offers.push({
         programId: program.id,
         providerName: locale === "ru" ? program.banks?.name_ru ?? program.banks?.name ?? "Банк" : program.banks?.name ?? "Bank",
@@ -62,8 +65,12 @@ export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackP
         termMonths: term,
         interestRate: rate,
         currency,
+        comparisonPaymentUzs: currency === "USD" ? payment * exchangeRate : payment,
       });
     }
   }
-  return offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0] ? (() => { const best = offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0]; const { comparisonPaymentUzs: _comparisonPaymentUzs, ...visible } = best; return visible; })() : null;
+  const best = offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0];
+  if (!best) return null;
+  const { comparisonPaymentUzs: _comparisonPaymentUzs, ...visible } = best;
+  return visible;
 }
