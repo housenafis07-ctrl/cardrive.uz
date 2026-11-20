@@ -5,6 +5,8 @@ import { Header, Footer } from "@/components/site-chrome";
 import { getLocale } from "@/lib/locale";
 import { createPublicServerClient } from "@/supabase/public-server";
 import { createServiceRoleClient } from "@/supabase/server";
+import { FinancingService } from "@/services/financing-service";
+import { UsedCarFinancingSection } from "@/components/used-car-financing-section";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,8 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
     .select("id,slug,brand,model,year,mileage_km,price,currency,region,district,body_type,fuel_type,transmission,engine_volume,color,vehicle_condition,condition_description,description,contact_name,contact_phone,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)")
     .eq("slug", slug).eq("status", "active").gt("expires_at", new Date().toISOString()).maybeSingle();
   if (!listing) notFound();
+  const financingResult = await new FinancingService().getBankCreditProgramsForUsedCar(Number(listing.price), listing.currency);
+  const financingPrograms = financingResult.data ?? [];
   const images = [...(listing.used_car_listing_images ?? [])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);
 
   // Only approved videos for an active public listing are exposed.
