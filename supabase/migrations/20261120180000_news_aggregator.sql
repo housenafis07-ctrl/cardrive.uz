@@ -4,7 +4,7 @@ create table if not exists public.news_sources (
  feed_url text not null unique,
  language text not null default 'auto' check(language in ('auto','uz','ru','en')),
  is_active boolean not null default true,
- fetch_interval_minutes integer not null default 30 check(fetch_interval_minutes between 15 and 1440),
+ fetch_interval_minutes integer not null default 1440 check(fetch_interval_minutes = 1440),
  last_fetched_at timestamptz,
  last_error text,
  created_at timestamptz not null default now(),
