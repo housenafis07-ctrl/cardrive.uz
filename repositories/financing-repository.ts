@@ -3,6 +3,7 @@ import { createPublicServerClient } from "@/supabase/public-server";
 
 const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description";
 const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
+const USED_PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks!inner(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
 const RULE_SELECT = "id,financing_program_id,down_payment_percent,term_months,annual_interest_rate,is_available,display_order";
 
 type ProgramLink = { dealer_id?: string; car_id?: string };
@@ -14,7 +15,7 @@ export class FinancingRepository {
 
   async getActiveProgramsWithCars() {
     const client = createPublicServerClient();
-    const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true });
+    const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).eq("market_segment", "new").order("sort_order", { ascending: true }).order("name", { ascending: true });
     if (programsResult.error || !programsResult.data?.length) return programsResult;
     const ids = programsResult.data.map((program) => program.id);
     const linksResult = await client.from("financing_program_cars").select("financing_program_id,car_id").in("financing_program_id", ids);
@@ -35,6 +36,7 @@ export class FinancingRepository {
     if(!carResult.data)return{data:[],error:null};
     const car=carResult.data;
     const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active",true)
+      .eq("market_segment","new")
       .or(`applicable_brand_id.is.null,applicable_brand_id.eq.${car.brand_id}`).or(`applicable_model_id.is.null,applicable_model_id.eq.${car.model_id}`)
       .or(`min_car_price.is.null,min_car_price.lte.${car.price}`).or(`max_car_price.is.null,max_car_price.gte.${car.price}`)
       .order("sort_order",{ascending:true}).order("name",{ascending:true});
@@ -74,9 +76,108 @@ export class FinancingRepository {
     return {...result,data};
   }
 
+  async getBankCreditProgramsForUsedCar(price: number, currency: string, vehicle: {year:number;origin:string;fuelType:string|null}) {
+    const client = createPublicServerClient();
+    const listingCurrency = currency === "USD" ? "USD" : "UZS";
+    const result = await client
+      .from("financing_programs")
+      .select(USED_PROGRAM_SELECT)
+      .eq("is_active", true)
+      .eq("type", "credit")
+      .eq("market_segment", "used")
+      .not("bank_id", "is", null)
+      .eq("banks.is_active", true)
+      .neq("banks.integration_status", "disabled")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (result.error || !result.data?.length) return result;
+
+    const needsConversion = result.data.some((program) =>
+      (program.currency === "USD" || program.currency === "UZS") && program.currency !== listingCurrency
+    );
+    let usdUzsRate: number | null = null;
+    if (needsConversion) {
+      try {
+        const response = await fetch("https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/", {
+          next: { revalidate: 3600 },
+        });
+        if (response.ok) {
+          const rates = await response.json() as Array<{ Rate?: string | number }>;
+          const rate = Number(rates?.[0]?.Rate);
+          if (Number.isFinite(rate) && rate > 0) usdUzsRate = rate;
+        }
+      } catch (error) {
+        console.error("[used-car-financing] exchange rate lookup failed", error);
+      }
+    }
+
+    const applicablePrograms = result.data.flatMap((program) => {
+      const age = new Date().getFullYear() - vehicle.year;
+      if (program.min_vehicle_age_years != null && age < Number(program.min_vehicle_age_years)) return [];
+      if (program.max_vehicle_age_years != null && age > Number(program.max_vehicle_age_years)) return [];
+      const origins = Array.isArray(program.eligible_vehicle_origins) ? program.eligible_vehicle_origins as string[] : [];
+      if (origins.length && !origins.includes(vehicle.origin)) return [];
+      const programCurrency = program.currency === "USD" ? "USD" : "UZS";
+      let calculatorPrice = price;
+      if (programCurrency !== listingCurrency) {
+        if (!usdUzsRate) return [];
+        calculatorPrice = listingCurrency === "USD"
+          ? price * usdUzsRate
+          : price / usdUzsRate;
+      }
+      if (program.min_car_price != null && calculatorPrice < Number(program.min_car_price)) return [];
+      if (program.max_car_price != null && calculatorPrice > Number(program.max_car_price)) return [];
+      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice) }];
+    });
+
+    if (!applicablePrograms.length) return { ...result, data: [] };
+
+    const programIds = applicablePrograms.map((program) => program.id);
+    const rulesResult = await client
+      .from("financing_program_rules")
+      .select(RULE_SELECT)
+      .in("financing_program_id", programIds)
+      .eq("is_available", true)
+      .order("display_order", { ascending: true })
+      .order("down_payment_percent", { ascending: true })
+      .order("term_months", { ascending: true });
+
+    if (rulesResult.error) return { ...result, data: null, error: rulesResult.error };
+
+    const rulesByProgram = new Map<string, typeof rulesResult.data>();
+    for (const rule of rulesResult.data ?? []) {
+      const current = rulesByProgram.get(rule.financing_program_id) ?? [];
+      current.push(rule);
+      rulesByProgram.set(rule.financing_program_id, current);
+    }
+
+    const data = applicablePrograms.map((program) => {
+      const minTerm = Number(program.min_term_months ?? program.term_months ?? 12);
+      const maxTerm = Number(program.max_term_months ?? program.term_months ?? minTerm);
+      const borrowerTypes = Array.isArray(program.eligible_borrower_types) ? program.eligible_borrower_types as string[] : [];
+      const borrowerLabels: Record<string,string> = { formal_income: "Rasmiy daromadli mijozlar", salary_project: "Faol ish haqi loyihasi ishtirokchilari", self_employed: "O‘zini o‘zi band qilganlar" };
+      const eligibilityParts = [
+        program.eligibility_notes,
+        borrowerTypes.length ? "Qarz oluvchi toifasi: " + borrowerTypes.map(type => borrowerLabels[type] ?? type).join(", ") : null,
+        program.special_conditions,
+        program.max_collateral_ltv_percent != null ? "Garov/kredit nisbati: " + program.max_collateral_ltv_percent + "% dan oshmasligi kerak." : null,
+      ].filter(Boolean);
+      return {
+        ...program,
+        eligibility_notes: eligibilityParts.join("\\n"),
+        min_term_months: minTerm,
+        max_term_months: Math.max(minTerm, maxTerm),
+        financing_program_rules: rulesByProgram.get(program.id) ?? [],
+      };
+    });
+
+    return { ...result, data };
+  }
+
   async getProgramById(id:string){
     const client=createPublicServerClient();
-    const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("id",id).eq("is_active",true).maybeSingle();
+    const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("id",id).eq("is_active",true).eq("market_segment","new").maybeSingle();
     if(result.error||!result.data)return result;
     const rulesResult=await client.from("financing_program_rules").select(RULE_SELECT).eq("financing_program_id",id).eq("is_available",true).order("display_order",{ascending:true}).order("down_payment_percent",{ascending:true}).order("term_months",{ascending:true});
     return {...result,data:{...result.data,financing_program_rules:rulesResult.data??[]}};
