@@ -6,13 +6,26 @@ import { getServerEnv } from "@/lib/env";
 const ESKIZ_API_BASE = "https://notify.eskiz.uz/api";
 let cachedToken: string | null = null;
 
-async function readJson(response: Response) {
+type EskizApiResponse = {
+  data?: { token?: string };
+  id?: string;
+  status?: string;
+  message?: string;
+};
+
+async function readJson(response: Response): Promise<EskizApiResponse | null> {
   const text = await response.text();
+  if (!text) return null;
   try {
-    return text ? JSON.parse(text) : null;
+    return JSON.parse(text) as EskizApiResponse;
   } catch {
     return { message: text };
   }
+}
+
+function getEskizError(data: EskizApiResponse | null, fallback: string): Error {
+  // Do not include credentials, access tokens, OTP codes, or request bodies in errors.
+  return new Error(data?.message?.slice(0, 300) || fallback);
 }
 
 async function login(): Promise<string> {
@@ -29,28 +42,32 @@ async function login(): Promise<string> {
     method: "POST",
     body: form,
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
   });
 
   const data = await readJson(response);
   const token = data?.data?.token;
   if (!response.ok || typeof token !== "string" || !token) {
-    throw new Error(data?.message || "Eskiz autentifikatsiyasi muvaffaqiyatsiz tugadi");
+    throw getEskizError(data, "Eskiz autentifikatsiyasi muvaffaqiyatsiz tugadi");
   }
 
   cachedToken = token;
   return token;
 }
 
-async function sendWithToken(token: string, input: { phone: string; code: string; expiresInSeconds: number }) {
+async function sendWithToken(
+  token: string,
+  input: { phone: string; message: string },
+): Promise<Response> {
   const env = getServerEnv();
   const mobilePhone = input.phone.replace(/\D/g, "");
-
-  // Eskiz moderatsiyasidan o'tgan login SMS shabloni.
-  const message = `Код верификации для входа к мобильному приложению cardrive.uz: ${input.code}`;
+  if (!/^998\d{9}$/.test(mobilePhone)) {
+    throw new Error("Telefon raqami Eskiz uchun noto'g'ri formatda");
+  }
 
   const form = new FormData();
   form.set("mobile_phone", mobilePhone);
-  form.set("message", message);
+  form.set("message", input.message);
   form.set("from", env.ESKIZ_FROM || "4546");
 
   return fetch(`${ESKIZ_API_BASE}/message/sms/send`, {
@@ -58,55 +75,47 @@ async function sendWithToken(token: string, input: { phone: string; code: string
     headers: { Authorization: `Bearer ${token}` },
     body: form,
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
   });
 }
 
+async function sendAcceptedMessage(input: { phone: string; message: string }): Promise<void> {
+  let token = cachedToken ?? (await login());
+  let response = await sendWithToken(token, input);
+
+  if (response.status === 401) {
+    cachedToken = null;
+    token = await login();
+    response = await sendWithToken(token, input);
+  }
+
+  const data = await readJson(response);
+  // Eskiz may return HTTP 200 with a JSON error. Treat a message as accepted
+  // only when its API response contains the dispatch ID and status.
+  if (
+    !response.ok ||
+    typeof data?.id !== "string" ||
+    !data.id ||
+    typeof data.status !== "string" ||
+    !data.status ||
+    data.status.toLowerCase() === "error"
+  ) {
+    throw getEskizError(data, "SMS Eskiz tomonidan qabul qilinmadi");
+  }
+}
+
 export class EskizSmsProvider implements SmsProvider {
-  async sendOtp(input: { phone: string; code: string; expiresInSeconds: number }): Promise<void> {
-    let token = cachedToken ?? (await login());
-    let response = await sendWithToken(token, input);
-
-    if (response.status === 401) {
-      cachedToken = null;
-      token = await login();
-      response = await sendWithToken(token, input);
-    }
-
-    if (!response.ok) {
-      const data = await readJson(response);
-      throw new Error(data?.message || "SMS yuborilmadi");
-    }
+  async sendOtp(input: {
+    phone: string;
+    code: string;
+    expiresInSeconds: number;
+  }): Promise<void> {
+    // Keep the already-approved Cardrive login template unchanged.
+    const message = `Код верификации для входа к мобильному приложению cardrive.uz: ${input.code}`;
+    await sendAcceptedMessage({ phone: input.phone, message });
   }
 
   async sendMessage(input: { phone: string; message: string }): Promise<void> {
-    let token = cachedToken ?? (await login());
-    const env = getServerEnv();
-    const form = new FormData();
-    form.set("mobile_phone", input.phone.replace(/\D/g, ""));
-    form.set("message", input.message);
-    form.set("from", env.ESKIZ_FROM || "4546");
-
-    let response = await fetch(`${ESKIZ_API_BASE}/message/sms/send`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-      cache: "no-store",
-    });
-
-    if (response.status === 401) {
-      cachedToken = null;
-      token = await login();
-      response = await fetch(`${ESKIZ_API_BASE}/message/sms/send`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-        cache: "no-store",
-      });
-    }
-
-    if (!response.ok) {
-      const data = await readJson(response);
-      throw new Error(data?.message || "SMS yuborilmadi");
-    }
+    await sendAcceptedMessage(input);
   }
 }

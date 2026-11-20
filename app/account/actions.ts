@@ -5,6 +5,7 @@ import { SmsService } from "@/services/sms/sms-service";
 import { EskizSmsProvider } from "@/services/sms/providers/eskiz-sms-provider";
 import { establishCustomerSession, createCustomerProfile, getCurrentCustomer } from "@/lib/customer-session";
 import { isGooglePlayTestAccount, verifyGooglePlayTestOtp } from "@/lib/google-play-test-auth";
+import { consumeOtpRegistrationProof, setOtpRegistrationProof } from "@/lib/otp-registration-proof";
 import { OrderService } from "@/services/order-service";
 import { CreditApplicationService } from "@/services/credit-application-service";
 import type { OtpPurpose, PurchaseType } from "@/types/domain";
@@ -63,7 +64,7 @@ export async function verifyCustomerOtpAction(
       }
 
       const customer = await getCurrentCustomer();
-      if (customer) {
+      if (customer?.phone === phone.trim()) {
         return { status: "verified" };
       }
 
@@ -94,9 +95,9 @@ export async function verifyCustomerOtpAction(
       return { status: "verified" };
     }
 
-    await new OtpService(new SmsService(smsProvider)).verifyOtp({ phone, code, purpose });
+    const verifiedOtp = await new OtpService(new SmsService(smsProvider)).verifyOtp({ phone, code, purpose });
     const customer = await getCurrentCustomer();
-    if (customer) return { status: "verified" };
+    if (customer?.phone === verifiedOtp.phone) return { status: "verified" };
 
     const check = await import("@/supabase/server").then(({ createServiceRoleClient }) =>
       createServiceRoleClient()
@@ -115,6 +116,7 @@ export async function verifyCustomerOtpAction(
       return { status: "verified" };
     }
 
+    await setOtpRegistrationProof({ otpId: verifiedOtp.id, phone: verifiedOtp.phone, purpose: verifiedOtp.purpose });
     return { status: "new_customer" };
   } catch (error) {
     return {
@@ -129,6 +131,8 @@ export async function createCustomerProfileAction(
   fullName: string,
 ): Promise<CreateProfileResult> {
   try {
+    const hasVerifiedPhone = await consumeOtpRegistrationProof(phone);
+    if (!hasVerifiedPhone) throw new Error("Telefon raqamini SMS-kod orqali qayta tasdiqlang");
     await createCustomerProfile(phone, fullName);
     revalidatePath("/account/orders");
     return { status: "verified" };
