@@ -130,7 +130,7 @@ export class FinancingRepository {
       }
       if (program.min_car_price != null && calculatorPrice < Number(program.min_car_price)) return [];
       if (program.max_car_price != null && calculatorPrice > Number(program.max_car_price)) return [];
-      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice), exchange_rate_to_uzs: programCurrency === "USD" ? usdUzsRate : 1 }];
+      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice), exchange_rate_to_uzs: programCurrency === "USD" ? (usdUzsRate ?? 1) : 1 }];
     });
 
     if (!applicablePrograms.length) return { ...result, data: [] };
