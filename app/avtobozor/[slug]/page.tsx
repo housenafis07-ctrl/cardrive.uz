@@ -99,7 +99,8 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
   const fmt = new Intl.NumberFormat(ru?"ru-RU":"uz-UZ",{maximumFractionDigits:0}).format(Number(listing.price));
   const price = listing.currency === "USD" ? "$" + fmt : fmt + " so'm";
   const specs: Array<[string, string | null | undefined]> = [
-    [ru?"Год выпуска":"Ishlab chiqarilgan yil",String(listing.year)],\n    [ru?"Страна производства":"Ishlab chiqarilgan mamlakat",listing.country_of_origin==="uzbekistan"?(ru?"Узбекистан":"O‘zbekiston"):listing.country_of_origin==="foreign"?(ru?"Другая страна":"Chet el"):null],
+    [ru?"Год выпуска":"Ishlab chiqarilgan yil",String(listing.year)],
+    [ru?"Страна производства":"Ishlab chiqarilgan mamlakat",listing.country_of_origin==="uzbekistan"?(ru?"Узбекистан":"O‘zbekiston"):listing.country_of_origin==="foreign"?(ru?"Другая страна":"Chet el"):null],
     [ru?"Пробег":"Yurgan masofasi",Number(listing.mileage_km).toLocaleString() + " km"],
     [ru?"Регион":"Hudud",listing.region],
     [ru?"Район / город":"Tuman / shahar",listing.district],
