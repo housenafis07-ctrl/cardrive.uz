@@ -38,7 +38,7 @@ export async function createUsedCarListingAction(form: FormData) {
   if (!["ideal", "good", "minor_defects", "body_repair", "major_repair", "parts_only"].includes(vehicleCondition) || conditionDescription.length < 10 || conditionDescription.length > 1200) redirect("/avtobozor/yangi-elon?error=Avtomobil+holatini+tekshiring");
   if (!Number.isFinite(price) || price <= 0 || price > 10_000_000_000_000) redirect("/avtobozor/yangi-elon?error=Narxni+tekshiring");
   if (!["UZS", "USD"].includes(currency)) redirect("/avtobozor/yangi-elon?error=Valyuta+notogri");
-  if (!region || region.length > 80 || description.length < 20 || description.length > 5000 || !contactName || contactName.length > 100) redirect("/avtobozor/yangi-elon?error=Majburiy+maydonlarni+tolldiring");
+  if (!["uzbekistan", "foreign", "unknown"].includes(text(form, "countryOfOrigin")) || !region || region.length > 80 || description.length < 20 || description.length > 5000 || !contactName || contactName.length > 100) redirect("/avtobozor/yangi-elon?error=Majburiy+maydonlarni+tolldiring");
   if (files.length > 8) redirect("/avtobozor/yangi-elon?error=Eng+kopi+8+ta+rasm+yuklash+mumkin");
   if (files.some(file => !allowedMime.has(file.type) || file.size > 8 * 1024 * 1024)) redirect("/avtobozor/yangi-elon?error=Rasmlar+JPG,+PNG+yoki+WEBP+va+8MB+dan+kichik+bolishi+kerak");
 
@@ -50,7 +50,7 @@ export async function createUsedCarListingAction(form: FormData) {
   const slug = `${slugPart(brand)}-${slugPart(model)}-${year}-${id.slice(0, 8)}`;
   const inserted = await db.from("used_car_listings").insert({
     id, owner_profile_id: customer.id, slug, brand, model, year, mileage_km: mileage,
-    price, currency, region, district: text(form, "district") || null,
+    price, currency, country_of_origin: text(form, "countryOfOrigin") || "unknown", region, district: text(form, "district") || null,
     body_type: text(form, "bodyType") || null, fuel_type: text(form, "fuelType") || null,
     transmission: text(form, "transmission") || null,
     engine_volume: text(form, "engineVolume") ? number(form, "engineVolume") : null,
