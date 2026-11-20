@@ -8,6 +8,7 @@ export async function SiteAnnouncementBar({locale}:{locale:string}){
   db.from("news_articles").select("id,title_uz,title_ru,title_en").eq("is_published",true).order("published_at",{ascending:false,nullsFirst:false}).limit(8),
   getLatestUsdUzsRate().catch(()=>null)
  ]);
+ const tickerAnnouncements=(announcements??[]).map(a=>({...a,rate_value:null,rate_date:null}));
  const news=(articles??[]).map(a=>({id:"news-"+a.id,kind:"news" as const,title_uz:locale==="ru"?a.title_ru:locale==="en"?a.title_en:a.title_uz,title_ru:null,href:"/news",rate_value:null,rate_date:null}));
- return <AnnouncementTicker items={[...(announcements??[]),...news]} locale={locale} usdRate={rate?{rate:rate.rate,rateDate:rate.rateDate}:null}/>;
+ return <AnnouncementTicker items={[...tickerAnnouncements,...news]} locale={locale} usdRate={rate?{rate:rate.rate,rateDate:rate.rateDate}:null}/>;
 }
