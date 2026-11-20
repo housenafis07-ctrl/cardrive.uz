@@ -239,7 +239,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
                     </button>;
                   })}
                 </div>
-                <label className="mt-3 block text-sm font-semibold">{ru ? "Шаблон состояния (можно отредактировать)" : "Avto holati shabloni (tahrirlash mumkin)"}
+                <label className="mt-3 block min-w-0 text-sm font-semibold">{ru ? "Шаблон состояния (можно отредактировать)" : "Avto holati shabloni (tahrirlash mumkin)"}
                   <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={event => setConditionDescription(event.target.value)} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" />
                 </label>
               </div>
