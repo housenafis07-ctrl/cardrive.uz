@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     { "path": "/api/cron/sync-cbu-rates", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/sync-news", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/sync-news", "schedule": "15 4 * * *" }
   ]
 }
