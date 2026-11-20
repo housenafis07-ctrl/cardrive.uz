@@ -1,0 +1,2 @@
+alter table public.financing_programs add column if not exists min_vehicle_age_years integer;
+alter table public.financing_programs add constraint financing_programs_min_vehicle_age_check check (min_vehicle_age_years is null or min_vehicle_age_years between 0 and 100);
