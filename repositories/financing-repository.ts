@@ -114,6 +114,7 @@ export class FinancingRepository {
 
     const applicablePrograms = result.data.flatMap((program) => {
       const age = new Date().getFullYear() - vehicle.year;
+      if (program.min_vehicle_age_years != null && age < Number(program.min_vehicle_age_years)) return [];
       if (program.max_vehicle_age_years != null && age > Number(program.max_vehicle_age_years)) return [];
       const origins = Array.isArray(program.eligible_vehicle_origins) ? program.eligible_vehicle_origins as string[] : [];
       if (origins.length && !origins.includes(vehicle.origin)) return [];
