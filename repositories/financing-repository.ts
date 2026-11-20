@@ -15,7 +15,7 @@ export class FinancingRepository {
 
   async getActiveProgramsWithCars() {
     const client = createPublicServerClient();
-    const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true });
+    const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).eq("market_segment", "new").order("sort_order", { ascending: true }).order("name", { ascending: true });
     if (programsResult.error || !programsResult.data?.length) return programsResult;
     const ids = programsResult.data.map((program) => program.id);
     const linksResult = await client.from("financing_program_cars").select("financing_program_id,car_id").in("financing_program_id", ids);
@@ -36,6 +36,7 @@ export class FinancingRepository {
     if(!carResult.data)return{data:[],error:null};
     const car=carResult.data;
     const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active",true)
+      .eq("market_segment","new")
       .or(`applicable_brand_id.is.null,applicable_brand_id.eq.${car.brand_id}`).or(`applicable_model_id.is.null,applicable_model_id.eq.${car.model_id}`)
       .or(`min_car_price.is.null,min_car_price.lte.${car.price}`).or(`max_car_price.is.null,max_car_price.gte.${car.price}`)
       .order("sort_order",{ascending:true}).order("name",{ascending:true});
@@ -83,6 +84,7 @@ export class FinancingRepository {
       .select(USED_PROGRAM_SELECT)
       .eq("is_active", true)
       .eq("type", "credit")
+      .eq("market_segment", "used")
       .not("bank_id", "is", null)
       .eq("banks.is_active", true)
       .neq("banks.integration_status", "disabled")
@@ -161,7 +163,7 @@ export class FinancingRepository {
 
   async getProgramById(id:string){
     const client=createPublicServerClient();
-    const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("id",id).eq("is_active",true).maybeSingle();
+    const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("id",id).eq("is_active",true).eq("market_segment","new").maybeSingle();
     if(result.error||!result.data)return result;
     const rulesResult=await client.from("financing_program_rules").select(RULE_SELECT).eq("financing_program_id",id).eq("is_available",true).order("display_order",{ascending:true}).order("down_payment_percent",{ascending:true}).order("term_months",{ascending:true});
     return {...result,data:{...result.data,financing_program_rules:rulesResult.data??[]}};
