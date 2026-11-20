@@ -76,24 +76,56 @@ export class FinancingRepository {
 
   async getBankCreditProgramsForUsedCar(price: number, currency: string) {
     const client = createPublicServerClient();
-    const normalizedCurrency = currency === "USD" ? "USD" : "UZS";
+    const listingCurrency = currency === "USD" ? "USD" : "UZS";
     const result = await client
       .from("financing_programs")
-      .select(PROGRAM_SELECT)
+      .select(PROGRAM_SELECT.replace("banks(", "banks!inner("))
       .eq("is_active", true)
       .eq("type", "credit")
       .not("bank_id", "is", null)
-      .eq("currency", normalizedCurrency)
       .eq("banks.is_active", true)
       .neq("banks.integration_status", "disabled")
-      .or(`min_car_price.is.null,min_car_price.lte.${price}`)
-      .or(`max_car_price.is.null,max_car_price.gte.${price}`)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
 
     if (result.error || !result.data?.length) return result;
 
-    const programIds = result.data.map((program) => program.id);
+    const needsConversion = result.data.some((program) =>
+      (program.currency === "USD" || program.currency === "UZS") && program.currency !== listingCurrency
+    );
+    let usdUzsRate: number | null = null;
+    if (needsConversion) {
+      try {
+        const response = await fetch("https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/", {
+          next: { revalidate: 3600 },
+        });
+        if (response.ok) {
+          const rates = await response.json() as Array<{ Rate?: string | number }>;
+          const rate = Number(rates?.[0]?.Rate);
+          if (Number.isFinite(rate) && rate > 0) usdUzsRate = rate;
+        }
+      } catch (error) {
+        console.error("[used-car-financing] exchange rate lookup failed", error);
+      }
+    }
+
+    const applicablePrograms = result.data.flatMap((program) => {
+      const programCurrency = program.currency === "USD" ? "USD" : "UZS";
+      let calculatorPrice = price;
+      if (programCurrency !== listingCurrency) {
+        if (!usdUzsRate) return [];
+        calculatorPrice = listingCurrency === "USD"
+          ? price * usdUzsRate
+          : price / usdUzsRate;
+      }
+      if (program.min_car_price != null && calculatorPrice < Number(program.min_car_price)) return [];
+      if (program.max_car_price != null && calculatorPrice > Number(program.max_car_price)) return [];
+      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice) }];
+    });
+
+    if (!applicablePrograms.length) return { ...result, data: [] };
+
+    const programIds = applicablePrograms.map((program) => program.id);
     const rulesResult = await client
       .from("financing_program_rules")
       .select(RULE_SELECT)
@@ -112,7 +144,7 @@ export class FinancingRepository {
       rulesByProgram.set(rule.financing_program_id, current);
     }
 
-    const data = result.data.map((program) => {
+    const data = applicablePrograms.map((program) => {
       const minTerm = Number(program.min_term_months ?? program.term_months ?? 12);
       const maxTerm = Number(program.max_term_months ?? program.term_months ?? minTerm);
       return {
