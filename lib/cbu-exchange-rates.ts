@@ -27,14 +27,7 @@ export async function syncCbuUsdRate() {
   const rateDate = parseCbuDate(usd?.Date);
   const client = createServiceRoleClient();
 
-  const { error: clearError } = await client
-    .from("exchange_rates")
-    .update({ is_current: false })
-    .eq("currency_code", "USD")
-    .eq("is_current", true);
-  if (clearError) throw new Error(`Could not clear previous current rate: ${clearError.message}`);
-
-  const { data, error } = await client
+  const { data: saved, error: saveError } = await client
     .from("exchange_rates")
     .upsert({
       currency_code: "USD",
@@ -43,11 +36,26 @@ export async function syncCbuUsdRate() {
       rate_date: rateDate,
       source: "CBU.uz",
       fetched_at: new Date().toISOString(),
-      is_current: true,
+      is_current: false,
     }, { onConflict: "currency_code,rate_date" })
+    .select("id,currency_code,rate,rate_date,source,fetched_at")
+    .single();
+  if (saveError) throw new Error(`Could not save CBU rate: ${saveError.message}`);
+
+  const { error: clearError } = await client
+    .from("exchange_rates")
+    .update({ is_current: false })
+    .eq("currency_code", "USD")
+    .eq("is_current", true);
+  if (clearError) throw new Error(`Could not update current rate marker: ${clearError.message}`);
+
+  const { data, error } = await client
+    .from("exchange_rates")
+    .update({ is_current: true })
+    .eq("id", saved.id)
     .select("id,currency_code,rate,rate_date,source,fetched_at,is_current")
     .single();
-  if (error) throw new Error(`Could not save CBU rate: ${error.message}`);
+  if (error) throw new Error(`Could not activate saved CBU rate: ${error.message}`);
 
   return {
     currency: data.currency_code as string,
