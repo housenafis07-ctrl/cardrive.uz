@@ -179,13 +179,13 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
     <>
       {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
-      <form onSubmit={handleSubmit} className="mt-6 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className="mt-6 grid w-full min-w-0 grid-cols-1 gap-4 overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-5">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
-        <label className="text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 w-full rounded-xl border p-3" /></label>
-        <label className="text-sm font-semibold">{ru ? "Модель" : "Model"} *<input name="model" required maxLength={100} placeholder="Cobalt" className="mt-1 w-full rounded-xl border p-3" /></label>
+        <label className="min-w-0 text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
+        <label className="text-sm font-semibold">{ru ? "Модель" : "Model"} *<input name="model" required maxLength={100} placeholder="Cobalt" className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
         <label className="text-sm font-semibold">{ru ? "Год выпуска" : "Ishlab chiqarilgan yil"} *<input name="year" type="number" min="1950" max={new Date().getFullYear()+1} required className="mt-1 w-full rounded-xl border p-3" /></label>
         <label className="text-sm font-semibold">{ru ? "Пробег, км" : "Yurgan masofasi, km"} *<input name="mileageKm" type="number" min="0" max="2000000" step="1" required placeholder={ru ? "Например: 85000" : "Masalan: 85000"} className="mt-1 w-full rounded-xl border p-3" /><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Укажите фактический пробег. 0 км допускается." : "Haqiqiy probegni kiriting. 0 km qiymati ham qabul qilinadi."}</span></label>
-        <div className="grid grid-cols-[1fr_110px] gap-2">
+        <div className="col-span-full grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,110px)] gap-2 sm:col-span-1">
           <label className="text-sm font-semibold">{ru ? "Цена" : "Narxi"} *<input name="price" type="number" min="1" step="any" required className="mt-1 w-full rounded-xl border p-3" /></label>
           <label className="text-sm font-semibold">{ru ? "Валюта" : "Valyuta"}<select name="currency" className="mt-1 w-full rounded-xl border p-3"><option value="UZS">UZS</option><option value="USD">USD</option></select></label>
         </div>
@@ -198,11 +198,11 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
         <label className="text-sm font-semibold">{ru ? "Коробка передач" : "Uzatmalar qutisi"}<select name="transmission" className="mt-1 w-full rounded-xl border p-3"><option value="">—</option>{["Mexanika","Avtomat","CVT","Robot"].map(x=><option key={x}>{x}</option>)}</select></label>
         <label className="text-sm font-semibold">{ru ? "Объём двигателя, л" : "Dvigatel hajmi, litr"}<input name="engineVolume" type="number" min="0" max="20" step="0.1" className="mt-1 w-full rounded-xl border p-3" /></label>
 
-        <fieldset className="col-span-full">
+        <fieldset className="col-span-full min-w-0 max-w-full">
           <legend className="mb-3 text-sm font-bold">{ru ? "Цвет автомобиля" : "Avtomobil rangi"} *</legend>
           <input type="hidden" name="color" value={color} />
-          <div className="-mx-1 overflow-x-auto px-1 pb-3 sm:mx-0 sm:overflow-visible sm:px-0">
-            <div className="flex w-max gap-3 sm:w-auto sm:flex-wrap">
+          <div className="max-w-full overflow-x-auto px-1 pb-3">
+            <div className="flex w-max gap-3">
               {colors.map(item => {
                 const selected = color === item.value;
                 return <button key={item.value} type="button" aria-label={ru ? item.ru : item.value} aria-pressed={selected} title={ru ? item.ru : item.value} onClick={() => setColor(item.value)} className={"h-12 w-12 shrink-0 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 " + (selected ? "border-blue-600 ring-2 ring-blue-200 ring-offset-2" : "border-slate-200")} style={{ background: item.hex }}><span className="sr-only">{ru ? item.ru : item.value}</span></button>;
@@ -240,7 +240,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
                   })}
                 </div>
                 <label className="mt-3 block text-sm font-semibold">{ru ? "Шаблон состояния (можно отредактировать)" : "Avto holati shabloni (tahrirlash mumkin)"}
-                  <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={event => setConditionDescription(event.target.value)} className="mt-1 w-full rounded-xl border p-3 font-normal" />
+                  <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={event => setConditionDescription(event.target.value)} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" />
                 </label>
               </div>
             ) : (
@@ -249,8 +249,8 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
           </div>
         </fieldset>
 
-        <label className="col-span-full text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
-        <label className="col-span-full text-sm font-semibold">{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className="mt-2 block w-full rounded-xl border p-3 text-sm" /></label>
+        <label className="col-span-full text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
+        <label className="col-span-full text-sm font-semibold">{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /></label>
         <label className="col-span-full flex items-center gap-2 text-sm"><input type="checkbox" name="isNegotiable" defaultChecked />{ru ? "Возможен торг" : "Savdolashish mumkin"}</label>
         <label className="col-span-full text-sm font-semibold">{ru ? "Имя продавца" : "Sotuvchi ismi"} *<input name="contactName" required maxLength={100} className="mt-1 w-full rounded-xl border p-3" /></label>
         <p className="col-span-full rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{ru ? "Номер телефона будет использован из подтверждённого аккаунта. Если вы ещё не зарегистрированы, подтверждение номера понадобится только после заполнения объявления. Объявление сначала проходит модерацию." : "Telefon raqamingiz tasdiqlangan akkauntingizdan olinadi. Ro'yxatdan o'tmagan bo'lsangiz, raqam faqat e'lon ma'lumotlarini to'ldirgandan keyin tasdiqlanadi. E'lon avval moderator tekshiruvidan o'tadi."}</p>
