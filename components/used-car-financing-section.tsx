@@ -30,7 +30,7 @@ export function UsedCarFinancingSection({
   programs: FinancingProgram[];
   locale?: FormatterLocale;
 }) {
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(bestProgramId);
   const l = LABELS[locale];
 
   return (
