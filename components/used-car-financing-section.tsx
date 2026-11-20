@@ -23,11 +23,13 @@ export function UsedCarFinancingSection({
   carPrice,
   currency,
   programs,
+  bestProgramId = null,
   locale = "uz",
 }: {
   carPrice: number;
   currency: string;
   programs: FinancingProgram[];
+  bestProgramId?: string | null;
   locale?: FormatterLocale;
 }) {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(bestProgramId);
