@@ -112,3 +112,37 @@ export async function updateMyUsedCarListingStatusAction(form: FormData) {
   revalidatePath("/account/my-listings");
   redirect("/account/my-listings?updated=1");
 }
+
+export async function updateMyUsedCarListingAction(form: FormData) {
+  const customer = await getCurrentCustomer();
+  if (!customer) redirect("/account/login?next=%2Faccount%2Fmy-listings");
+  const id = text(form, "listingId");
+  const brand = text(form, "brand"), model = text(form, "model");
+  const year = number(form, "year"), mileage = number(form, "mileageKm"), price = number(form, "price");
+  const currency = text(form, "currency") || "UZS", origin = text(form, "countryOfOrigin") || "unknown";
+  const condition = text(form, "vehicleCondition"), conditionDescription = text(form, "conditionDescription");
+  const description = text(form, "description"), region = text(form, "region"), contactName = text(form, "contactName");
+  if (!id || !brand || brand.length > 80 || !model || model.length > 100 ||
+      !Number.isInteger(year) || year < 1950 || year > new Date().getFullYear()+1 ||
+      !Number.isInteger(mileage) || mileage < 0 || mileage > 2000000 ||
+      !Number.isFinite(price) || price <= 0 || !["UZS","USD"].includes(currency) ||
+      !["uzbekistan","foreign","unknown"].includes(origin) ||
+      !["ideal","good","minor_defects","body_repair","major_repair","parts_only"].includes(condition) ||
+      conditionDescription.length < 10 || conditionDescription.length > 1200 ||
+      description.length < 20 || description.length > 5000 || !region || region.length > 80 ||
+      !contactName || contactName.length > 100) redirect("/account/my-listings?error=Maydonlarni+tekshiring");
+  const db = createServiceRoleClient();
+  const result = await db.from("used_car_listings").update({
+    brand, model, year, mileage_km:mileage, price, currency, country_of_origin:origin,
+    region, district:text(form,"district")||null, body_type:text(form,"bodyType")||null,
+    fuel_type:text(form,"fuelType")||null, transmission:text(form,"transmission")||null,
+    engine_volume:text(form,"engineVolume")?number(form,"engineVolume"):null,
+    color:text(form,"color")||null, vehicle_condition:condition, condition_description:conditionDescription,
+    description, contact_name:contactName, is_negotiable:form.get("isNegotiable")==="on",
+    status:"pending_review", moderation_note:null, updated_at:new Date().toISOString(),
+  }).eq("id",id).eq("owner_profile_id",customer.id).in("status",["active","pending_review","rejected","reserved"]);
+  if (result.error) redirect("/account/my-listings?error=E'lonni+yangilab+bo'lmadi");
+  await db.from("audit_logs").insert({actor_id:customer.id,action:"used_car_listing.updated",entity_type:"used_car_listing",entity_id:id,metadata:{status:"pending_review"}});
+  revalidatePath("/avtobozor"); revalidatePath("/account/my-listings");
+  redirect("/account/my-listings?updated=1");
+}
