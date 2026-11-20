@@ -74,6 +74,58 @@ export class FinancingRepository {
     return {...result,data};
   }
 
+  async getBankCreditProgramsForUsedCar(price: number, currency: string) {
+    const client = createPublicServerClient();
+    const normalizedCurrency = currency === "USD" ? "USD" : "UZS";
+    const result = await client
+      .from("financing_programs")
+      .select(PROGRAM_SELECT)
+      .eq("is_active", true)
+      .eq("type", "credit")
+      .not("bank_id", "is", null)
+      .eq("currency", normalizedCurrency)
+      .eq("banks.is_active", true)
+      .neq("banks.integration_status", "disabled")
+      .or(`min_car_price.is.null,min_car_price.lte.${price}`)
+      .or(`max_car_price.is.null,max_car_price.gte.${price}`)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (result.error || !result.data?.length) return result;
+
+    const programIds = result.data.map((program) => program.id);
+    const rulesResult = await client
+      .from("financing_program_rules")
+      .select(RULE_SELECT)
+      .in("financing_program_id", programIds)
+      .eq("is_available", true)
+      .order("display_order", { ascending: true })
+      .order("down_payment_percent", { ascending: true })
+      .order("term_months", { ascending: true });
+
+    if (rulesResult.error) return { ...result, data: null, error: rulesResult.error };
+
+    const rulesByProgram = new Map<string, typeof rulesResult.data>();
+    for (const rule of rulesResult.data ?? []) {
+      const current = rulesByProgram.get(rule.financing_program_id) ?? [];
+      current.push(rule);
+      rulesByProgram.set(rule.financing_program_id, current);
+    }
+
+    const data = result.data.map((program) => {
+      const minTerm = Number(program.min_term_months ?? program.term_months ?? 12);
+      const maxTerm = Number(program.max_term_months ?? program.term_months ?? minTerm);
+      return {
+        ...program,
+        min_term_months: minTerm,
+        max_term_months: Math.max(minTerm, maxTerm),
+        financing_program_rules: rulesByProgram.get(program.id) ?? [],
+      };
+    });
+
+    return { ...result, data };
+  }
+
   async getProgramById(id:string){
     const client=createPublicServerClient();
     const result=await client.from("financing_programs").select(PROGRAM_SELECT).eq("id",id).eq("is_active",true).maybeSingle();
