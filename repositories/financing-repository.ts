@@ -3,6 +3,7 @@ import { createPublicServerClient } from "@/supabase/public-server";
 
 const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description";
 const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
+const USED_PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks!inner(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
 const RULE_SELECT = "id,financing_program_id,down_payment_percent,term_months,annual_interest_rate,is_available,display_order";
 
 type ProgramLink = { dealer_id?: string; car_id?: string };
@@ -79,7 +80,7 @@ export class FinancingRepository {
     const listingCurrency = currency === "USD" ? "USD" : "UZS";
     const result = await client
       .from("financing_programs")
-      .select(PROGRAM_SELECT.replace("banks(", "banks!inner("))
+      .select(USED_PROGRAM_SELECT)
       .eq("is_active", true)
       .eq("type", "credit")
       .not("bank_id", "is", null)
