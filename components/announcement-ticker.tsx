@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-type Item = { id: string; kind: "rate" | "news" | "announcement"; title_uz: string; title_ru: string | null; href: string | null; rate_value: number | null; rate_date: string | null };
+type Item = { id: string; kind: "rate" | "news" | "announcement"; title_uz: string; title_ru: string | null; href: string | null; rate_value?: number | null; rate_date?: string | null };
 export function AnnouncementTicker({ items, locale, usdRate }: { items: Item[]; locale: string; usdRate: { rate: number; rateDate: string } | null }) {
   const [index,setIndex]=useState(0);
   const messages:Item[]=[...(usdRate?[{id:"cbu-usd",kind:"rate" as const,title_uz:"",title_ru:null,href:null,rate_value:usdRate.rate,rate_date:usdRate.rateDate}]:[]),...items];
