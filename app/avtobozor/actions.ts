@@ -126,7 +126,7 @@ export async function updateMyUsedCarListingAction(form: FormData) {
       !Number.isInteger(year) || year < 1950 || year > new Date().getFullYear()+1 ||
       !Number.isInteger(mileage) || mileage < 0 || mileage > 2000000 ||
       !Number.isFinite(price) || price <= 0 || !["UZS","USD"].includes(currency) ||
-      !["uzbekistan","foreign","unknown"].includes(origin) ||
+      !["uzbekistan","foreign"].includes(origin) ||
       !["ideal","good","minor_defects","body_repair","major_repair","parts_only"].includes(condition) ||
       conditionDescription.length < 10 || conditionDescription.length > 1200 ||
       description.length < 20 || description.length > 5000 || !region || region.length > 80 ||
