@@ -1,7 +1,7 @@
 import "server-only";
 import { createServiceRoleClient } from "@/supabase/server";
 
-type FeedSource={id:string;name:string;feed_url:string;language:string;fetch_interval_minutes:number};
+type FeedSource={id:string;name:string;feed_url:string;language:string;fetch_interval_minutes:number;last_fetched_at:string|null};
 type FeedEntry={id:string;url:string;title:string;summary:string;image:string|null;publishedAt:string|null};
 const decode=(s:string)=>s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([\da-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
 const tag=(xml:string,name:string)=>{const m=new RegExp("<(?:[\\w.-]+:)?"+name+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?"+name+"\\s*>","i").exec(xml);return m?decode(m[1]):""};
