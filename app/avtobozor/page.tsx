@@ -5,6 +5,9 @@ import { getLocale } from "@/lib/locale";
 import { createPublicServerClient } from "@/supabase/public-server";
 import { normalizeSearchText, searchRelevance } from "@/features/catalog/search-utils";
 import { CollapsibleFilters } from "@/components/collapsible-filters";
+import { FinancingService } from "@/services/financing-service";
+import { getBestUsedCarCredit } from "@/lib/used-car-financing";
+import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -23,7 +26,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   const value = (key: string) => typeof raw[key] === "string" ? String(raw[key]).trim() : "";
   const db = createPublicServerClient();
   let query = db.from("used_car_listings")
-    .select("id,slug,brand,model,year,mileage_km,price,currency,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
+    .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
     .eq("status", "active").gt("expires_at", new Date().toISOString());
   const q = value("q").replace(/[^\p{L}\p{N} .-]/gu, " ").trim();
   const normalizedQ = normalizeSearchText(q);
@@ -56,6 +59,16 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
         .map(entry => entry.item)
     : null;
   const listings = rankedListings ? rankedListings.slice((page - 1) * 12, page * 12) : data ?? [];
+  const financingService = new FinancingService();
+  const listingsWithCredit = await Promise.all(listings.map(async item => {
+    const result = await financingService.getBankCreditProgramsForUsedCar(Number(item.price), item.currency, {
+      year: Number(item.year),
+      origin: item.country_of_origin ?? "",
+      fuelType: item.fuel_type ?? null,
+      brand: item.brand,
+    });
+    return { ...item, bestCredit: getBestUsedCarCredit(result.data ?? [], Number(item.price), item.currency, locale) };
+  }));
   const resultCount = rankedListings ? rankedListings.length : count ?? 0;
   const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
@@ -84,7 +97,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
       </form></CollapsibleFilters></aside>
       <section>
         <p className="mb-4 text-sm text-slate-500">{resultCount} {labels.found}</p>
-        {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{listings.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);return <Link key={item.id} href={"/avtobozor/"+item.slug} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{images[0]?.public_url?<img src={images[0].public_url} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span></div><div className="p-4"><h2 className="font-black">{item.brand} {item.model} · {item.year}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></div></Link>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
+        {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{listingsWithCredit.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);return <Link key={item.id} href={"/avtobozor/"+item.slug} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{images[0]?.public_url?<img src={images[0].public_url} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span></div><div className="p-4"><h2 className="font-black">{item.brand} {item.model} · {item.year}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><div className="mt-3"><UsedCarFinancingBadge offer={item.bestCredit} locale={locale}/></div><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></div></Link>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
         {totalPages>1?<nav className="mt-8 flex items-center justify-center gap-3"><Link aria-disabled={page<=1} className="rounded-lg border px-4 py-2" href={pageHref(Math.max(1,page-1))}>{ru?"Назад":"Oldingi"}</Link><span className="text-sm text-slate-600">{page} / {totalPages}</span><Link aria-disabled={page>=totalPages} className="rounded-lg border px-4 py-2" href={pageHref(Math.min(totalPages,page+1))}>{ru?"Далее":"Keyingi"}</Link></nav>:null}
       </section>
     </div>
