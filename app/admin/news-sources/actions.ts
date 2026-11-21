@@ -3,6 +3,7 @@ import {redirect} from "next/navigation";
 import {revalidatePath} from "next/cache";
 import {requireAdminUser} from "@/lib/admin-auth";
 import {createServiceRoleClient} from "@/supabase/server";
+import {testNewsSource} from "@/lib/news-aggregator";
 const v=(fd:FormData,k:string)=>{const x=fd.get(k);return typeof x==="string"?x.trim():""};
 export async function saveNewsSourceAction(fd:FormData){
  await requireAdminUser();const id=v(fd,"id"),name=v(fd,"name"),url=v(fd,"feedUrl"),language=v(fd,"language"),interval=Number(v(fd,"interval")||1440);
@@ -15,3 +16,19 @@ export async function saveNewsSourceAction(fd:FormData){
  revalidatePath("/admin/news-sources");redirect("/admin/news-sources?saved=1");
 }
 export async function deleteNewsSourceAction(fd:FormData){await requireAdminUser();const id=v(fd,"id");if(!id)throw new Error("Manba topilmadi");const db=createServiceRoleClient();await db.from("news_sources").delete().eq("id",id);revalidatePath("/admin/news-sources");}
+
+
+export async function testNewsSourceAction(fd:FormData){
+ await requireAdminUser();
+ const id=v(fd,"id");
+ if(!id)redirect("/admin/news-sources?testError="+encodeURIComponent("Manba ID topilmadi"));
+ try{
+  const result=await testNewsSource(id);
+  revalidatePath("/admin/news-sources");
+  const params=new URLSearchParams({test:"success",source:result.source,imported:String(result.imported),entries:String(result.feedEntries),title:result.title||""});
+  redirect("/admin/news-sources?"+params.toString());
+ }catch(error){
+  const message=error instanceof Error?error.message:"RSS sinovi bajarilmadi";
+  redirect("/admin/news-sources?testError="+encodeURIComponent(message));
+ }
+}
