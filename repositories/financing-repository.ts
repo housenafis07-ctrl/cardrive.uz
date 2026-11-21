@@ -154,11 +154,11 @@ export class FinancingRepository {
       const minTerm = Number(program.min_term_months ?? program.term_months ?? 12);
       const maxTerm = Number(program.max_term_months ?? program.term_months ?? minTerm);
       const borrowerTypes = Array.isArray(program.eligible_borrower_types) ? program.eligible_borrower_types as string[] : [];
-      const borrowerLabels: Record<string,string> = { formal_income: "Rasmiy daromadli mijozlar", salary_project: "Faol ish haqi loyihasi ishtirokchilari", self_employed: "O‘zini o‘zi band qilganlar" };
+      const borrowerLabels: Record<string,string> = { formal_income: "Rasmiy daromadli mijozlar", salary_project: "Faol ish haqi loyihasi ishtirokchilari", self_employed: "O‘zini o‘zi band qilganlar", no_formal_income: "Rasmiy daromadi bo‘lmagan mijozlar" };
       const eligibilityParts = [
         program.eligibility_notes,
         borrowerTypes.length ? "Qarz oluvchi toifasi: " + borrowerTypes.map(type => borrowerLabels[type] ?? type).join(", ") : null,
-        program.special_conditions,
+        typeof program.special_conditions === "string" && /kalkulyatorda\\s+qo.?llanmaydi|filtrlashni\\s+talab\\s+qiladi/i.test(program.special_conditions) ? null : program.special_conditions,
         program.max_collateral_ltv_percent != null ? "Garov/kredit nisbati: " + program.max_collateral_ltv_percent + "% dan oshmasligi kerak." : null,
       ].filter(Boolean);
       return {
