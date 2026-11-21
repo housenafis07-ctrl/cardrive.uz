@@ -22,13 +22,14 @@ export async function testNewsSourceAction(fd:FormData){
  await requireAdminUser();
  const id=v(fd,"id");
  if(!id)redirect("/admin/news-sources?testError="+encodeURIComponent("Manba ID topilmadi"));
+ let result:Awaited<ReturnType<typeof testNewsSource>>|null=null;
  try{
-  const result=await testNewsSource(id);
-  revalidatePath("/admin/news-sources");
-  const params=new URLSearchParams({test:"success",source:result.source,imported:String(result.imported),entries:String(result.feedEntries),title:result.title||""});
-  redirect("/admin/news-sources?"+params.toString());
+  result=await testNewsSource(id);
  }catch(error){
   const message=error instanceof Error?error.message:"RSS sinovi bajarilmadi";
   redirect("/admin/news-sources?testError="+encodeURIComponent(message));
  }
+ revalidatePath("/admin/news-sources");
+ const params=new URLSearchParams({test:"success",source:result!.source,imported:String(result!.imported),entries:String(result!.feedEntries),title:result!.title||""});
+ redirect("/admin/news-sources?"+params.toString());
 }
