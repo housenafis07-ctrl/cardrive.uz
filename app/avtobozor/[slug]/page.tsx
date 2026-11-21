@@ -18,7 +18,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const locale = await getLocale();
   const ru = locale === "ru";
-  const customer = await getCurrentCustomer();
   const db = createPublicServerClient();
   const { data: listing } = await db.from("used_car_listings")
     .select("slug,brand,model,year,description,condition_description,used_car_listing_images(public_url,sort_order,is_primary)")
@@ -61,6 +60,7 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const locale = await getLocale();
   const ru = locale === "ru";
+  const customer = await getCurrentCustomer();
   const db = createPublicServerClient();
   const { data: listing } = await db.from("used_car_listings")
     .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,district,body_type,fuel_type,transmission,engine_volume,color,vehicle_condition,condition_description,description,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)")
