@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import type { Locale } from "@/lib/i18n";
 
 type Props = { locale: Locale };
-type Item = { href: string; uz: string; ru: string; icon: "home" | "credit" | "search" | "orders" | "profile" };
+type Item = { href: string; uz: string; ru: string; icon: "home" | "credit" | "search" | "orders" | "profile" | "saved" };
 
 const items: Item[] = [
   { href: "/", uz: "Asosiy", ru: "Главная", icon: "home" },
@@ -13,6 +13,7 @@ const items: Item[] = [
   { href: "/cars", uz: "Qidiruv", ru: "Поиск", icon: "search" },
   { href: "/account/orders", uz: "Buyurtmalarim", ru: "Мои заказы", icon: "orders" },
   { href: "/account", uz: "Profil", ru: "Профиль", icon: "profile" },
+  { href: "/account/saved-cars", uz: "Saqlangan", ru: "Избранное", icon: "saved" },
 ];
 
 function Icon({ name, active }: { name: Item["icon"]; active: boolean }) {
@@ -21,6 +22,7 @@ function Icon({ name, active }: { name: Item["icon"]; active: boolean }) {
   if (name === "credit") return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>;
   if (name === "search") return <svg {...common}><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 5 5" strokeLinecap="round" /></svg>;
   if (name === "orders") return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3.5h6M8.5 9h7M8.5 13h7M8.5 17h4" /></svg>;
+  if (name === "saved") return <svg {...common}><path d="M20.8 8.8c0 5.1-8.8 10.2-8.8 10.2S3.2 13.9 3.2 8.8A4.7 4.7 0 0 1 12 6.1a4.7 4.7 0 0 1 8.8 2.7Z" strokeLinecap="round" strokeLinejoin="round"/></svg>;
   return <svg {...common}><circle cx="12" cy="8" r="3.2" /><path d="M5 20c.8-3.5 3.1-5.2 7-5.2s6.2 1.7 7 5.2" /></svg>;
 }
 
@@ -34,7 +36,7 @@ export function MobileBottomNav({ locale }: Props) {
     <>
       <div className="h-[82px] md:hidden" aria-hidden="true" />
       <nav aria-label={locale === "ru" ? "Основная навигация" : "Asosiy navigatsiya"} className="fixed inset-x-0 bottom-0 z-[100] border-t border-white/10 bg-[#0b0f14]/95 shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur-xl md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="mx-auto grid h-[68px] max-w-xl grid-cols-5 px-1">
+        <div className="mx-auto grid h-[68px] max-w-xl grid-cols-6 px-1">
           {navItems.map(item => {
             const active = isActive(item.href);
             const label = locale === "ru" ? item.ru : item.uz;
