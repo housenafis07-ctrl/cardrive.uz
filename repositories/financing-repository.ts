@@ -19,16 +19,26 @@ export class FinancingRepository {
     const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).eq("market_segment", "new").order("sort_order", { ascending: true }).order("name", { ascending: true });
     if (programsResult.error || !programsResult.data?.length) return programsResult;
     const ids = programsResult.data.map((program) => program.id);
+    const rulesResult = await client.from("financing_program_rules").select(RULE_SELECT)
+      .in("financing_program_id", ids).eq("is_available", true)
+      .order("display_order", { ascending: true }).order("down_payment_percent", { ascending: true }).order("term_months", { ascending: true });
+    if (rulesResult.error) return { ...programsResult, data: null, error: rulesResult.error };
+    const rulesByProgram = new Map<string, typeof rulesResult.data>();
+    for (const rule of rulesResult.data ?? []) {
+      const current = rulesByProgram.get(rule.financing_program_id) ?? [];
+      current.push(rule);
+      rulesByProgram.set(rule.financing_program_id, current);
+    }
     const linksResult = await client.from("financing_program_cars").select("financing_program_id,car_id").in("financing_program_id", ids);
     if (linksResult.error) return { ...programsResult, data: null, error: linksResult.error };
     const carIds = [...new Set((linksResult.data ?? []).map((link) => link.car_id))];
-    if (!carIds.length) return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: [] })) };
+    if (!carIds.length) return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, financing_program_rules: rulesByProgram.get(program.id) ?? [], linked_cars: [] })) };
     const carsResult = await client.from("cars").select("id,slug,name,name_uz,name_ru,price,currency,year,stock_status,is_active,brands(name,name_uz,name_ru,slug,logo_url),car_models(name,name_uz,name_ru,slug)").in("id", carIds).eq("is_active", true).order("name", { ascending: true });
     if (carsResult.error) return { ...programsResult, data: null, error: carsResult.error };
     const carsById = new Map((carsResult.data ?? []).map((car) => [car.id, car]));
     const linksByProgram = new Map<string, string[]>();
     for (const link of linksResult.data ?? []) linksByProgram.set(link.financing_program_id, [...(linksByProgram.get(link.financing_program_id) ?? []), link.car_id]);
-    return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: (linksByProgram.get(program.id) ?? []).map((id) => carsById.get(id)).filter(Boolean) })) };
+    return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, financing_program_rules: rulesByProgram.get(program.id) ?? [], linked_cars: (linksByProgram.get(program.id) ?? []).map((id) => carsById.get(id)).filter(Boolean) })) };
   }
 
   async getApplicableProgramsForCar(carId: string) {
