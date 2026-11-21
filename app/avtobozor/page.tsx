@@ -75,7 +75,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     return { ...item, bestCredit: getBestUsedCarCredit(result.data ?? [], Number(item.price), item.currency, locale) };
   }));
   const resultCount = rankedListings ? rankedListings.length : count ?? 0;
-  const discoveryItems: SavedVehicle[] = (data ?? []).map(item => { const photo=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url; return { key:"used:"+item.id,type:"used",title:item.brand+" "+item.model+" · "+item.year,href:"/avtobozor/"+item.slug,image:photo,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year) }; });
+  const discoveryItems: SavedVehicle[] = (data ?? []).map(item => { const photo=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url; return { key:"used:"+item.id,type:"used",title:item.brand+" "+item.model+" · "+item.year,href:"/avtobozor/"+item.slug,image:photo,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year),views:Number(item.view_count??0) }; });
   const topListings = [...listingsWithCredit].sort((a,b)=>Number(b.view_count??0)-Number(a.view_count??0));
   const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
