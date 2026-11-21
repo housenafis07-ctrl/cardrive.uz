@@ -49,9 +49,8 @@ export function VehicleViewTracker({ vehicle }: { vehicle: SavedVehicle }) {
 
 export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedVehicle[]; locale?:"uz"|"ru" }) {
   const [recent,setRecent]=useState<SavedVehicle[]>([]);
-  const [favorites,setFavorites]=useState<SavedVehicle[]>([]);
   useEffect(() => {
-    const sync=()=>{setRecent(read(RECENT_KEY).filter(x=>x.type==="used"));setFavorites(read(FAVORITES_KEY));};
+    const sync=()=>{setRecent(read(RECENT_KEY).filter(x=>x.type==="used"));};
     sync();window.addEventListener("cardrive:vehicles-changed",sync);return()=>window.removeEventListener("cardrive:vehicles-changed",sync);
   },[]);
   const viewedBrands=new Set(recent.slice(0,5).map(x=>(x.brand||"").toLowerCase()).filter(Boolean));
