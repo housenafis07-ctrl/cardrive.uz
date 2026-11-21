@@ -33,3 +33,23 @@ export async function testNewsSourceAction(fd:FormData){
  const params=new URLSearchParams({test:"success",source:result!.source,imported:String(result!.imported),entries:String(result!.feedEntries),title:result!.title||""});
  redirect("/admin/news-sources?"+params.toString());
 }
+
+
+export async function testAllActiveNewsSourcesAction(){
+ await requireAdminUser();
+ const db=createServiceRoleClient();
+ const {data:sources,error}=await db.from("news_sources").select("id,name").eq("is_active",true).limit(20);
+ if(error)redirect("/admin/news-sources?testAllError="+encodeURIComponent(error.message));
+ const results:string[]=[];
+ for(const source of sources??[]){
+  try{
+   const result=await testNewsSource(source.id);
+   results.push(source.name+": OK ("+result.feedEntries+" ta maqola, "+result.imported+" ta yangi import)");
+  }catch(error){
+   results.push(source.name+": XATO ("+(error instanceof Error?error.message:"RSS sinovi bajarilmadi")+")");
+  }
+ }
+ revalidatePath("/admin/news-sources");
+ const ok=results.filter(x=>x.includes(": OK")).length;
+ redirect("/admin/news-sources?testAll="+encodeURIComponent(ok+"/"+results.length)+"&details="+encodeURIComponent(results.join(" | ")));
+}
