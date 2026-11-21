@@ -9,6 +9,8 @@ import { FinancingService } from "@/services/financing-service";
 import { UsedCarFinancingSection } from "@/components/used-car-financing-section";
 import { getBestUsedCarCredit } from "@/lib/used-car-financing";
 import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
+import { SellerContact } from "@/components/seller-contact";
+import { getCurrentCustomer } from "@/lib/customer-session";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const locale = await getLocale();
   const ru = locale === "ru";
+  const customer = await getCurrentCustomer();
   const db = createPublicServerClient();
   const { data: listing } = await db.from("used_car_listings")
     .select("slug,brand,model,year,description,condition_description,used_car_listing_images(public_url,sort_order,is_primary)")
@@ -60,7 +63,7 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
   const ru = locale === "ru";
   const db = createPublicServerClient();
   const { data: listing } = await db.from("used_car_listings")
-    .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,district,body_type,fuel_type,transmission,engine_volume,color,vehicle_condition,condition_description,description,contact_name,contact_phone,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)")
+    .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,district,body_type,fuel_type,transmission,engine_volume,color,vehicle_condition,condition_description,description,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)")
     .eq("slug", slug).eq("status", "active").gt("expires_at", new Date().toISOString()).maybeSingle();
   if (!listing) notFound();
   const financingResult = await new FinancingService().getBankCreditProgramsForUsedCar(Number(listing.price), listing.currency, { year: Number(listing.year), origin: listing.country_of_origin, fuelType: listing.fuel_type, brand: listing.brand });
@@ -132,7 +135,7 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
                 <h2 className="mt-8 text-xl font-black">{ru?"Характеристики":"Texnik xususiyatlari"}</h2><dl className="mt-3 grid grid-cols-2 gap-2">{specs.map(([k,v])=><div key={k} className="rounded-xl bg-slate-50 p-3"><dt className="text-xs text-slate-500">{k}</dt><dd className="mt-1 font-bold">{v}</dd></div>)}</dl>
         <h2 className="mt-8 text-xl font-black">{ru?"Состояние автомобиля":"Avtomobil holati"}</h2><p className="mt-3 whitespace-pre-wrap leading-7 text-slate-700">{listing.condition_description}</p><h2 className="mt-8 text-xl font-black">{ru?"Дополнительное описание":"Qo‘shimcha tavsif"}</h2><p className="mt-3 whitespace-pre-wrap leading-7 text-slate-700">{listing.description}</p>
       </section>
-      <aside><div className="sticky top-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-sm font-bold text-slate-500">{ru?"Цена":"Narxi"}</p><p className="mt-1 text-3xl font-black text-blue-700">{price}</p><div className="mt-4"><UsedCarFinancingBadge offer={bestCredit} locale={locale}/></div>{listing.is_negotiable?<p className="mt-1 text-xs text-slate-500">{ru?"Возможен торг":"Savdolashish mumkin"}</p>:null}<h1 className="mt-5 text-2xl font-black">{listing.brand} {listing.model} · {listing.year}</h1><p className="mt-2 text-sm text-slate-500">{listing.region}{listing.district?", "+listing.district:""}</p><div className="mt-6 border-t pt-5"><p className="text-xs text-slate-500">{ru?"Продавец":"Sotuvchi"}</p><p className="mt-1 font-bold">{listing.contact_name}</p><p className="mt-1 text-xs text-slate-500">{listing.seller_type==="dealer"?(ru?"Автосалон":"Avtosalon"):(ru?"Частное лицо":"Jismoniy shaxs")}</p><a href={"tel:"+listing.contact_phone} className="mt-5 block rounded-full bg-blue-700 px-5 py-3 text-center font-bold text-white">{ru?"Позвонить продавцу":"Sotuvchiga qo‘ng‘iroq qilish"}</a><a href={"https://t.me/share/url?url="+encodeURIComponent("https://cardrive.uz/avtobozor/"+listing.slug)+"&text="+encodeURIComponent(listing.brand+" "+listing.model)} target="_blank" rel="noreferrer" className="mt-3 block rounded-full border px-5 py-3 text-center text-sm font-bold">{ru?"Поделиться объявлением":"E'lonni ulashish"}</a></div></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-900">{ru?"Проверяйте документы, VIN и техническое состояние автомобиля до оплаты. Cardrive не является стороной сделки.":"To‘lovdan oldin hujjatlar, VIN va avtomobilning texnik holatini tekshiring. Cardrive oldi-sotdi bitimining tomoni emas."}</p></aside>
+      <aside><div className="sticky top-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-sm font-bold text-slate-500">{ru?"Цена":"Narxi"}</p><p className="mt-1 text-3xl font-black text-blue-700">{price}</p><div className="mt-4"><UsedCarFinancingBadge offer={bestCredit} locale={locale}/></div>{listing.is_negotiable?<p className="mt-1 text-xs text-slate-500">{ru?"Возможен торг":"Savdolashish mumkin"}</p>:null}<h1 className="mt-5 text-2xl font-black">{listing.brand} {listing.model} · {listing.year}</h1><p className="mt-2 text-sm text-slate-500">{listing.region}{listing.district?", "+listing.district:""}</p><div className="mt-6 border-t pt-5"><p className="text-xs text-slate-500">{ru?"Продавец":"Sotuvchi"}</p><p className="mt-1 text-xs text-slate-500">{listing.seller_type==="dealer"?(ru?"Автосалон":"Avtosalon"):(ru?"Частное лицо":"Jismoniy shaxs")}</p><SellerContact listingId={listing.id} isAuthenticated={!!customer} locale={locale} /><a href={"https://t.me/share/url?url="+encodeURIComponent("https://cardrive.uz/avtobozor/"+listing.slug)+"&text="+encodeURIComponent(listing.brand+" "+listing.model)} target="_blank" rel="noreferrer" className="mt-3 block rounded-full border px-5 py-3 text-center text-sm font-bold">{ru?"Поделиться объявлением":"E'lonni ulashish"}</a></div></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-900">{ru?"Проверяйте документы, VIN и техническое состояние автомобиля до оплаты. Cardrive не является стороной сделки.":"To‘lovdan oldin hujjatlar, VIN va avtomobilning texnik holatini tekshiring. Cardrive oldi-sotdi bitimining tomoni emas."}</p></aside>
     </div>
     <UsedCarFinancingSection carPrice={Number(listing.price)} currency={listing.currency} programs={financingPrograms} bestProgramId={bestCredit?.programId ?? null} locale={locale} />
   </main><Footer/></>;
