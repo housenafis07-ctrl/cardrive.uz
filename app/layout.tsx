@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/locale";
+import { SiteAnnouncementBar } from "@/components/site-announcement-bar";
 
 const siteUrl = "https://cardrive.uz";
 
@@ -160,6 +161,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             `,
           }}
         />
+        <SiteAnnouncementBar locale={locale} />
         {children}
       </body>
     </html>

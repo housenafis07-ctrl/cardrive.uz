@@ -1,5 +1,6 @@
 import "server-only";
 import { createPublicServerClient } from "@/supabase/public-server";
+import { getLatestUsdUzsRate } from "@/lib/cbu-exchange-rates";
 
 const BANK_SELECT = "id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description";
 const PROGRAM_SELECT = "*,financing_type:type,annual_interest_rate:interest_rate,min_down_payment_percent:down_payment_percent,display_order:sort_order,banks(id,name,name_ru,code,logo_url,website_url,integration_status,is_active,display_order,phone,description),financing_program_dealers(dealer_id),financing_program_cars(car_id)";
@@ -93,22 +94,16 @@ export class FinancingRepository {
 
     if (result.error || !result.data?.length) return result;
 
-    const needsConversion = result.data.some((program) =>
-      (program.currency === "USD" || program.currency === "UZS") && program.currency !== listingCurrency
+    const needsUsdRate = result.data.some((program) =>
+      program.currency === "USD" || program.currency === "UZS" && listingCurrency === "USD"
     );
     let usdUzsRate: number | null = null;
-    if (needsConversion) {
+    if (needsUsdRate) {
       try {
-        const response = await fetch("https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/", {
-          next: { revalidate: 3600 },
-        });
-        if (response.ok) {
-          const rates = await response.json() as Array<{ Rate?: string | number }>;
-          const rate = Number(rates?.[0]?.Rate);
-          if (Number.isFinite(rate) && rate > 0) usdUzsRate = rate;
-        }
+        const latestRate = await getLatestUsdUzsRate();
+        usdUzsRate = latestRate.rate;
       } catch (error) {
-        console.error("[used-car-financing] exchange rate lookup failed", error);
+        console.error("[used-car-financing] stored CBU exchange rate unavailable", error);
       }
     }
 
@@ -130,7 +125,8 @@ export class FinancingRepository {
       }
       if (program.min_car_price != null && calculatorPrice < Number(program.min_car_price)) return [];
       if (program.max_car_price != null && calculatorPrice > Number(program.max_car_price)) return [];
-      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice), exchange_rate_to_uzs: programCurrency === "USD" ? (usdUzsRate ?? 1) : 1 }];
+      if (programCurrency === "USD" && !usdUzsRate) return [];
+      return [{ ...program, currency: programCurrency, calculator_price: Math.round(calculatorPrice), exchange_rate_to_uzs: programCurrency === "USD" ? usdUzsRate : 1 }];
     });
 
     if (!applicablePrograms.length) return { ...result, data: [] };

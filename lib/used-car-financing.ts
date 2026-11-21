@@ -71,6 +71,14 @@ export function getBestUsedCarCredit(programs: UsedCarCreditProgram[], fallbackP
   }
   const best = offers.sort((a, b) => a.comparisonPaymentUzs - b.comparisonPaymentUzs || b.termMonths - a.termMonths || a.downPaymentPercent - b.downPaymentPercent)[0];
   if (!best) return null;
-  const { comparisonPaymentUzs: _comparisonPaymentUzs, ...visible } = best;
-  return visible;
+  return {
+    programId: best.programId,
+    providerName: best.providerName,
+    programName: best.programName,
+    monthlyPayment: best.monthlyPayment,
+    downPaymentPercent: best.downPaymentPercent,
+    termMonths: best.termMonths,
+    interestRate: best.interestRate,
+    currency: best.currency,
+  };
 }
