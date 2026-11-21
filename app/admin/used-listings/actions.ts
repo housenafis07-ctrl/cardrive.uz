@@ -30,7 +30,7 @@ export async function moderateUsedCarMediaAction(form: FormData) {
   const status = String(form.get("status") ?? "").trim();
   if (!id || !["approved", "rejected"].includes(status)) redirect("/admin/used-listings?error=Media+so‘rovi+noto‘g‘ri");
   const db = createServiceRoleClient();
-  const result = await db.from("used_car_listing_media").update({ status, reviewed_at: new Date().toISOString(), reviewed_by: moderator.id })
+  const result = await db.from("used_car_listing_media").update({ status, updated_at: new Date().toISOString(), moderation_note: status === "rejected" ? "Admin tomonidan moderatsiyada rad etildi" : null })
     .eq("id", id).in("status", ["pending_review", "approved"]).select("id").maybeSingle();
   if (result.error || !result.data) redirect("/admin/used-listings?error=Videoni+moderatsiya+qilib+bo‘lmadi");
   await db.from("audit_logs").insert({ actor_id: moderator.id, action: "used_car_listing_media.moderated", entity_type: "used_car_listing_media", entity_id: id, metadata: { status } });
