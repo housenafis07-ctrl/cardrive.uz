@@ -168,7 +168,7 @@ export class FinancingRepository {
       const eligibilityParts = [
         program.eligibility_notes,
         borrowerTypes.length ? "Qarz oluvchi toifasi: " + borrowerTypes.map(type => borrowerLabels[type] ?? type).join(", ") : null,
-        typeof program.special_conditions === "string" && /kalkulyatorda\\s+qo.?llanmaydi|filtrlashni\\s+talab\\s+qiladi/i.test(program.special_conditions) ? null : program.special_conditions,
+        typeof program.special_conditions === "string" && /kalkulyatorda\s+qo.?llanmaydi|filtrlashni\s+talab\s+qiladi/i.test(program.special_conditions) ? null : program.special_conditions,
         program.max_collateral_ltv_percent != null ? "Garov/kredit nisbati: " + program.max_collateral_ltv_percent + "% dan oshmasligi kerak." : null,
       ].filter(Boolean);
       return {
