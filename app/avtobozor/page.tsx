@@ -8,6 +8,8 @@ import { CollapsibleFilters } from "@/components/collapsible-filters";
 import { FinancingService } from "@/services/financing-service";
 import { getBestUsedCarCredit } from "@/lib/used-car-financing";
 import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
+import { VehicleFavoriteButton, UsedCarDiscoverySections, type SavedVehicle } from "@/components/vehicle-favorites";
+import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -26,12 +28,15 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   const value = (key: string) => typeof raw[key] === "string" ? String(raw[key]).trim() : "";
   const db = createPublicServerClient();
   let query = db.from("used_car_listings")
-    .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
+    .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,view_count,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
     .eq("status", "active").gt("expires_at", new Date().toISOString());
+  const selectedBrand = VEHICLE_BRANDS.find(item => item.name.toLowerCase() === value("brand").toLowerCase());
   const q = value("q").replace(/[^\p{L}\p{N} .-]/gu, " ").trim();
   const normalizedQ = normalizeSearchText(q);
   // Search both brand and model after Latin/Cyrillic normalization; typo tolerance is ranked below.
 
+  if (value("brand")) query = query.ilike("brand", value("brand"));
+  if (value("model")) query = query.ilike("model", value("model"));
   if (value("region")) query = query.eq("region", value("region"));
   if (value("fuel")) query = query.eq("fuel_type", value("fuel"));
   if (value("transmission")) query = query.eq("transmission", value("transmission"));
@@ -70,9 +75,11 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     return { ...item, bestCredit: getBestUsedCarCredit(result.data ?? [], Number(item.price), item.currency, locale) };
   }));
   const resultCount = rankedListings ? rankedListings.length : count ?? 0;
+  const discoveryItems: SavedVehicle[] = (data ?? []).map(item => { const photo=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url; return { key:"used:"+item.id,type:"used",title:item.brand+" "+item.model+" · "+item.year,href:"/avtobozor/"+item.slug,image:photo,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year),views:Number(item.view_count??0) }; });
+  const topListings = [...listingsWithCredit].sort((a,b)=>Number(b.view_count??0)-Number(a.view_count??0));
   const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
-  for (const key of ["q","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo","sort"]) if (value(key)) params.set(key, value(key));
+  for (const key of ["q","brand","model","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo","sort"]) if (value(key)) params.set(key, value(key));
   const pageHref = (n: number) => { const p = new URLSearchParams(params); p.set("page", String(n)); return "/avtobozor?" + p.toString(); };
   const labels = ru
     ? { title:"Авторынок", sub:"Покупайте и продавайте автомобили по всему Узбекистану", add:"Подать объявление", search:"Поиск марки или модели", region:"Регион", all:"Все регионы", fuel:"Топливо", transmission:"Коробка", body:"Кузов", priceMin:"Цена от", priceMax:"Цена до", currency:"Валюта", mileageFrom:"Пробег от", mileageTo:"Пробег до", yearFrom:"Год от", yearTo:"Год до", sort:"Сортировка", newest:"Сначала новые", cheap:"Сначала дешевле", expensive:"Сначала дороже", apply:"Найти", found:"объявлений", mileage:"Пробег", seller:"Частное лицо", dealer:"Автосалон", noResults:"Объявлений по вашему запросу пока нет", error:"Не удалось загрузить объявления" }
@@ -83,6 +90,8 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     <div className="mt-7 grid gap-6 lg:grid-cols-[280px_1fr]">
       <aside><CollapsibleFilters title={ru ? "Фильтры" : "Filtrlar"}><form action="/avtobozor" className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <input name="q" defaultValue={value("q")} placeholder={labels.search} className="rounded-xl border p-3 text-sm"/>
+        <select name="brand" defaultValue={value("brand")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Все марки":"Barcha brendlar"}</option>{VEHICLE_BRANDS.filter(item=>item.slug!=="other").map(item=><option key={item.slug} value={item.name}>{item.name}</option>)}</select>
+        <select name="model" defaultValue={value("model")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Все модели":"Barcha modellar"}</option>{(selectedBrand?.models ?? VEHICLE_BRANDS.filter(item=>item.slug!=="other").flatMap(item=>item.models)).map(model=><option key={model} value={model}>{model}</option>)}</select>
         <select name="region" defaultValue={value("region")} className="rounded-xl border p-3 text-sm"><option value="">{labels.all}</option>{regions.map(r=><option key={r}>{r}</option>)}</select>
         <div className="grid grid-cols-2 gap-2"><input name="minPrice" type="number" defaultValue={value("minPrice")} placeholder={labels.priceMin} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="maxPrice" type="number" defaultValue={value("maxPrice")} placeholder={labels.priceMax} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
         <select name="currency" defaultValue={value("currency")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Любая валюта":"Barcha valyutalar"}</option><option value="USD">USD ($)</option><option value="UZS">UZS (so‘m)</option></select>
@@ -96,8 +105,9 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
         <Link href="/avtobozor" className="text-center text-xs font-semibold text-slate-500 underline">{ru?"Сбросить":"Filtrlarni tozalash"}</Link>
       </form></CollapsibleFilters></aside>
       <section>
+        <UsedCarDiscoverySections items={discoveryItems} locale={locale}/>
         <p className="mb-4 text-sm text-slate-500">{resultCount} {labels.found}</p>
-        {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{listingsWithCredit.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);return <Link key={item.id} href={"/avtobozor/"+item.slug} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{images[0]?.public_url?<img src={images[0].public_url} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span></div><div className="p-4"><h2 className="font-black">{item.brand} {item.model} · {item.year}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><div className="mt-3"><UsedCarFinancingBadge offer={item.bestCredit} locale={locale}/></div><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></div></Link>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
+        {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{labels.error}</p> : listings.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{topListings.map(item=>{const images=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);const image=images[0]?.public_url;const title=item.brand+" "+item.model+" · "+item.year;return <article key={item.id} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"><div className="relative aspect-[4/3] bg-slate-100">{image?<img src={image} alt={item.brand+" "+item.model} className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-5xl">🚘</div>}<span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold">{item.seller_type==="dealer"?labels.dealer:labels.seller}</span><span className="absolute left-3 bottom-3 flex h-10 w-10 items-center justify-center rounded-xl border bg-white p-1 shadow">{VEHICLE_BRANDS.find(b=>b.name.toLowerCase()===item.brand.toLowerCase())?.logo?<img src={VEHICLE_BRANDS.find(b=>b.name.toLowerCase()===item.brand.toLowerCase())!.logo} alt={item.brand} className="h-full w-full object-contain"/>:<span className="text-xs font-black">{item.brand.slice(0,2).toUpperCase()}</span>}</span><VehicleFavoriteButton locale={locale} vehicle={{key:"used:"+item.id,type:"used",title,href:"/avtobozor/"+item.slug,image,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year)}}/></div><Link href={"/avtobozor/"+item.slug} className="block p-4"><h2 className="font-black">{title}</h2><p className="mt-2 text-lg font-black text-blue-700">{money(Number(item.price),item.currency,locale)}</p><div className="mt-3"><UsedCarFinancingBadge offer={item.bestCredit} locale={locale}/></div><p className="mt-2 text-xs text-slate-500">{item.region} · {Number(item.mileage_km).toLocaleString(locale==="ru"?"ru-RU":"uz-UZ")} km</p></Link></article>})}</div> : <div className="rounded-2xl border border-dashed p-12 text-center"><p className="text-3xl">🚗</p><p className="mt-3 font-bold">{labels.noResults}</p><Link href="/avtobozor/yangi-elon" className="mt-4 inline-block font-bold text-blue-700 underline">{labels.add}</Link></div>}
         {totalPages>1?<nav className="mt-8 flex items-center justify-center gap-3"><Link aria-disabled={page<=1} className="rounded-lg border px-4 py-2" href={pageHref(Math.max(1,page-1))}>{ru?"Назад":"Oldingi"}</Link><span className="text-sm text-slate-600">{page} / {totalPages}</span><Link aria-disabled={page>=totalPages} className="rounded-lg border px-4 py-2" href={pageHref(Math.min(totalPages,page+1))}>{ru?"Далее":"Keyingi"}</Link></nav>:null}
       </section>
     </div>

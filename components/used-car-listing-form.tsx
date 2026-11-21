@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { PhoneOtpAuth } from "@/components/phone-otp-auth";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 import type { Locale } from "@/lib/i18n";
+import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
 type VehicleCondition = {
   value: string;
@@ -128,6 +129,11 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
   const [showCondition, setShowCondition] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState("Chevrolet");
+  const [customBrand, setCustomBrand] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [customModel, setCustomModel] = useState("");
+  const selectedBrandInfo = VEHICLE_BRANDS.find(item => item.name === selectedBrand);
 
   async function submitListing(data: FormData) {
     setSubmitting(true);
@@ -181,8 +187,8 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
       {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
       <form onSubmit={handleSubmit} className="mt-6 grid w-full min-w-0 grid-cols-1 gap-4 overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-5">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
-        <label className="min-w-0 text-sm font-semibold">{ru ? "Марка" : "Brend"} *<input name="brand" required maxLength={80} placeholder="Chevrolet" className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
-        <label className="min-w-0 text-sm font-semibold">{ru ? "Модель" : "Model"} *<input name="model" required maxLength={100} placeholder="Cobalt" className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
+        <label className="min-w-0 text-sm font-semibold">{ru ? "Марка" : "Brend"} *{selectedBrand==="Other" ? <input name="brand" required maxLength={80} value={customBrand} onChange={event=>setCustomBrand(event.target.value)} placeholder={ru?"Введите марку":"Brend nomini kiriting"} className="mt-1 block w-full rounded-xl border p-3"/> : <span className="mt-1 flex min-w-0 items-center gap-2 rounded-xl border px-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center">{selectedBrandInfo?.logo ? <img src={selectedBrandInfo.logo} alt="" className="h-7 w-7 object-contain"/> : <span className="text-xs font-black">{selectedBrand.slice(0,2).toUpperCase()}</span>}</span><select name="brand" required value={selectedBrand} onChange={event=>{setSelectedBrand(event.target.value);setSelectedModel("");}} className="min-w-0 flex-1 border-0 bg-transparent p-3 outline-none">{VEHICLE_BRANDS.map(item=><option key={item.slug} value={item.name}>{item.name}</option>)}</select></span>}</label>
+        <label className="min-w-0 text-sm font-semibold">{ru ? "Модель" : "Model"} *{selectedBrand==="Other" || selectedModel==="__other__" || !selectedBrandInfo?.models.length ? <input name="model" required maxLength={100} value={customModel} onChange={event=>setCustomModel(event.target.value)} placeholder={ru ? "Введите модель" : "Modelni kiriting"} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3"/> : <select name="model" required value={selectedModel} onChange={event=>setSelectedModel(event.target.value)} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3"><option value="" disabled>{ru ? "Выберите модель" : "Modelni tanlang"}</option>{selectedBrandInfo.models.map(model=><option key={model} value={model}>{model}</option>)}<option value="__other__">{ru ? "Другая модель" : "Boshqa model"}</option></select>}</label>
         <label className="min-w-0 text-sm font-semibold">{ru ? "Год выпуска" : "Ishlab chiqarilgan yil"} *<input name="year" type="number" min="1950" max={new Date().getFullYear()+1} required className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
         <label className="min-w-0 text-sm font-semibold">{ru ? "Пробег, км" : "Yurgan masofasi, km"} *<input name="mileageKm" type="number" min="0" max="2000000" step="1" required placeholder={ru ? "Например: 85000" : "Masalan: 85000"} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Укажите фактический пробег. 0 км допускается." : "Haqiqiy probegni kiriting. 0 km qiymati ham qabul qilinadi."}</span></label>
         <div className="col-span-full grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,110px)] gap-2 sm:col-span-1">
