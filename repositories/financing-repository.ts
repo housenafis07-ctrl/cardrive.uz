@@ -163,7 +163,7 @@ export class FinancingRepository {
       ].filter(Boolean);
       return {
         ...program,
-        eligibility_notes: eligibilityParts.join("\\n"),
+        eligibility_notes: eligibilityParts.join("\n"),
         min_term_months: minTerm,
         max_term_months: Math.max(minTerm, maxTerm),
         financing_program_rules: rulesByProgram.get(program.id) ?? [],
