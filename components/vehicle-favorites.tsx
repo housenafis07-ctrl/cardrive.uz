@@ -13,6 +13,7 @@ export type SavedVehicle = {
   brand?: string;
   model?: string;
   year?: number;
+  views?: number;
   savedAt?: number;
 };
 
@@ -56,7 +57,7 @@ export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedV
   const viewedBrands=new Set(recent.slice(0,5).map(x=>(x.brand||"").toLowerCase()).filter(Boolean));
   const recommendations=items.filter(x=>x.brand&&viewedBrands.has(x.brand.toLowerCase())&&!recent.some(r=>r.key===x.key)).slice(0,4);
   const sections=[
-    {title:locale==="ru"?"Топ объявления":"Top e’lonlar",list:items.slice(0,4)},
+    {title:locale==="ru"?"Топ объявления":"Top e’lonlar",list:[...items].sort((a,b)=>(b.views??0)-(a.views??0)).slice(0,4)},
     {title:locale==="ru"?"Рекомендуем вам":"Sizga tavsiya etamiz",list:recommendations.length?recommendations:items.slice(0,4)},
     {title:locale==="ru"?"Недавно просмотренные":"Oxirgi ko‘rilganlar",list:recent.slice(0,4)},
   ];
