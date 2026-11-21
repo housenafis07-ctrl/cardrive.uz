@@ -10,7 +10,7 @@ type ModelRelation = { name:string; slug?:string|null; brands?:SingleOrArray<Bra
 type CarImage = { public_url:string|null; alt_text:string|null; is_primary:boolean; sort_order:number; color_id?:string|null; car_colors?:{id:string;name_uz:string;name_ru:string;hex_code:string}|{id:string;name_uz:string;name_ru:string;hex_code:string}[]|null };
 type CarRelations = { id:string; model_id:string; name:string; slug:string; price:number; currency:string; old_price?:number|null; year:number; stock_status:string; is_featured:boolean; description?:string|null; short_description?:string|null; body_type?:string|null; fuel_type?:string|null; transmission?:string|null; drive_type?:string|null; engine_volume?:number|string|null; engine_type?:string|null; engine_power?:number|string|null; range_km?:number|null; battery_capacity_kwh?:number|null; acceleration_0_100_sec?:number|null; charging_time_minutes?:number|null; seats?:number|null; color?:string|null; brands?:SingleOrArray<BrandRelation>; car_models?:SingleOrArray<ModelRelation>; car_images?:CarImage[]|null };
 type FinancingType="credit"|"installment"|"credit_installment";
-type FinancingRule = { is_available?:boolean; term_months?:number|null };
+type FinancingRule = { is_available?:boolean; down_payment_percent?:number|null; term_months?:number|null; annual_interest_rate?:number|null };
 export type FinancingSummary={financingType:FinancingType;monthlyPayment:number;downPaymentPercent:number;termMonths:number;providerName:string;interestRate:number}|null;
 export type CatalogVariant={id:string;name:string;slug:string;price:number;currency:string;old_price?:number|null;year:number;stock_status:string};
 type NormalizedCar<T extends CarRelations>=Omit<T,"brands"|"car_models">&{brands:BrandRelation|null;car_models:ModelRelation|null;financing:FinancingSummary;variants:CatalogVariant[];modification_count:number};
@@ -22,7 +22,29 @@ function groupByModel<T extends CarRelations>(cars:Array<NormalizedCar<T>>):Arra
 function groupAvailableByModel<T extends CarRelations>(cars:Array<NormalizedCar<T>>):Array<NormalizedCar<T>>{const groups=new Map<string,Array<NormalizedCar<T>>>();for(const car of cars){const group=groups.get(car.model_id)??[];group.push(car);groups.set(car.model_id,group)}return [...groups.values()].map(group=>{const variants=group.slice().sort((a,b)=>Number(a.price)-Number(b.price)||a.name.localeCompare(b.name));const representative=variants[0];return {...representative,variants:variants.map(v=>({id:v.id,name:v.name,slug:v.slug,price:Number(v.price),currency:v.currency,old_price:v.old_price??null,year:Number(v.year),stock_status:v.stock_status})),modification_count:variants.length}})}
 export class CatalogRepository{
  private readonly financing=new FinancingRepository();
- private async enrichFinancing<T extends CarRelations>(cars:T[]|null):Promise<Array<NormalizedCar<T>>>{if(!cars?.length)return[];return Promise.all(cars.map(async car=>{const programs=await this.financing.getApplicableProgramsForCar(car.id);const offers=(programs.data??[]).map(program=>{const rules=Array.isArray(program.financing_program_rules)?(program.financing_program_rules as FinancingRule[]).filter((rule:FinancingRule)=>rule.is_available!==false&&Number(rule.term_months)>0):[];const ruleMaxTerm=rules.length?Math.max(...rules.map((rule:FinancingRule)=>Number(rule.term_months))):0;const configuredMaxTerm=Number(program.max_term_months??program.term_months??0);const termMonths=Math.max(1,ruleMaxTerm,configuredMaxTerm||60);const downPaymentPercent=Math.min(100,Math.max(0,Number(program.min_down_payment_percent??program.down_payment_percent??0)));const interestRate=Math.max(0,Number(program.annual_interest_rate??program.interest_rate??0));const payment=monthlyPayment(Number(car.price)*(1-downPaymentPercent/100),interestRate,termMonths);const providerName=program.banks?.name_ru||program.banks?.name||program.name||"Moliyalashtirish";return{monthlyPayment:payment,downPaymentPercent,termMonths,providerName,financingType:financingType(program.financing_type??program.type),interestRate}}).filter(o=>o.monthlyPayment>0).sort((a,b)=>a.monthlyPayment-b.monthlyPayment||b.termMonths-a.termMonths);return normalizeCar(car,offers[0]??null)}))}
+ private async enrichFinancing<T extends CarRelations>(cars:T[]|null):Promise<Array<NormalizedCar<T>>>{
+  if(!cars?.length)return[];
+  return Promise.all(cars.map(async car=>{
+    const programs=await this.financing.getApplicableProgramsForCar(car.id);
+    const offers=(programs.data??[]).flatMap(program=>{
+      const rules=Array.isArray(program.financing_program_rules)
+        ? (program.financing_program_rules as FinancingRule[]).filter(rule=>rule.is_available!==false&&Number(rule.term_months)>0&&Number(rule.down_payment_percent)>=0&&Number(rule.down_payment_percent)<100&&Number(rule.annual_interest_rate)>=0)
+        : [];
+      const configuredMaxTerm=Number(program.max_term_months??program.term_months??0);
+      const candidates=rules.length
+        ? rules.map(rule=>({downPaymentPercent:Number(rule.down_payment_percent),termMonths:Number(rule.term_months),interestRate:Number(rule.annual_interest_rate)}))
+        : configuredMaxTerm>0
+          ? [{downPaymentPercent:Number(program.min_down_payment_percent??program.down_payment_percent??0),termMonths:configuredMaxTerm,interestRate:Number(program.annual_interest_rate??program.interest_rate??0)}]
+          : [];
+      const providerName=program.banks?.name_ru||program.banks?.name||program.name||"Moliyalashtirish";
+      return candidates.map(candidate=>{
+        const payment=monthlyPayment(Number(car.price)*(1-candidate.downPaymentPercent/100),candidate.interestRate,candidate.termMonths);
+        return {monthlyPayment:payment,downPaymentPercent:candidate.downPaymentPercent,termMonths:candidate.termMonths,providerName,financingType:financingType(program.financing_type??program.type),interestRate:candidate.interestRate};
+      }).filter(offer=>offer.monthlyPayment>0);
+    }).sort((a,b)=>a.monthlyPayment-b.monthlyPayment||b.termMonths-a.termMonths||a.downPaymentPercent-b.downPaymentPercent);
+    return normalizeCar(car,offers[0]??null);
+  }));
+}
  async getCalculatorCars(){
   const result=await createPublicServerClient().from("cars").select("id,model_id,name,slug,price,currency,year,stock_status,is_active,brands!inner(name,name_uz,name_ru,slug),car_models!inner(name,name_uz,name_ru,slug,brands!inner(name,name_uz,name_ru,slug))").eq("is_active",true).in("stock_status",["available","coming_soon"]).order("name",{ascending:true});
   return result;

@@ -19,16 +19,26 @@ export class FinancingRepository {
     const programsResult = await client.from("financing_programs").select(PROGRAM_SELECT).eq("is_active", true).eq("market_segment", "new").order("sort_order", { ascending: true }).order("name", { ascending: true });
     if (programsResult.error || !programsResult.data?.length) return programsResult;
     const ids = programsResult.data.map((program) => program.id);
+    const rulesResult = await client.from("financing_program_rules").select(RULE_SELECT)
+      .in("financing_program_id", ids).eq("is_available", true)
+      .order("display_order", { ascending: true }).order("down_payment_percent", { ascending: true }).order("term_months", { ascending: true });
+    if (rulesResult.error) return { ...programsResult, data: null, error: rulesResult.error };
+    const rulesByProgram = new Map<string, typeof rulesResult.data>();
+    for (const rule of rulesResult.data ?? []) {
+      const current = rulesByProgram.get(rule.financing_program_id) ?? [];
+      current.push(rule);
+      rulesByProgram.set(rule.financing_program_id, current);
+    }
     const linksResult = await client.from("financing_program_cars").select("financing_program_id,car_id").in("financing_program_id", ids);
     if (linksResult.error) return { ...programsResult, data: null, error: linksResult.error };
     const carIds = [...new Set((linksResult.data ?? []).map((link) => link.car_id))];
-    if (!carIds.length) return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: [] })) };
+    if (!carIds.length) return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, financing_program_rules: rulesByProgram.get(program.id) ?? [], linked_cars: [] })) };
     const carsResult = await client.from("cars").select("id,slug,name,name_uz,name_ru,price,currency,year,stock_status,is_active,brands(name,name_uz,name_ru,slug,logo_url),car_models(name,name_uz,name_ru,slug)").in("id", carIds).eq("is_active", true).order("name", { ascending: true });
     if (carsResult.error) return { ...programsResult, data: null, error: carsResult.error };
     const carsById = new Map((carsResult.data ?? []).map((car) => [car.id, car]));
     const linksByProgram = new Map<string, string[]>();
     for (const link of linksResult.data ?? []) linksByProgram.set(link.financing_program_id, [...(linksByProgram.get(link.financing_program_id) ?? []), link.car_id]);
-    return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, linked_cars: (linksByProgram.get(program.id) ?? []).map((id) => carsById.get(id)).filter(Boolean) })) };
+    return { ...programsResult, data: programsResult.data.map((program) => ({ ...program, financing_program_rules: rulesByProgram.get(program.id) ?? [], linked_cars: (linksByProgram.get(program.id) ?? []).map((id) => carsById.get(id)).filter(Boolean) })) };
   }
 
   async getApplicableProgramsForCar(carId: string) {
@@ -154,16 +164,16 @@ export class FinancingRepository {
       const minTerm = Number(program.min_term_months ?? program.term_months ?? 12);
       const maxTerm = Number(program.max_term_months ?? program.term_months ?? minTerm);
       const borrowerTypes = Array.isArray(program.eligible_borrower_types) ? program.eligible_borrower_types as string[] : [];
-      const borrowerLabels: Record<string,string> = { formal_income: "Rasmiy daromadli mijozlar", salary_project: "Faol ish haqi loyihasi ishtirokchilari", self_employed: "O‘zini o‘zi band qilganlar" };
+      const borrowerLabels: Record<string,string> = { formal_income: "Rasmiy daromadli mijozlar", salary_project: "Faol ish haqi loyihasi ishtirokchilari", self_employed: "O‘zini o‘zi band qilganlar", no_formal_income: "Rasmiy daromadi bo‘lmagan mijozlar" };
       const eligibilityParts = [
         program.eligibility_notes,
         borrowerTypes.length ? "Qarz oluvchi toifasi: " + borrowerTypes.map(type => borrowerLabels[type] ?? type).join(", ") : null,
-        program.special_conditions,
+        typeof program.special_conditions === "string" && /kalkulyatorda\s+qo.?llanmaydi|filtrlashni\s+talab\s+qiladi/i.test(program.special_conditions) ? null : program.special_conditions,
         program.max_collateral_ltv_percent != null ? "Garov/kredit nisbati: " + program.max_collateral_ltv_percent + "% dan oshmasligi kerak." : null,
       ].filter(Boolean);
       return {
         ...program,
-        eligibility_notes: eligibilityParts.join("\\n"),
+        eligibility_notes: eligibilityParts.join("\n"),
         min_term_months: minTerm,
         max_term_months: Math.max(minTerm, maxTerm),
         financing_program_rules: rulesByProgram.get(program.id) ?? [],

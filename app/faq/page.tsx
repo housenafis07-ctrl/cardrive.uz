@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const FAQ = {
   uz: [
-    ["Cardrive.uz nima?", "Cardrive.uz O‘zbekistonda yangi avtomobillarni narxi, komplektatsiyasi, texnik xususiyatlari va mavjud moliyalashtirish shartlari bilan tanlashga yordam beradigan avtomobil katalogi."],
+    ["Cardrive.uz nima?", "Cardrive.uz yangi avtomobillar katalogi va Avtobozor orqali ishlatilgan avtomobillar e’lonlarini ko‘rish, solishtirish va sotuvchiga murojaat qilish imkonini beradi."],
     ["Avtomobil kreditini qanday tanlash mumkin?", "Avtomobil sahifasida mavjud kredit dasturlarini solishtiring: foiz stavkasi, boshlang‘ich to‘lov, kredit muddati va oylik to‘lovni ko‘rib, o‘zingizga mos variantni tanlang."],
     ["Kredit dasturlari nimani ko‘rsatadi?", "Kredit dasturlari bank yoki dilerning avtomobil uchun amaldagi shartlarini ko‘rsatadi. Har bir dasturda foiz stavkasi, boshlang‘ich to‘lov, muddat va boshqa shartlar bo‘lishi mumkin."],
     ["Kredit kalkulyatori qanday ishlaydi?", "Avtomobil sahifasidagi kredit kalkulyatori tanlangan kredit dasturi qoidalariga asoslanib boshlang‘ich to‘lov, muddat va foiz stavkasini hisobga oladi hamda taxminiy oylik to‘lovni ko‘rsatadi."],
@@ -22,7 +22,7 @@ const FAQ = {
     ["Kredit arizasi bankka yuborilgandan keyin nima bo‘ladi?", "Ariza bankka yuborilgach, uning holati tizimda yangilanadi. Yakuniy kredit qarorini bank qabul qiladi."],
   ],
   ru: [
-    ["Что такое Cardrive.uz?", "Cardrive.uz — каталог новых автомобилей в Узбекистане с ценами, комплектациями, техническими характеристиками и доступными вариантами финансирования."],
+    ["Что такое Cardrive.uz?", "Cardrive.uz объединяет каталог новых автомобилей и авторынок подержанных автомобилей, где можно просматривать объявления и связываться с продавцами."],
     ["Как выбрать автокредит?", "На странице автомобиля сравните доступные кредитные программы по ставке, первоначальному взносу, сроку и расчётному ежемесячному платежу."],
     ["Что показывают кредитные программы?", "Кредитные программы показывают действующие условия банка или дилера для автомобиля: процентную ставку, первоначальный взнос, срок и другие условия."],
     ["Как работает кредитный калькулятор?", "Кредитный калькулятор на странице автомобиля учитывает правила выбранной программы, первоначальный взнос, срок и процентную ставку и показывает расчётный ежемесячный платёж."],
@@ -38,5 +38,5 @@ export default async function FaqPage(){
   const items=FAQ[locale];
   const title=locale==="ru"?"FAQ — Частые вопросы об автомобилях и автокредите":"FAQ — Ko‘p beriladigan savollar";
   const structuredData={"@context":"https://schema.org","@type":"FAQPage",mainEntity:items.map(([question,answer])=>({"@type":"Question",name:question,acceptedAnswer:{"@type":"Answer",text:answer}}))};
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/><Header/><main className="mx-auto max-w-4xl px-5 py-12"><p className="text-sm font-black uppercase tracking-wide text-amber-600">FAQ</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">{title}</h1><div className="mt-10 space-y-4">{items.map(([question,answer])=><details key={question} className="rounded-2xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer font-black">{question}</summary><p className="mt-3 leading-7 text-slate-600">{answer}</p></details>)}</div><Link href="/cars" className="mt-8 inline-flex rounded-xl bg-slate-950 px-6 py-4 font-bold text-white">{locale==="ru"?"Открыть каталог":"Katalogni ochish"} →</Link></main><Footer/></>;
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/><Header/><main className="mx-auto max-w-4xl px-5 py-12"><p className="text-sm font-black uppercase tracking-wide text-amber-600">FAQ</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">{title}</h1><div className="mt-10 space-y-4">{items.map(([question,answer])=><details key={question} className="rounded-2xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer font-black">{question}</summary><p className="mt-3 leading-7 text-slate-600">{answer}</p></details>)}</div><div className="mt-8 flex flex-wrap gap-3"><Link href="/cars" className="inline-flex rounded-xl bg-slate-950 px-6 py-4 font-bold text-white">{locale==="ru"?"Новые автомобили":"Yangi avtomobillar"} →</Link><Link href="/avtobozor" className="inline-flex rounded-xl border border-slate-300 px-6 py-4 font-bold text-slate-900">{locale==="ru"?"Авторынок":"Avtobozor"} →</Link></div></main><Footer/></>;
 }
