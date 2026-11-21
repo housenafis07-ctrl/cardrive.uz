@@ -30,10 +30,13 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   let query = db.from("used_car_listings")
     .select("id,slug,brand,model,year,mileage_km,price,currency,country_of_origin,region,body_type,fuel_type,transmission,seller_type,is_negotiable,created_at,view_count,used_car_listing_images(public_url,sort_order,is_primary)", { count: "exact" })
     .eq("status", "active").gt("expires_at", new Date().toISOString());
+  const selectedBrand = VEHICLE_BRANDS.find(item => item.name.toLowerCase() === value("brand").toLowerCase());
   const q = value("q").replace(/[^\p{L}\p{N} .-]/gu, " ").trim();
   const normalizedQ = normalizeSearchText(q);
   // Search both brand and model after Latin/Cyrillic normalization; typo tolerance is ranked below.
 
+  if (value("brand")) query = query.ilike("brand", value("brand"));
+  if (value("model")) query = query.ilike("model", value("model"));
   if (value("region")) query = query.eq("region", value("region"));
   if (value("fuel")) query = query.eq("fuel_type", value("fuel"));
   if (value("transmission")) query = query.eq("transmission", value("transmission"));
@@ -76,7 +79,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   const topListings = [...listingsWithCredit].sort((a,b)=>Number(b.view_count??0)-Number(a.view_count??0));
   const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
-  for (const key of ["q","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo","sort"]) if (value(key)) params.set(key, value(key));
+  for (const key of ["q","brand","model","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo","sort"]) if (value(key)) params.set(key, value(key));
   const pageHref = (n: number) => { const p = new URLSearchParams(params); p.set("page", String(n)); return "/avtobozor?" + p.toString(); };
   const labels = ru
     ? { title:"Авторынок", sub:"Покупайте и продавайте автомобили по всему Узбекистану", add:"Подать объявление", search:"Поиск марки или модели", region:"Регион", all:"Все регионы", fuel:"Топливо", transmission:"Коробка", body:"Кузов", priceMin:"Цена от", priceMax:"Цена до", currency:"Валюта", mileageFrom:"Пробег от", mileageTo:"Пробег до", yearFrom:"Год от", yearTo:"Год до", sort:"Сортировка", newest:"Сначала новые", cheap:"Сначала дешевле", expensive:"Сначала дороже", apply:"Найти", found:"объявлений", mileage:"Пробег", seller:"Частное лицо", dealer:"Автосалон", noResults:"Объявлений по вашему запросу пока нет", error:"Не удалось загрузить объявления" }
@@ -87,6 +90,8 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
     <div className="mt-7 grid gap-6 lg:grid-cols-[280px_1fr]">
       <aside><CollapsibleFilters title={ru ? "Фильтры" : "Filtrlar"}><form action="/avtobozor" className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <input name="q" defaultValue={value("q")} placeholder={labels.search} className="rounded-xl border p-3 text-sm"/>
+        <select name="brand" defaultValue={value("brand")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Все марки":"Barcha brendlar"}</option>{VEHICLE_BRANDS.filter(item=>item.slug!=="other").map(item=><option key={item.slug} value={item.name}>{item.name}</option>)}</select>
+        <select name="model" defaultValue={value("model")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Все модели":"Barcha modellar"}</option>{(selectedBrand?.models ?? VEHICLE_BRANDS.filter(item=>item.slug!=="other").flatMap(item=>item.models)).map(model=><option key={model} value={model}>{model}</option>)}</select>
         <select name="region" defaultValue={value("region")} className="rounded-xl border p-3 text-sm"><option value="">{labels.all}</option>{regions.map(r=><option key={r}>{r}</option>)}</select>
         <div className="grid grid-cols-2 gap-2"><input name="minPrice" type="number" defaultValue={value("minPrice")} placeholder={labels.priceMin} className="min-w-0 rounded-xl border p-3 text-sm"/><input name="maxPrice" type="number" defaultValue={value("maxPrice")} placeholder={labels.priceMax} className="min-w-0 rounded-xl border p-3 text-sm"/></div>
         <select name="currency" defaultValue={value("currency")} className="rounded-xl border p-3 text-sm"><option value="">{ru?"Любая валюта":"Barcha valyutalar"}</option><option value="USD">USD ($)</option><option value="UZS">UZS (so‘m)</option></select>
