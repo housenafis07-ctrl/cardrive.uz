@@ -49,3 +49,48 @@ export async function syncNewsFeeds(){
  }
  return {imported,skipped,failed,details};
 }
+
+
+/**
+ * Admin-only diagnostic: fetch exactly one source and import at most one new article.
+ * Does not alter the normal daily sync behavior.
+ */
+export async function testNewsSource(sourceId:string){
+ const db=createServiceRoleClient();
+ const {data:source,error:sourceError}=await db.from("news_sources").select("*").eq("id",sourceId).single();
+ if(sourceError||!source)throw new Error(sourceError?.message||"News source not found");
+ const parsed=new URL(source.feed_url);
+ if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)throw new Error("Feed URL must be a public HTTP(S) URL");
+ if(["localhost","127.0.0.1","0.0.0.0","::1"].includes(parsed.hostname))throw new Error("Local feed URLs are not allowed");
+ try{
+  const response=await fetch(source.feed_url,{headers:{Accept:"application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8","User-Agent":"CardriveNewsBot/1.0"},signal:AbortSignal.timeout(15000),redirect:"error"});
+  if(!response.ok)throw new Error("Feed returned HTTP "+response.status);
+  const xml=await response.text();
+  if(xml.length>2_000_000)throw new Error("Feed exceeds 2 MB limit");
+  const entries=parseFeed(xml,source.feed_url);
+  if(!entries.length)throw new Error("RSS/Atom feed parsed successfully but contained no usable articles");
+  let importedTitle:string|null=null;
+  let duplicateCount=0;
+  for(const entry of entries){
+   const {data:existing,error:lookupError}=await db.from("news_articles").select("id").eq("source_id",source.id).eq("external_id",entry.id).maybeSingle();
+   if(lookupError)throw lookupError;
+   if(existing){duplicateCount++;continue;}
+   const summary=entry.summary.slice(0,3000);
+   const translated=await translate(entry.title,summary,source.language);
+   const record={source_id:source.id,external_id:entry.id,source_url:entry.url,source_name:source.name,original_language:source.language,title_original:entry.title,summary_original:summary,title_uz:translated.title_uz||entry.title,summary_uz:translated.summary_uz||summary,title_ru:translated.title_ru||entry.title,summary_ru:translated.summary_ru||summary,title_en:translated.title_en||entry.title,summary_en:translated.summary_en||summary,image_url:entry.image,published_at:entry.publishedAt,is_published:true};
+   const {error:insertError}=await db.from("news_articles").insert(record);
+   if(insertError){if(insertError.code==="23505"){duplicateCount++;continue;}throw insertError;}
+   importedTitle=entry.title;
+   break;
+  }
+  const checkedAt=new Date().toISOString();
+  const {error:updateError}=await db.from("news_sources").update({last_fetched_at:checkedAt,last_error:null,updated_at:checkedAt}).eq("id",source.id);
+  if(updateError)throw updateError;
+  return {source:source.name,feedEntries:entries.length,imported:importedTitle?1:0,duplicateCount,title:importedTitle,checkedAt};
+ }catch(error){
+  const message=error instanceof Error?error.message:"Unknown RSS test error";
+  const checkedAt=new Date().toISOString();
+  await db.from("news_sources").update({last_fetched_at:checkedAt,last_error:message,updated_at:checkedAt}).eq("id",source.id);
+  throw new Error(source.name+": "+message);
+ }
+}
