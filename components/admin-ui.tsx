@@ -12,6 +12,7 @@ const groups = [
   { title: "AVTOBOZOR · ISHLATILGAN", links: [
     { href: "/admin/used-listings", label: "E’lonlar moderatsiyasi", icon: "▤" },
     { href: "/admin/used-videos", label: "Video moderatsiyasi", icon: "▷" },
+    { href: "/admin/used-car-credit-applications", label: "Kredit arizalari", icon: "▧" },
   ]},
   { title: "SAVDO VA MOLIYA", links: [
     { href: "/admin/orders", label: "Buyurtmalar", icon: "⇄" },
