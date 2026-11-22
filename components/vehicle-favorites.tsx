@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
+import type { UsedCarBestCredit } from "@/lib/used-car-financing";
 
 export type SavedVehicle = {
   key: string;
@@ -15,7 +16,7 @@ export type SavedVehicle = {
   model?: string;
   year?: number;
   views?: number;
-  credit?: { monthlyPayment: number; currency: string; downPaymentPercent: number; termMonths: number; providerName: string } | null;
+  credit?: UsedCarBestCredit | null;
   savedAt?: number;
 };
 
