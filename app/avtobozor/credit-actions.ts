@@ -10,6 +10,12 @@ import { randomUUID } from "node:crypto";
 const text=(fd:FormData,key:string)=>{const v=fd.get(key);return typeof v==="string"?v.trim():"";};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const money=(v:number)=>Number.isFinite(v)&&v>=0;
+type FinancingRuleSnapshot = {
+  is_available?: boolean | null;
+  down_payment_percent?: number | string | null;
+  term_months?: number | string | null;
+  annual_interest_rate?: number | string | null;
+};
 async function validateImage(file:File,label:string){
  if(!(file instanceof File)||!file.size||file.size>5*1024*1024)throw new Error(label+": rasm 5 MB dan kichik bo‘lishi kerak.");
  const b=new Uint8Array(await file.slice(0,12).arrayBuffer());
@@ -41,8 +47,8 @@ export async function submitUsedCarCreditApplication(fd:FormData):Promise<{ok:tr
   const eligible=await new FinancingService().getBankCreditProgramsForUsedCar(Number(listing.price),listing.currency,{year:Number(listing.year),origin:listing.country_of_origin,fuelType:listing.fuel_type,brand:listing.brand});
   const program=(eligible.data??[]).find((p)=>p.id===programId);
   if(!program)throw new Error("Tanlangan bank dasturi ushbu avtomobil uchun hozir mos emas.");
-  const rules=(program.financing_program_rules??[]).filter((r)=>r.is_available!==false);
-  const rule=rules.slice().sort((a,b)=>Number(a.down_payment_percent)-Number(b.down_payment_percent)||Number(b.term_months)-Number(a.term_months))[0]??null;
+  const rules=((program.financing_program_rules??[]) as FinancingRuleSnapshot[]).filter((rule: FinancingRuleSnapshot)=>rule.is_available!==false);
+  const rule=rules.slice().sort((a: FinancingRuleSnapshot,b: FinancingRuleSnapshot)=>Number(a.down_payment_percent)-Number(b.down_payment_percent)||Number(b.term_months)-Number(a.term_months))[0]??null;
   const down=Number(rule?.down_payment_percent??program.min_down_payment_percent??0);
   const term=Number(rule?.term_months??program.max_term_months??program.term_months??0);
   const rate=Number(rule?.annual_interest_rate??program.annual_interest_rate??0);
