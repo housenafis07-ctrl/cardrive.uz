@@ -15,7 +15,7 @@ const submissionStatus=(s:string)=>{const v=s.trim().toLowerCase();if(v==="pendi
 const syncStatus=(s:string)=>{const v=s.trim().toLowerCase();if(v==="pending")return"no_change";if(["approved","rejected","cancelled"].includes(v))return v;return null;};
 const TERMINAL_STATUSES=new Set(["approved","rejected","cancelled","failed"]),MAX_DOCUMENT_BYTES=5*1024*1024;
 type PassportFile=File;
-function validatePassportFile(file:PassportFile,label:string){if(!(file instanceof File)||file.size===0)throw new Error(label+": fayl tanlanmagan");if(file.size>MAX_DOCUMENT_BYTES)throw new Error(label+": fayl 5 MB dan oshmasligi kerak");if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error(label+": faqat JPG, PNG yoki WEBP fayl qabul qilinadi");}
+async function validatePassportFile(file:PassportFile,label:string){if(!(file instanceof File)||file.size===0)throw new Error(label+": fayl tanlanmagan");if(file.size>MAX_DOCUMENT_BYTES)throw new Error(label+": fayl 5 MB dan oshmasligi kerak");const bytes=new Uint8Array(await file.slice(0,12).arrayBuffer());const jpeg=bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff;const png=bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47;const webp=bytes[0]===0x52&&bytes[1]===0x49&&bytes[2]===0x46&&bytes[3]===0x46&&bytes[8]===0x57&&bytes[9]===0x45&&bytes[10]===0x42&&bytes[11]===0x50;const detected=jpeg?"image/jpeg":png?"image/png":webp?"image/webp":null;if(!detected||file.type!==detected)throw new Error(label+": fayl haqiqiy JPG, PNG yoki WEBP rasm bo‘lishi kerak");}
 function normalizedPhone(value:string){const digits=value.replace(/\\D/g,"");const normalized=digits.length===9?"+998"+digits:digits.startsWith("998")?"+"+digits:value.trim();if(!/^\\+998\\d{9}$/.test(normalized))throw new Error("Telefon raqamini +998 XX XXX XX XX formatida kiriting");return normalized;}
 export type SubmitApplicationResult={outcome:"submitted"|"already_exists";applicationId:string;status:string};
 export type SyncApplicationStatusResult={applicationId:string;orderId:string;status:string};
@@ -25,7 +25,7 @@ export class CreditApplicationService{
  async submitApplication(input:unknown,files:{passportFront:PassportFile;passportBack:PassportFile},customerId:string):Promise<SubmitApplicationResult>{
   const value=submitCreditApplicationInputSchema.parse(input);
   if(!value.oneidConsentConfirmed||!value.personalDataConsent)throw new Error("OneID va shaxsiy ma’lumotlarni qayta ishlash roziligini tasdiqlang.");
-  validatePassportFile(files.passportFront,"Pasport old tomoni");validatePassportFile(files.passportBack,"Pasport orqa tomoni");
+  await validatePassportFile(files.passportFront,"Pasport old tomoni");await validatePassportFile(files.passportBack,"Pasport orqa tomoni");
   const orderResult=await this.orders.findByIdForCustomer(value.orderId,customerId);if(!orderResult.data)throw new Error("Buyurtma topilmadi yoki sizga tegishli emas");
   const order=orderResult.data;if(order.status!=="processing")throw new Error("Kredit arizasi faqat menejer buyurtmani jarayonga o'tkazgandan keyin beriladi.");
   if(order.purchase_type!=="credit"&&order.purchase_type!=="installment")throw new Error("Bu buyurtma kredit yoki bo'lib to'lash turi emas");
