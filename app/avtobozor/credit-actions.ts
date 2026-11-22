@@ -39,10 +39,10 @@ export async function submitUsedCarCreditApplication(fd:FormData):Promise<{ok:tr
   const {data:listing}=await db.from("used_car_listings") .select("id,brand,model,year,price,currency,country_of_origin,fuel_type,status,expires_at").eq("id",listingId).eq("status","active").gt("expires_at",new Date().toISOString()).maybeSingle();
   if(!listing)throw new Error("E’lon faol emas yoki topilmadi.");
   const eligible=await new FinancingService().getBankCreditProgramsForUsedCar(Number(listing.price),listing.currency,{year:Number(listing.year),origin:listing.country_of_origin,fuelType:listing.fuel_type,brand:listing.brand});
-  const program=(eligible.data??[]).find((p:any)=>p.id===programId);
+  const program=(eligible.data??[]).find((p)=>p.id===programId);
   if(!program)throw new Error("Tanlangan bank dasturi ushbu avtomobil uchun hozir mos emas.");
-  const rules=(program.financing_program_rules??[]).filter((r:any)=>r.is_available!==false);
-  const rule=rules.slice().sort((a:any,b:any)=>Number(a.down_payment_percent)-Number(b.down_payment_percent)||Number(b.term_months)-Number(a.term_months))[0]??null;
+  const rules=(program.financing_program_rules??[]).filter((r)=>r.is_available!==false);
+  const rule=rules.slice().sort((a,b)=>Number(a.down_payment_percent)-Number(b.down_payment_percent)||Number(b.term_months)-Number(a.term_months))[0]??null;
   const down=Number(rule?.down_payment_percent??program.min_down_payment_percent??0);
   const term=Number(rule?.term_months??program.max_term_months??program.term_months??0);
   const rate=Number(rule?.annual_interest_rate??program.annual_interest_rate??0);
