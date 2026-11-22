@@ -4,7 +4,6 @@ import { UsedCarCreditApplicationService } from "@/services/used-car-credit-appl
 import { AdminTable } from "@/components/admin-ui";
 import { UsedCarCreditStatusControl } from "@/components/used-car-credit-status-control";
 export const dynamic="force-dynamic";
-const statusLabel:Record<string,string>={pending:"Yangi",under_review:"Tekshirilmoqda",sent_to_bank:"Bankka yuborildi",approved:"Tasdiqlandi",rejected:"Rad etildi",cancelled:"Bekor qilindi"};
 const date=(v:string)=>new Intl.DateTimeFormat("uz-UZ",{dateStyle:"short",timeStyle:"short",timeZone:"Asia/Tashkent"}).format(new Date(v));
 export default async function UsedCarCreditApplicationsPage(){
  const user=await requireAdminUser();if(user.role!=="admin"&&user.role!=="manager")notFound();
