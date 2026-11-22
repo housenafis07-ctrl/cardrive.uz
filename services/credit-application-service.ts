@@ -27,7 +27,7 @@ export class CreditApplicationService{
   if(!value.oneidConsentConfirmed||!value.personalDataConsent)throw new Error("OneID va shaxsiy ma’lumotlarni qayta ishlash roziligini tasdiqlang.");
   await validatePassportFile(files.passportFront,"Pasport old tomoni");await validatePassportFile(files.passportBack,"Pasport orqa tomoni");
   const orderResult=await this.orders.findByIdForCustomer(value.orderId,customerId);if(!orderResult.data)throw new Error("Buyurtma topilmadi yoki sizga tegishli emas");
-  const order=orderResult.data;if(order.status!=="processing")throw new Error("Kredit arizasi faqat menejer buyurtmani jarayonga o'tkazgandan keyin beriladi.");
+  const order=orderResult.data;if(order.financing_program_id!==value.financingProgramId)throw new Error("Tanlangan kredit dasturi buyurtmaga mos emas");if(order.status!=="processing")throw new Error("Kredit arizasi faqat menejer buyurtmani jarayonga o'tkazgandan keyin beriladi.");
   if(order.purchase_type!=="credit"&&order.purchase_type!=="installment")throw new Error("Bu buyurtma kredit yoki bo'lib to'lash turi emas");
   const existing=await this.applications.findByOrderId(value.orderId);if(existing.data)return{outcome:"already_exists",applicationId:existing.data.id,status:existing.data.status};
   const program=await this.financing.getProgramById(value.financingProgramId);if(!program.data||!program.data.is_active)throw new Error("Kredit dasturi topilmadi yoki faol emas");
