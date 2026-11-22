@@ -7,10 +7,30 @@ import type { FormatterLocale } from "@/lib/formatters";
 
 type Props={listingId:string;vehicleTitle:string;carPrice:number;currency:string;programs:FinancingProgram[];isAuthenticated:boolean;locale:FormatterLocale};
 const words={
- uz:{apply:"Bankda hisob-kitobga buyurtma berish",bank:"Bank",rate:"Yillik foiz",down:"Boshlang‘ich to‘lov",term:"Muddat",monthly:"Taxminiy oylik to‘lov",title:"Kredit arizasi",desc:"Bank vakili individual kredit shartlarini aniqlashi uchun ma’lumotlaringizni yuboring.",phone:"Telefon raqami",pinfl:"JSHSHIR (14 raqam)",kind:"Hujjat turi",passport:"Pasport",id:"ID-karta",series:"Seriya (mavjud bo‘lsa)",number:"Hujjat raqami",front:"Old tomoni rasmi",back:"Orqa tomoni rasmi",consent:"Shaxsiy ma’lumotlarim, JSHSHIR va hujjat rasmlarim kredit arizamni ko‘rib chiqish va tanlangan bank bilan ishlash uchun Cardrive tomonidan qayta ishlanishiga roziman.",send:"Arizani yuborish",cancel:"Bekor qilish",login:"Ariza yuborish uchun avval Cardrive akkauntingizga kiring.",private:"Hujjatlar yopiq saqlanadi. Faqat vakolatli xodimlar vaqtinchalik havola orqali ko‘ra oladi.",success:"Arizangiz qabul qilindi. Cardrive menejeri siz bilan bog‘lanadi.",file:"JPG, PNG yoki WEBP · har biri 5 MB gacha"},
- ru:{apply:"Заказать расчёт в банке",bank:"Банк",rate:"Годовая ставка",down:"Первоначальный взнос",term:"Срок",monthly:"Ориентировочный платёж в месяц",title:"Заявка на кредит",desc:"Отправьте данные для индивидуального расчёта условий представителем банка.",phone:"Номер телефона",pinfl:"ПИНФЛ (14 цифр)",kind:"Тип документа",passport:"Паспорт",id:"ID-карта",series:"Серия (если есть)",number:"Номер документа",front:"Лицевая сторона",back:"Обратная сторона",consent:"Я согласен на обработку Cardrive моих персональных данных, ПИНФЛ и изображений документа для рассмотрения заявки и взаимодействия с выбранным банком.",send:"Отправить заявку",cancel:"Отмена",login:"Для подачи заявки войдите в аккаунт Cardrive.",private:"Документы хранятся в закрытом хранилище и доступны только уполномоченным сотрудникам по временной ссылке.",success:"Заявка принята. Менеджер Cardrive свяжется с вами.",file:"JPG, PNG или WEBP · до 5 МБ каждый"}
+ uz:{apply:"Bankda hisob-kitobga buyurtma berish",bank:"Bank",rate:"Yillik foiz",down:"Boshlang‘ich to‘lov",term:"Muddat",monthly:"Taxminiy oylik to‘lov",title:"Kredit arizasi",desc:"Bank vakili individual kredit shartlarini aniqlashi uchun ma’lumotlaringizni yuboring.",phone:"Telefon raqami",pinfl:"JSHSHIR (14 raqam)",kind:"Hujjat turi",passport:"Pasport",id:"ID-karta",series:"Seriya (mavjud bo‘lsa)",number:"Hujjat raqami",front:"Old tomoni rasmi",back:"Orqa tomoni rasmi",consent:"Shaxsiy ma’lumotlarim, JSHSHIR va hujjat rasmlarim kredit arizamni ko‘rib chiqish va tanlangan bank bilan ishlash uchun Cardrive tomonidan qayta ishlanishiga roziman.",send:"Arizani yuborish",cancel:"Bekor qilish",login:"Ariza yuborish uchun avval Cardrive akkauntingizga kiring.",private:"Hujjatlar yopiq saqlanadi. Faqat vakolatli xodimlar vaqtinchalik havola orqali ko‘ra oladi.",success:"Arizangiz qabul qilindi. Cardrive menejeri siz bilan bog‘lanadi.",file:"JPG, PNG yoki WEBP · avtomatik siqiladi, har biri 1.3 MB gacha"},
+ ru:{apply:"Заказать расчёт в банке",bank:"Банк",rate:"Годовая ставка",down:"Первоначальный взнос",term:"Срок",monthly:"Ориентировочный платёж в месяц",title:"Заявка на кредит",desc:"Отправьте данные для индивидуального расчёта условий представителем банка.",phone:"Номер телефона",pinfl:"ПИНФЛ (14 цифр)",kind:"Тип документа",passport:"Паспорт",id:"ID-карта",series:"Серия (если есть)",number:"Номер документа",front:"Лицевая сторона",back:"Обратная сторона",consent:"Я согласен на обработку Cardrive моих персональных данных, ПИНФЛ и изображений документа для рассмотрения заявки и взаимодействия с выбранным банком.",send:"Отправить заявку",cancel:"Отмена",login:"Для подачи заявки войдите в аккаунт Cardrive.",private:"Документы хранятся в закрытом хранилище и доступны только уполномоченным сотрудникам по временной ссылке.",success:"Заявка принята. Менеджер Cardrive свяжется с вами.",file:"JPG, PNG или WEBP · автоматическое сжатие, до 1,3 МБ каждый"}
 } as const;
 const fmt=(v:number,c:string,ru:boolean)=>new Intl.NumberFormat(ru?"ru-RU":"uz-UZ",{maximumFractionDigits:0}).format(v)+(c==="USD"?" $":" so‘m");
+async function compressDocument(input:HTMLInputElement){
+ const file=input.files?.[0];if(!file)return;
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)){input.value="";window.alert("Faqat JPG, PNG yoki WEBP rasm yuklang.");return;}
+ const url=URL.createObjectURL(file);
+ try{
+  const image=new Image();image.decoding="async";
+  await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(new Error("Rasmni o‘qib bo‘lmadi"));image.src=url;});
+  const scale=Math.min(1,2000/Math.max(image.naturalWidth,image.naturalHeight));
+  const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+  const context=canvas.getContext("2d");if(!context)throw new Error("Rasmni qayta ishlash imkoni bo‘lmadi");
+  context.drawImage(image,0,0,canvas.width,canvas.height);
+  let blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",0.86));
+  if(!blob)throw new Error("Rasmni siqib bo‘lmadi");
+  if(blob.size>1300*1024)blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/jpeg",0.7));
+  if(!blob||blob.size>1300*1024)throw new Error("Rasm 1.3 MB dan kichik bo‘lishi kerak");
+  const prepared=new File([blob],file.name.replace(/\\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  const transfer=new DataTransfer();transfer.items.add(prepared);input.files=transfer.files;
+ }catch(error){input.value="";window.alert(error instanceof Error?error.message:"Rasmni tayyorlab bo‘lmadi");}
+ finally{URL.revokeObjectURL(url);}
+}
 function payment(p:number,r:number,m:number){const x=r/1200;return Math.round(x===0?p/m:p*x/(1-Math.pow(1+x,-m)));}
 export function UsedCarCreditApplicationPanel({listingId,vehicleTitle,carPrice,currency,programs,isAuthenticated,locale}:Props){
  const ru=locale==="ru",t=words[locale], [active,setActive]=useState<FinancingProgram|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[done,setDone]=useState(false);
@@ -28,8 +48,8 @@ export function UsedCarCreditApplicationPanel({listingId,vehicleTitle,carPrice,c
     <label className="text-xs font-bold sm:col-span-2">{t.kind}<select name="documentType" className="mt-1 w-full rounded-xl border p-3 text-sm"><option value="passport">{t.passport}</option><option value="id_card">{t.id}</option></select></label>
     <label className="text-xs font-bold">{t.series}<input name="documentSeries" maxLength={2} pattern="[A-Za-z]{0,2}" className="mt-1 w-full rounded-xl border p-3 text-sm"/></label>
     <label className="text-xs font-bold">{t.number}<input name="documentNumber" required minLength={7} maxLength={12} pattern="[A-Za-z0-9]{7,12}" className="mt-1 w-full rounded-xl border p-3 text-sm"/></label>
-    <label className="rounded-xl border border-dashed p-3 text-xs font-bold">{t.front}<input name="documentFront" type="file" required accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full text-xs font-normal"/></label>
-    <label className="rounded-xl border border-dashed p-3 text-xs font-bold">{t.back}<input name="documentBack" type="file" required accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full text-xs font-normal"/></label>
+    <label className="rounded-xl border border-dashed p-3 text-xs font-bold">{t.front}<input name="documentFront" type="file" required accept="image/jpeg,image/png,image/webp" onChange={e=>void compressDocument(e.currentTarget)} className="mt-2 block w-full text-xs font-normal"/></label>
+    <label className="rounded-xl border border-dashed p-3 text-xs font-bold">{t.back}<input name="documentBack" type="file" required accept="image/jpeg,image/png,image/webp" onChange={e=>void compressDocument(e.currentTarget)} className="mt-2 block w-full text-xs font-normal"/></label>
    </div>
    <p className="text-xs text-slate-500">{t.file}</p>
    <label className="flex gap-3 rounded-xl border p-3 text-xs leading-5"><input name="personalDataConsent" type="checkbox" required className="mt-1 h-4 w-4 shrink-0"/>{t.consent}</label>
