@@ -17,6 +17,7 @@ create table if not exists public.used_car_credit_applications (
  personal_data_consent_at timestamptz,
  car_price numeric(14,2) not null check (car_price > 0),
  car_currency text not null check (car_currency in ('UZS','USD')),
+ credit_currency text not null check (credit_currency in ('UZS','USD')),
  annual_interest_rate numeric(7,3) not null check (annual_interest_rate between 0 and 100),
  down_payment_percent numeric(5,2) not null check (down_payment_percent between 0 and 100),
  term_months integer not null check (term_months between 1 and 120),
