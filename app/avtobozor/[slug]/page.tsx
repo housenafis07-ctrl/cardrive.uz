@@ -71,6 +71,20 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
   const financingPrograms = financingResult.data ?? [];
   const bestCredit = getBestUsedCarCredit(financingPrograms, Number(listing.price), listing.currency, locale);
   const images = [...(listing.used_car_listing_images ?? [])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order);
+  const { data: similarRaw } = await db.from("used_car_listings")
+    .select("id,slug,brand,model,year,mileage_km,price,currency,region,transmission,fuel_type,used_car_listing_images(public_url,sort_order,is_primary)")
+    .eq("status", "active")
+    .gt("expires_at", new Date().toISOString())
+    .eq("brand", listing.brand)
+    .neq("id", listing.id)
+    .limit(20);
+  const similarListings = (similarRaw ?? [])
+    .sort((a, b) => {
+      const modelRank = Number(b.model.toLowerCase() === listing.model.toLowerCase()) - Number(a.model.toLowerCase() === listing.model.toLowerCase());
+      const priceRank = Math.abs(Number(a.price) - Number(listing.price)) - Math.abs(Number(b.price) - Number(listing.price));
+      return modelRank || priceRank;
+    })
+    .slice(0, 6);
 
   // Only approved videos for an active public listing are exposed.
   // The bucket is private, so create short-lived signed playback URLs.
@@ -139,5 +153,23 @@ export default async function UsedCarDetailPage({ params }: { params: Promise<{ 
       <aside><div className="sticky top-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-sm font-bold text-slate-500">{ru?"Цена":"Narxi"}</p><p className="mt-1 text-3xl font-black text-blue-700">{price}</p><div className="mt-4"><UsedCarFinancingBadge offer={bestCredit} locale={locale}/></div>{listing.is_negotiable?<p className="mt-1 text-xs text-slate-500">{ru?"Возможен торг":"Savdolashish mumkin"}</p>:null}<h1 className="mt-5 text-2xl font-black">{listing.brand} {listing.model} · {listing.year}</h1><p className="mt-2 text-sm text-slate-500">{listing.region}{listing.district?", "+listing.district:""}</p><div className="mt-6 border-t pt-5"><p className="text-xs text-slate-500">{ru?"Продавец":"Sotuvchi"}</p><p className="mt-1 text-xs text-slate-500">{listing.seller_type==="dealer"?(ru?"Автосалон":"Avtosalon"):(ru?"Частное лицо":"Jismoniy shaxs")}</p><SellerContact listingId={listing.id} isAuthenticated={!!customer} locale={locale} /><a href={"https://t.me/share/url?url="+encodeURIComponent("https://cardrive.uz/avtobozor/"+listing.slug)+"&text="+encodeURIComponent(listing.brand+" "+listing.model)} target="_blank" rel="noreferrer" className="mt-3 block rounded-full border px-5 py-3 text-center text-sm font-bold">{ru?"Поделиться объявлением":"E'lonni ulashish"}</a></div></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-900">{ru?"Проверяйте документы, VIN и техническое состояние автомобиля до оплаты. Cardrive не является стороной сделки.":"To‘lovdan oldin hujjatlar, VIN va avtomobilning texnik holatini tekshiring. Cardrive oldi-sotdi bitimining tomoni emas."}</p></aside>
     </div>
     <UsedCarFinancingSection carPrice={Number(listing.price)} currency={listing.currency} programs={financingPrograms} bestProgramId={bestCredit?.programId ?? null} locale={locale} />
+    {similarListings.length ? <section className="mt-12 border-t border-slate-200 pt-8">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div><p className="text-xs font-black uppercase tracking-[.18em] text-blue-700">{ru ? "ВАМ ТАКЖЕ МОЖЕТ ПОНРАВИТЬСЯ" : "SIZ UCHUN TANLOV"}</p><h2 className="mt-2 text-2xl font-black">{ru ? "Похожие объявления" : "O‘xshash e’lonlar"}</h2><p className="mt-1 text-sm text-slate-500">{ru ? "Другие автомобили той же марки с близкими характеристиками и ценой" : "Shu brenddagi, modeli va narxi yaqin avtomobillar"}</p></div>
+        <Link href="/avtobozor" className="text-sm font-bold text-blue-700 hover:underline">{ru ? "Все объявления" : "Barcha e’lonlar"} →</Link>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {similarListings.map(item => {
+          const photo = [...(item.used_car_listing_images ?? [])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url;
+          const itemPrice = new Intl.NumberFormat(ru ? "ru-RU" : "uz-UZ", { maximumFractionDigits: 0 }).format(Number(item.price)) + (item.currency === "USD" ? " $" : " so'm");
+          return <article key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
+            <Link href={"/avtobozor/" + item.slug} className="block">
+              {photo ? <img src={photo} alt={item.brand + " " + item.model} className="aspect-[16/10] w-full bg-slate-100 object-cover"/> : <div className="flex aspect-[16/10] items-center justify-center bg-slate-100 text-5xl">🚘</div>}
+              <div className="p-4"><h3 className="truncate font-black">{item.brand} {item.model} · {item.year}</h3><p className="mt-2 text-lg font-black text-blue-700">{itemPrice}</p><div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600"><span className="rounded-md bg-slate-100 px-2 py-1">{Number(item.mileage_km).toLocaleString(ru ? "ru-RU" : "uz-UZ")} km</span>{item.transmission ? <span className="rounded-md bg-slate-100 px-2 py-1">{item.transmission}</span> : null}{item.fuel_type ? <span className="rounded-md bg-slate-100 px-2 py-1">{item.fuel_type}</span> : null}</div><p className="mt-2 text-xs text-slate-500">{item.region}</p></div>
+            </Link>
+          </article>;
+        })}
+      </div>
+    </section> : null}
   </main><Footer/></>;
 }
