@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    results.news = { ok: true, data: await syncNewsFeeds() };
+    results.news = { ok: true, data: await syncNewsFeeds({ force: true }) };
   } catch (error) {
     results.news = { ok: false, error: error instanceof Error ? error.message : "Unknown news sync error" };
     console.error("[cron:daily-sync] news sync failed", error);

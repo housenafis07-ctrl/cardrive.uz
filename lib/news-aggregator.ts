@@ -24,12 +24,12 @@ async function translate(title:string,summary:string,sourceLanguage:string){
  if(!response.ok)throw new Error("Translation API returned HTTP "+response.status);
  const data=await response.json();const content=data.choices?.[0]?.message?.content;if(!content)throw new Error("Translation API returned empty content");return JSON.parse(content) as Record<string,string>;
 }
-export async function syncNewsFeeds(){
+export async function syncNewsFeeds(options:{force?:boolean}={}){
  const db=createServiceRoleClient();const {data:sources,error}=await db.from("news_sources").select("*").eq("is_active",true).limit(50);if(error)throw error;
  const now=Date.now();let imported=0,skipped=0,failed=0;const details:string[]=[];
  for(const source of (sources??[]) as FeedSource[]){
   const last=source.last_fetched_at?Date.parse(source.last_fetched_at):0;
-  if(last&&now-last<source.fetch_interval_minutes*60_000){skipped++;continue}
+  if(!options.force&&last&&now-last<source.fetch_interval_minutes*60_000){skipped++;continue}
   try{
    const parsed=new URL(source.feed_url);if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)throw new Error("Feed URL must be a public HTTP(S) URL");
    if(["localhost","127.0.0.1","0.0.0.0","::1"].includes(parsed.hostname))throw new Error("Local feed URLs are not allowed");
@@ -41,7 +41,7 @@ export async function syncNewsFeeds(){
     const {data:existing}=await db.from("news_articles").select("id").eq("source_id",source.id).eq("external_id",entry.id).maybeSingle();if(existing){skipped++;continue}
     const cleanSummary=entry.summary.slice(0,3000);
     const tr=await translate(entry.title,cleanSummary,source.language);
-    const record={source_id:source.id,external_id:entry.id,source_url:entry.url,source_name:source.name,original_language:source.language,title_original:entry.title,summary_original:cleanSummary,title_uz:tr.title_uz||entry.title,summary_uz:tr.summary_uz||cleanSummary,title_ru:tr.title_ru||entry.title,summary_ru:tr.summary_ru||cleanSummary,title_en:tr.title_en||entry.title,summary_en:tr.summary_en||cleanSummary,image_url:entry.image,published_at:entry.publishedAt,is_published:true};
+    const record={source_id:source.id,external_id:entry.id,source_url:entry.url,source_name:source.name,original_language:source.language,title_original:entry.title,summary_original:cleanSummary,title_uz:tr.title_uz||entry.title,summary_uz:tr.summary_uz||cleanSummary,title_ru:tr.title_ru||entry.title,summary_ru:tr.summary_ru||cleanSummary,title_en:tr.title_en||entry.title,summary_en:tr.summary_en||cleanSummary,image_url:entry.image,published_at:entry.publishedAt,is_published:false,moderation_status:"pending"};
     const {error:insertError}=await db.from("news_articles").insert(record);if(insertError&&insertError.code!=="23505")throw insertError; if(!insertError)imported++;
    }
    await db.from("news_sources").update({last_fetched_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",source.id);
@@ -77,7 +77,7 @@ export async function testNewsSource(sourceId:string){
    if(existing){duplicateCount++;continue;}
    const summary=entry.summary.slice(0,3000);
    const translated=await translate(entry.title,summary,source.language);
-   const record={source_id:source.id,external_id:entry.id,source_url:entry.url,source_name:source.name,original_language:source.language,title_original:entry.title,summary_original:summary,title_uz:translated.title_uz||entry.title,summary_uz:translated.summary_uz||summary,title_ru:translated.title_ru||entry.title,summary_ru:translated.summary_ru||summary,title_en:translated.title_en||entry.title,summary_en:translated.summary_en||summary,image_url:entry.image,published_at:entry.publishedAt,is_published:true};
+   const record={source_id:source.id,external_id:entry.id,source_url:entry.url,source_name:source.name,original_language:source.language,title_original:entry.title,summary_original:summary,title_uz:translated.title_uz||entry.title,summary_uz:translated.summary_uz||summary,title_ru:translated.title_ru||entry.title,summary_ru:translated.summary_ru||summary,title_en:translated.title_en||entry.title,summary_en:translated.summary_en||summary,image_url:entry.image,published_at:entry.publishedAt,is_published:false,moderation_status:"pending"};
    const {error:insertError}=await db.from("news_articles").insert(record);
    if(insertError){if(insertError.code==="23505"){duplicateCount++;continue;}throw insertError;}
    importedTitle=entry.title;
