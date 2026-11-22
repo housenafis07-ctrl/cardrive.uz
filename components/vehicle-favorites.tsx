@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
 
 export type SavedVehicle = {
   key: string;
@@ -14,6 +15,7 @@ export type SavedVehicle = {
   model?: string;
   year?: number;
   views?: number;
+  credit?: { monthlyPayment: number; currency: string; downPaymentPercent: number; termMonths: number; providerName: string } | null;
   savedAt?: number;
 };
 
@@ -44,14 +46,14 @@ export function VehicleViewTracker({ vehicle }: { vehicle: SavedVehicle }) {
   useEffect(() => {
     const current=read(RECENT_KEY).filter(item=>item.key!==vehicle.key);
     write(RECENT_KEY,[{...vehicle,savedAt:Date.now()},...current]);
-  },[vehicle.key,vehicle.title,vehicle.href,vehicle.image,vehicle.price]);
+  },[vehicle.key,vehicle.title,vehicle.href,vehicle.image,vehicle.price,vehicle.credit?.monthlyPayment,vehicle.credit?.currency,vehicle.credit?.downPaymentPercent,vehicle.credit?.termMonths,vehicle.credit?.providerName]);
   return null;
 }
 
-function DiscoveryCard({ item }: { item: SavedVehicle }) {
+function DiscoveryCard({ item, locale }: { item: SavedVehicle; locale: "uz" | "ru" }) {
   return <Link href={item.href} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
     {item.image ? <img src={item.image} alt="" className="aspect-[16/10] w-full bg-slate-100 object-cover transition group-hover:scale-[1.02]"/> : <div className="flex aspect-[16/10] items-center justify-center bg-slate-100 text-4xl">🚘</div>}
-    <span className="block p-3"><span className="block truncate text-sm font-bold text-slate-900">{item.title}</span><span className="mt-1 block truncate text-sm font-black text-blue-700">{item.price||""}</span></span>
+    <span className="block p-2 sm:p-3"><span className="block truncate text-xs font-bold text-slate-900 sm:text-sm">{item.title}</span><span className="mt-1 block truncate text-sm font-black text-blue-700">{item.price||""}</span>{item.credit ? <span className="mt-2 block"><UsedCarFinancingBadge offer={item.credit} locale={locale} compact/></span> : null}</span>
   </Link>;
 }
 
@@ -72,7 +74,7 @@ export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedV
   ];
   return <div className="mb-8 space-y-7">{sections.map(section=>section.list.length?<section key={section.key}>
     <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black tracking-tight sm:text-xl">{section.title}</h2><span className="text-xs font-semibold text-slate-400">{section.list.length}</span></div>
-    <div className="grid grid-flow-col auto-cols-[minmax(220px,1fr)] gap-3 overflow-x-auto pb-2 sm:auto-cols-[240px] xl:auto-cols-[250px]">{section.list.map(item=><DiscoveryCard key={item.key} item={item}/>)}</div>
+    <div className="grid grid-cols-2 gap-3 pb-2 sm:grid-cols-3 xl:grid-cols-4">{section.list.map(item=><DiscoveryCard key={item.key} item={item} locale={locale}/>)}</div>
   </section>:null)}</div>;
 }
 
