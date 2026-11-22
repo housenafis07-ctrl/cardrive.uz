@@ -68,10 +68,11 @@ export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedV
   const recommendations=items.filter(x=>x.brand&&viewedBrands.has(x.brand.toLowerCase())&&!recent.some(r=>r.key===x.key)).slice(0,4);
   const top=[...items].sort((a,b)=>(b.views??0)-(a.views??0)).slice(0,4);
   const fallbackRecommendations=items.filter(x=>!top.some(t=>t.key===x.key)).slice(0,4);
+  const enrichedRecent=recent.map(item=>{const current=items.find(candidate=>candidate.key===item.key);return current?.credit?{...item,credit:current.credit}:item;});
   const sections=[
     {key:"top",title:locale==="ru"?"Популярные объявления":"Top e’lonlar",list:top},
     {key:"recommended",title:locale==="ru"?"Похожие вам":"Sizga tavsiya etamiz",list:recommendations.length?recommendations:fallbackRecommendations},
-    {key:"recent",title:locale==="ru"?"Недавно просмотренные":"Oxirgi ko‘rilganlar",list:recent.slice(0,4)},
+    {key:"recent",title:locale==="ru"?"Недавно просмотренные":"Oxirgi ko‘rilganlar",list:enrichedRecent.slice(0,4)},
   ];
   return <div className="mb-8 space-y-7">{sections.map(section=>section.list.length?<section key={section.key}>
     <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black tracking-tight sm:text-xl">{section.title}</h2><span className="text-xs font-semibold text-slate-400">{section.list.length}</span></div>
