@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FinancingOptions, type FinancingProgram } from "@/components/financing-options";
 import { UsedCarCreditApplicationPanel } from "@/components/used-car-credit-application-panel";
 import type { FormatterLocale } from "@/lib/formatters";
@@ -28,6 +29,7 @@ export function UsedCarFinancingSection({
   listingId: string; vehicleTitle: string; isAuthenticated?: boolean;
 }) {
   const l = LABELS[locale];
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(bestProgramId);
   return (
     <section className="mt-12 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <div className="mx-auto max-w-4xl">
@@ -37,7 +39,7 @@ export function UsedCarFinancingSection({
           <>
             <div className="mt-6">
               <FinancingOptions carPrice={carPrice} currency={currency} programs={programs}
-                purchaseType="credit" selectedProgramId={bestProgramId} locale={locale} scope="used" />
+                purchaseType="credit" selectedProgramId={selectedProgramId} onSelectProgram={setSelectedProgramId} locale={locale} scope="used" />
             </div>
             <div className="mt-8 border-t border-slate-200 pt-6">
               <h3 className="text-xl font-black">{locale === "ru" ? "Заявка на индивидуальный расчёт в банке" : "Bankda individual kredit hisob-kitobini so‘rash"}</h3>
