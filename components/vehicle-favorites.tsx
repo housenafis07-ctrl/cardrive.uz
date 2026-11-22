@@ -48,6 +48,13 @@ export function VehicleViewTracker({ vehicle }: { vehicle: SavedVehicle }) {
   return null;
 }
 
+function DiscoveryCard({ item }: { item: SavedVehicle }) {
+  return <Link href={item.href} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
+    {item.image ? <img src={item.image} alt="" className="aspect-[16/10] w-full bg-slate-100 object-cover transition group-hover:scale-[1.02]"/> : <div className="flex aspect-[16/10] items-center justify-center bg-slate-100 text-4xl">🚘</div>}
+    <span className="block p-3"><span className="block truncate text-sm font-bold text-slate-900">{item.title}</span><span className="mt-1 block truncate text-sm font-black text-blue-700">{item.price||""}</span></span>
+  </Link>;
+}
+
 export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedVehicle[]; locale?:"uz"|"ru" }) {
   const [recent,setRecent]=useState<SavedVehicle[]>([]);
   useEffect(() => {
@@ -56,12 +63,17 @@ export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedV
   },[]);
   const viewedBrands=new Set(recent.slice(0,5).map(x=>(x.brand||"").toLowerCase()).filter(Boolean));
   const recommendations=items.filter(x=>x.brand&&viewedBrands.has(x.brand.toLowerCase())&&!recent.some(r=>r.key===x.key)).slice(0,4);
+  const top=[...items].sort((a,b)=>(b.views??0)-(a.views??0)).slice(0,4);
+  const fallbackRecommendations=items.filter(x=>!top.some(t=>t.key===x.key)).slice(0,4);
   const sections=[
-    {title:locale==="ru"?"Топ объявления":"Top e’lonlar",list:[...items].sort((a,b)=>(b.views??0)-(a.views??0)).slice(0,4)},
-    {title:locale==="ru"?"Рекомендуем вам":"Sizga tavsiya etamiz",list:recommendations.length?recommendations:items.slice(0,4)},
-    {title:locale==="ru"?"Недавно просмотренные":"Oxirgi ko‘rilganlar",list:recent.slice(0,4)},
+    {key:"top",title:locale==="ru"?"Популярные объявления":"Top e’lonlar",list:top},
+    {key:"recommended",title:locale==="ru"?"Похожие вам":"Sizga tavsiya etamiz",list:recommendations.length?recommendations:fallbackRecommendations},
+    {key:"recent",title:locale==="ru"?"Недавно просмотренные":"Oxirgi ko‘rilganlar",list:recent.slice(0,4)},
   ];
-  return <div className="mb-8 space-y-6">{sections.map(section=><section key={section.title}><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black">{section.title}</h2><span className="text-xs text-slate-400">{section.list.length}</span></div>{section.list.length?<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{section.list.map(item=><Link key={item.key} href={item.href} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-2 hover:shadow-sm">{item.image?<img src={item.image} alt="" className="h-16 w-20 shrink-0 rounded-lg object-cover"/>:<span className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg bg-slate-100">🚘</span>}<span className="min-w-0"><span className="block truncate text-sm font-bold">{item.title}</span><span className="mt-1 block truncate text-xs text-blue-700">{item.price||""}</span></span></Link>)}</div>:<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">{locale==="ru"?"Пока нет автомобилей для этого раздела":"Hozircha bu bo‘limda avtomobillar yo‘q"}</p>}</section>)}</div>;
+  return <div className="mb-8 space-y-7">{sections.map(section=>section.list.length?<section key={section.key}>
+    <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black tracking-tight sm:text-xl">{section.title}</h2><span className="text-xs font-semibold text-slate-400">{section.list.length}</span></div>
+    <div className="grid grid-flow-col auto-cols-[minmax(220px,1fr)] gap-3 overflow-x-auto pb-2 sm:auto-cols-[240px] xl:auto-cols-[250px]">{section.list.map(item=><DiscoveryCard key={item.key} item={item}/>)}</div>
+  </section>:null)}</div>;
 }
 
 export function SavedVehiclesPage({ locale="uz" }: { locale?:"uz"|"ru" }) {
