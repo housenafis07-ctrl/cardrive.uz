@@ -1,5 +1,5 @@
 export function newsSlug(title: string, id: string) {
- const slug=title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/ oʻ|’|'/g,"-").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,90).replace(/-+$/g,"");
+ const slug=title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[ʻʼ’‘]/g,"").replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,90).replace(/-+$/g,"");
  return `${slug||"avtomobil-yangiliklari"}--${id}`;
 }
 export function newsIdFromSlug(slug: string) {
