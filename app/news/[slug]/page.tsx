@@ -6,9 +6,9 @@ import { createServiceRoleClient } from "@/supabase/server";
 import { getLocale } from "@/lib/locale";
 import { newsIdFromSlug, newsSlug } from "@/lib/news-seo";
 
-type Article={id:string;source_url:string;source_name:string;title_uz:string;summary_uz:string|null;title_ru:string;summary_ru:string|null;title_en:string;summary_en:string|null;editorial_note_uz:string|null;editorial_note_ru:string|null;image_url:string|null;published_at:string|null;created_at:string};
+type Article={id:string;source_url:string;source_name:string;title_uz:string;summary_uz:string|null;title_ru:string;summary_ru:string|null;title_en:string;summary_en:string|null;editorial_note_uz?:string|null;editorial_note_ru?:string|null;image_url:string|null;published_at:string|null;created_at:string};
 const base="https://cardrive.uz";
-async function getArticle(slug:string){const id=newsIdFromSlug(slug);if(!id)return null;const {data}=await createServiceRoleClient().from("news_articles").select("id,source_url,source_name,title_uz,summary_uz,title_ru,summary_ru,title_en,summary_en,editorial_note_uz,editorial_note_ru,image_url,published_at,created_at").eq("id",id).eq("is_published",true).maybeSingle();return data as Article|null;}
+async function getArticle(slug:string){const id=newsIdFromSlug(slug);if(!id)return null;const db=createServiceRoleClient();const primary=await db.from("news_articles").select("id,source_url,source_name,title_uz,summary_uz,title_ru,summary_ru,title_en,summary_en,editorial_note_uz,editorial_note_ru,image_url,published_at,created_at").eq("id",id).eq("is_published",true).maybeSingle();if(!primary.error)return primary.data as Article|null;const fallback=await db.from("news_articles").select("id,source_url,source_name,title_uz,summary_uz,title_ru,summary_ru,title_en,summary_en,image_url,published_at,created_at").eq("id",id).eq("is_published",true).maybeSingle();return fallback.data as Article|null;}
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{
  const {slug}=await params;const article=await getArticle(slug);if(!article)return {title:"Maqola topilmadi | Cardrive"};
  const locale=await getLocale();const ru=locale==="ru";const title=ru?article.title_ru:article.title_uz;const description=(ru?article.summary_ru:article.summary_uz)||title;const canonical=`/news/${newsSlug(article.title_uz,article.id)}`;
