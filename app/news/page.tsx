@@ -5,11 +5,11 @@ import { createServiceRoleClient } from "@/supabase/server";
 import { getLocale } from "@/lib/locale";
 import { newsSlug } from "@/lib/news-seo";
 export const metadata:Metadata={
- title:"Avtomobil yangiliklari | Cardrive.uz",
+ title:"Avtomobil yangiliklari",
  description:"O‘zbekiston va jahondagi avtomobil sanoati yangiliklari.",
  alternates:{canonical:"/news"},
- openGraph:{type:"website",url:"/news",title:"Avtomobil yangiliklari | Cardrive.uz",description:"O‘zbekiston va jahondagi avtomobil sanoati yangiliklari."},
- twitter:{card:"summary_large_image",title:"Avtomobil yangiliklari | Cardrive.uz",description:"O‘zbekiston va jahondagi avtomobil sanoati yangiliklari."}
+ openGraph:{type:"website",url:"/news",title:"Avtomobil yangiliklari",description:"O‘zbekiston va jahondagi avtomobil sanoati yangiliklari."},
+ twitter:{card:"summary_large_image",title:"Avtomobil yangiliklari",description:"O‘zbekiston va jahondagi avtomobil sanoati yangiliklari."}
 };
 type Article={id:string;source_url:string;source_name:string;title_uz:string;summary_uz:string|null;title_ru:string;summary_ru:string|null;title_en:string;summary_en:string|null;editorial_note_uz?:string|null;editorial_note_ru?:string|null;image_url:string|null;published_at:string|null;created_at:string};
 export default async function NewsPage(){
