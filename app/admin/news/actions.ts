@@ -23,7 +23,7 @@ export async function updateNewsEditorialAction(formData: FormData) {
   const id = String(formData.get("articleId") ?? "").trim();
   const value = (key: string) => String(formData.get(key) ?? "").trim();
   if (!id || !value("titleUz") || !value("titleRu") || !value("titleEn")) redirect("/admin/news?error=" + encodeURIComponent("Uch tildagi sarlavha majburiy"));
-  const db = createServiceRoleClient();
+  const db = createNewsEditorialClient();
   const result = await db.from("news_articles").update({
     title_uz: value("titleUz"), title_ru: value("titleRu"), title_en: value("titleEn"),
     summary_uz: value("summaryUz") || null, summary_ru: value("summaryRu") || null, summary_en: value("summaryEn") || null,
