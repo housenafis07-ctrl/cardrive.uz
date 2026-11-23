@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createPublicServerClient } from "@/supabase/public-server";
+import { createServiceRoleClient } from "@/supabase/server";
+import { newsSlug } from "@/lib/news-seo";
 
 const baseUrl = "https://cardrive.uz";
 const BATCH_SIZE = 1000;
@@ -17,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/avtokredit/kalkulyator`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${baseUrl}/rassrochka`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${baseUrl}/faq`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/news`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
   ];
 
   for (let from = 0; ; from += BATCH_SIZE) {
@@ -53,6 +56,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       urls.push({ url: `${baseUrl}/avtobozor/${listing.slug}`, lastModified: listing.created_at ? new Date(listing.created_at) : now, changeFrequency: "daily", priority: 0.7 });
     }
     if (!data || data.length < BATCH_SIZE) break;
+  }
+
+  const { data: articles, error: newsError } = await createServiceRoleClient()
+    .from("news_articles")
+    .select("id,title_uz,created_at,published_at")
+    .eq("is_published", true)
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(5000);
+  if (!newsError) {
+    for (const article of articles ?? []) {
+      urls.push({
+        url: `${baseUrl}/news/${newsSlug(article.title_uz, article.id)}`,
+        lastModified: article.published_at ? new Date(article.published_at) : article.created_at ? new Date(article.created_at) : now,
+        changeFrequency: "monthly",
+        priority: 0.7,
+      });
+    }
   }
 
   return urls;
