@@ -50,6 +50,12 @@ jobs:
           sudo apt-get install -y postgresql-client
       - name: Create minimal Supabase-compatible fixture
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/avtobozor-fixture.sql
+      - name: Create minimal news schema fixture
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/news-editorial-fixture.sql
+      - name: Apply news editorial SEO migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261123180000_news_editorial_seo.sql
+      - name: Verify news editorial SEO migration
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/news-editorial-assertions.sql
       - name: Apply Avtobozor migrations
         run: |
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117120000_used_car_marketplace_mvp.sql
