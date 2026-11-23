@@ -12,11 +12,11 @@ const groups = [
   { title: "AVTOBOZOR · ISHLATILGAN", links: [
     { href: "/admin/used-listings", label: "E’lonlar moderatsiyasi", icon: "▤" },
     { href: "/admin/used-videos", label: "Video moderatsiyasi", icon: "▷" },
-    { href: "/admin/used-car-credit-applications", label: "Kredit arizalari", icon: "▧" },
+    { href: "/admin/used-car-credit-applications", label: "Avtobozor kredit arizalari", icon: "▧" },
   ]},
   { title: "SAVDO VA MOLIYA", links: [
     { href: "/admin/orders", label: "Buyurtmalar", icon: "⇄" },
-    { href: "/admin/credit-applications", label: "Kredit arizalari", icon: "▧" },
+    { href: "/admin/credit-applications", label: "Yangi avtomobillar kredit arizalari", icon: "▧" },
     { href: "/admin/banks", label: "Banklar", icon: "⌑" },
     { href: "/admin/financing-programs", label: "Kredit dasturlari", icon: "◉" },
     { href: "/admin/exchange-rates", label: "Valyuta kurslari", icon: "＄" },
