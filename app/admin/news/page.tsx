@@ -16,18 +16,18 @@ export default async function AdminNewsPage({searchParams}:{searchParams:Promise
  const params=await searchParams; const db=createServiceRoleClient(); const articlesDb=createNewsEditorialClient();
  const [pending,published,rejected,sources,errors]=await Promise.all([
   articlesDb.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","pending"),
-  db.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","approved"),
-  db.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","rejected"),
+  articlesDb.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","approved"),
+  articlesDb.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","rejected"),
   db.from("news_sources").select("id",{count:"exact",head:true}).eq("is_active",true),
   db.from("news_sources").select("id",{count:"exact",head:true}).eq("is_active",true).not("last_error","is",null)
  ]);
  const editorialSelect="id,source_name,source_url,title_original,title_uz,title_ru,title_en,summary_uz,summary_ru,summary_en,editorial_note_uz,editorial_note_ru,image_url,published_at,created_at,is_featured,ticker_order";
  const legacySelect="id,source_name,source_url,title_original,title_uz,title_ru,title_en,summary_uz,summary_ru,summary_en,image_url,published_at,created_at";
- const editorialResult=await db.from("news_articles").select(editorialSelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100);
+ const editorialResult=await articlesDb.from("news_articles").select(editorialSelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100);
  const editorialAvailable=!editorialResult.error;
  const useLegacy=Boolean(editorialResult.error && /editorial_note_uz|is_featured|ticker_order|column .* does not exist/i.test(editorialResult.error.message));
  const legacyResult=useLegacy
-  ? await db.from("news_articles").select(legacySelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100)
+  ? await articlesDb.from("news_articles").select(legacySelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100)
   : null;
  const data=(useLegacy?legacyResult?.data:editorialResult.data) as Article[]|null;
  const error=useLegacy?legacyResult?.error??null:editorialResult.error;
