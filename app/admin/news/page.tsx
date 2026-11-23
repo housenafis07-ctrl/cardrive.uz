@@ -23,12 +23,14 @@ export default async function AdminNewsPage({searchParams}:{searchParams:Promise
  ]);
  const editorialSelect="id,source_name,source_url,title_original,title_uz,title_ru,title_en,summary_uz,summary_ru,summary_en,editorial_note_uz,editorial_note_ru,image_url,published_at,created_at,is_featured,ticker_order";
  const legacySelect="id,source_name,source_url,title_original,title_uz,title_ru,title_en,summary_uz,summary_ru,summary_en,image_url,published_at,created_at";
- let result=await db.from("news_articles").select(editorialSelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100);
- let editorialAvailable=!result.error;
- if(result.error && /editorial_note_uz|is_featured|ticker_order|column .* does not exist/i.test(result.error.message)){
-  result=await db.from("news_articles").select(legacySelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100);
- }
- const data=result.data as Article[]|null; const error=result.error;
+ const editorialResult=await db.from("news_articles").select(editorialSelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100);
+ const editorialAvailable=!editorialResult.error;
+ const useLegacy=Boolean(editorialResult.error && /editorial_note_uz|is_featured|ticker_order|column .* does not exist/i.test(editorialResult.error.message));
+ const legacyResult=useLegacy
+  ? await db.from("news_articles").select(legacySelect).eq("moderation_status","pending").order("published_at",{ascending:false,nullsFirst:false}).limit(100)
+  : null;
+ const data=(useLegacy?legacyResult?.data:editorialResult.data) as Article[]|null;
+ const error=useLegacy?legacyResult?.error??null:editorialResult.error;
  return <div className="mx-auto max-w-7xl space-y-6">
   <header><p className="text-xs font-black uppercase tracking-widest text-sky-600">CARDRIVE NEWS</p><h1 className="mt-2 text-3xl font-black">Yangiliklar moderatsiyasi</h1><p className="mt-2 text-sm text-slate-500">RSS materialini tahrirlang, Cardrive izohini qo‘shing va tasdiqlang. Tasdiqlangan maqolalar saytga chiqariladi.</p></header>
   {params.updated&&<p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Maqola saqlandi.</p>}
