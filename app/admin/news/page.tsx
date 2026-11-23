@@ -1,6 +1,6 @@
 import { AdminCard } from "@/components/admin-ui";
 import { moderateNewsArticleAction, updateNewsEditorialAction } from "@/app/admin/news/actions";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createNewsEditorialClient, createServiceRoleClient } from "@/supabase/server";
 
 export const metadata = { title: "Yangiliklar moderatsiyasi | Cardrive Admin" };
 type Article = {
@@ -13,9 +13,9 @@ type Article = {
 };
 const field="w-full rounded-lg border border-slate-300 p-2 text-sm";
 export default async function AdminNewsPage({searchParams}:{searchParams:Promise<{error?:string;updated?:string}>}) {
- const params=await searchParams; const db=createServiceRoleClient();
+ const params=await searchParams; const db=createServiceRoleClient(); const articlesDb=createNewsEditorialClient();
  const [pending,published,rejected,sources,errors]=await Promise.all([
-  db.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","pending"),
+  articlesDb.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","pending"),
   db.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","approved"),
   db.from("news_articles").select("id",{count:"exact",head:true}).eq("moderation_status","rejected"),
   db.from("news_sources").select("id",{count:"exact",head:true}).eq("is_active",true),
