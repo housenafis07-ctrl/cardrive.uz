@@ -1,4 +1,4 @@
-import { AdminCard, AdminTable } from "@/components/admin-ui";
+import { AdminCard } from "@/components/admin-ui";
 import { moderateNewsArticleAction, updateNewsEditorialAction } from "@/app/admin/news/actions";
 import { createServiceRoleClient } from "@/supabase/server";
 
