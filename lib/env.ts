@@ -17,6 +17,9 @@ const serverEnvSchema = z.object({
   PAYME_RESPONSE_URL: z.string().url().optional(),
 }).refine((env) => Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), {
   message: "Set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+}).refine((env) => Boolean(env.PAYME_MERCHANT_ID) === Boolean(env.PAYME_MERCHANT_KEY), {
+  message: "Set both PAYME_MERCHANT_ID and PAYME_MERCHANT_KEY, or leave both unset",
+  path: ["PAYME_MERCHANT_ID"],
 });
 
 export const getServerEnv = () => serverEnvSchema.parse(process.env);
