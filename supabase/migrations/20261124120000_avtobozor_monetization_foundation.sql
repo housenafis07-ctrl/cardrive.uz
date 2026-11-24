@@ -53,7 +53,7 @@ create table if not exists public.monetization_entitlements (
   starts_at timestamptz not null default now(),
   expires_at timestamptz,
   consumed_at timestamptz,
-  consumed_for_listing_id uuid references public.used_car_listings(id) on delete set null,
+  consumed_for_listing_id uuid, -- intentionally retained after listing deletion so release RPC can restore the slot
   status text not null default 'active' check (status in ('active','exhausted','expired','revoked')),
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
