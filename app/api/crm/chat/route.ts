@@ -12,7 +12,7 @@ export async function POST(request:Request){
  const carUrl=typeof v.carUrl==="string"&&v.carUrl.startsWith("https://cardrive.uz/")?v.carUrl:null;
  const source=carName?"new_car_advice":"website_chat";
  if(!name||!/^\+?[0-9 ()-]{7,20}$/.test(phone)||!message)return NextResponse.json({error:"Ism, telefon va xabarni to‘g‘ri kiriting"},{status:400});
- const db=createServiceRoleClient();
+ const db=createCrmClient();
  const {error}=await db.from("crm_leads").insert({source,customer_name:name,phone,message,car_name:carName||null,car_url:carUrl,metadata:{origin:"cardrive_native_chat",page_title:typeof v.pageTitle==="string"?v.pageTitle.slice(0,250):null}});
  if(error){console.error("[crm-chat] insert failed",{code:error.code});return NextResponse.json({error:"Murojaat yuborilmadi. Qayta urinib ko‘ring."},{status:500});}
  return NextResponse.json({ok:true,message:"Murojaatingiz qabul qilindi. Menejerimiz siz bilan bog‘lanadi."},{status:201,headers:{"Cache-Control":"no-store"}});
