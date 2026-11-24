@@ -22,3 +22,17 @@ export function createNewsEditorialClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+
+/**
+ * CRM data is isolated in the existing news_stage schema on Vercel Preview.
+ * Production continues to use public and is not changed by preview validation.
+ */
+export function createCrmClient() {
+  const env = getServerEnv();
+  const schema = process.env.VERCEL_ENV === "preview" ? "news_stage" : "public";
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    db: { schema },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
