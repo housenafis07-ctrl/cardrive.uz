@@ -115,3 +115,78 @@ begin
   end if;
 end
 $$;
+
+
+-- Order creation reads configured prices from the catalog; verified payment grants one entitlement.
+do $$
+declare
+  v_listing_id uuid;
+  v_order_id uuid;
+  v_amount numeric;
+  v_currency text;
+  v_status text;
+  v_confirmed boolean;
+  v_entitlement_count integer;
+  v_promotion_count integer;
+begin
+  update public.monetization_products
+  set amount = 5000, currency = 'UZS', is_active = true
+  where code = 'top_1d';
+
+  select id into v_listing_id from public.used_car_listings
+  where slug = 'pending-owner' and owner_profile_id = '10000000-0000-4000-8000-000000000001';
+
+  select order_id, total_amount, currency, status
+    into v_order_id, v_amount, v_currency, v_status
+  from public.create_monetization_order(
+    '10000000-0000-4000-8000-000000000001',
+    'top_1d', v_listing_id, 'test-order-key-top-1d-0001'
+  );
+
+  if v_amount <> 5000 or v_currency <> 'UZS' or v_status <> 'pending' then
+    raise exception 'Order did not snapshot configured catalog price';
+  end if;
+
+  v_confirmed := public.confirm_monetization_payment(
+    v_order_id, 'test_provider', 'event-top-1d-0001',
+    'provider-ref-top-1d-0001', 5000, 'UZS'
+  );
+  if v_confirmed is distinct from true then
+    raise exception 'Verified payment confirmation failed';
+  end if;
+
+  select count(*) into v_entitlement_count
+  from public.monetization_entitlements where order_item_id in (
+    select id from public.monetization_order_items where order_id = v_order_id
+  );
+  select count(*) into v_promotion_count
+  from public.used_car_listing_promotions where listing_id = v_listing_id
+    and promotion_type = 'top' and expires_at > now();
+
+  if v_entitlement_count <> 1 or v_promotion_count <> 1 then
+    raise exception 'Paid TOP entitlement or promotion was not activated';
+  end if;
+
+  -- Replaying the same provider event must not create a second entitlement or promotion.
+  v_confirmed := public.confirm_monetization_payment(
+    v_order_id, 'test_provider', 'event-top-1d-0001',
+    'provider-ref-top-1d-0001', 5000, 'UZS'
+  );
+  select count(*) into v_entitlement_count
+  from public.monetization_entitlements where order_item_id in (
+    select id from public.monetization_order_items where order_id = v_order_id
+  );
+  select count(*) into v_promotion_count
+  from public.used_car_listing_promotions where listing_id = v_listing_id
+    and promotion_type = 'top' and expires_at > now();
+
+  if v_confirmed is distinct from true or v_entitlement_count <> 1 or v_promotion_count <> 1 then
+    raise exception 'Duplicate payment event was not idempotent';
+  end if;
+
+  if has_function_privilege('anon','public.create_monetization_order(uuid,text,uuid,text)','EXECUTE')
+     or has_function_privilege('authenticated','public.confirm_monetization_payment(uuid,text,text,text,numeric,text)','EXECUTE') then
+    raise exception 'A public role can execute a privileged payment RPC';
+  end if;
+end
+$$;
