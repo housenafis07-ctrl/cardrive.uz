@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createCrmClient } from "@/supabase/server";
 export const dynamic="force-dynamic";
 export async function POST(request:Request){
  let body:unknown;try{body=await request.json()}catch{return NextResponse.json({error:"So‘rov noto‘g‘ri"},{status:400})}
