@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/locale";
 import { SiteAnnouncementBar } from "@/components/site-announcement-bar";
 import { CardriveChatWidget } from "@/components/cardrive-chat-widget";
+import { HomeScreenInstallPrompt } from "@/components/home-screen-install-prompt";
 
 const siteUrl = "https://cardrive.uz";
 
@@ -96,6 +98,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale}>
       <body>
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
         <script
@@ -140,6 +143,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <SiteAnnouncementBar locale={locale} />
         {children}
         <CardriveChatWidget />
+        <HomeScreenInstallPrompt />
       </body>
     </html>
   );
