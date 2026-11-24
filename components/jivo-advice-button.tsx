@@ -30,6 +30,7 @@ declare global {
 export function JivoAdviceButton({ carName, brandName, priceText, pageUrl, financing, locale = "uz" }: Props) {
   const isRu = locale === "ru";
   const openAdvice = () => {
+    void fetch("/api/crm/consultation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ carName, brandName, carUrl: pageUrl, pageTitle: `${brandName} ${carName}` }), keepalive: true }).catch(() => undefined);
     const run = () => {
       const api = window.jivo_api;
       if (!api) return false;
