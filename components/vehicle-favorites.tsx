@@ -43,12 +43,25 @@ export function VehicleFavoriteButton({ vehicle, locale="uz" }: { vehicle: Saved
   </button>;
 }
 
-export function VehicleViewTracker({ vehicle }: { vehicle: SavedVehicle }) {
+export function VehicleViewTracker({ vehicle, listingId, initialViews = 0, locale = "uz" }: { vehicle: SavedVehicle; listingId?: string; initialViews?: number; locale?: "uz" | "ru" }) {
+  const [views, setViews] = useState(initialViews);
   useEffect(() => {
-    const current=read(RECENT_KEY).filter(item=>item.key!==vehicle.key);
-    write(RECENT_KEY,[{...vehicle,savedAt:Date.now()},...current]);
-  },[vehicle.key,vehicle.title,vehicle.href,vehicle.image,vehicle.price,vehicle.credit?.monthlyPayment,vehicle.credit?.currency,vehicle.credit?.downPaymentPercent,vehicle.credit?.termMonths,vehicle.credit?.providerName]);
-  return null;
+    const current = read(RECENT_KEY).filter(item => item.key !== vehicle.key);
+    write(RECENT_KEY, [{ ...vehicle, savedAt: Date.now() }, ...current]);
+    if (!listingId) return;
+    let cancelled = false;
+    fetch("/api/avtobozor/views", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId }), cache: "no-store",
+    }).then(async response => {
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!cancelled && Number.isFinite(Number(data.viewCount))) setViews(Number(data.viewCount));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [vehicle, listingId]);
+  if (!listingId) return null;
+  return <p className="mt-2 text-xs font-medium text-slate-500" aria-live="polite">◉ {views.toLocaleString(locale === "ru" ? "ru-RU" : "uz-UZ")} {locale === "ru" ? "просмотров" : "ko‘rish"}</p>;
 }
 
 function DiscoveryCard({ item, locale }: { item: SavedVehicle; locale: "uz" | "ru" }) {
