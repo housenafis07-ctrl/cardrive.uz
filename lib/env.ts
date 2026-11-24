@@ -9,6 +9,8 @@ const serverEnvSchema = z.object({
   ESKIZ_EMAIL: z.string().email().optional(),
   ESKIZ_PASSWORD: z.string().min(1).optional(),
   ESKIZ_FROM: z.string().min(1).optional(),
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
 }).refine((env) => Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), {
   message: "Set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
 });
