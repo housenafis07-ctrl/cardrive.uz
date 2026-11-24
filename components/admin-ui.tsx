@@ -16,6 +16,7 @@ const groups = [
   ]},
   { title: "SAVDO VA MOLIYA", links: [
     { href: "/admin/orders", label: "Buyurtmalar", icon: "⇄" },
+    { href: "/admin/monetization", label: "Monetizatsiya", icon: "＄" },
     { href: "/admin/credit-applications", label: "Yangi avtomobil kredit arizalari", icon: "▧" },
     { href: "/admin/banks", label: "Banklar", icon: "⌑" },
     { href: "/admin/financing-programs", label: "Kredit dasturlari", icon: "◉" },
