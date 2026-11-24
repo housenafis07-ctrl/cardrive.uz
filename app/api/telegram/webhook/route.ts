@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getServerEnv } from "@/lib/env";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createCrmClient } from "@/supabase/server";
 export const dynamic="force-dynamic";
 const MINI_APP_URL="https://cardrive.uz";
 type TelegramUpdate={update_id?:number;message?:{message_id?:number;date?:number;text?:string;chat?:{id?:number;type?:string};from?:{id?:number;first_name?:string;last_name?:string;username?:string};contact?:{phone_number?:string;first_name?:string;last_name?:string;user_id?:number}}};
