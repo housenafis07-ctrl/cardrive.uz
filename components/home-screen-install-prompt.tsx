@@ -107,7 +107,7 @@ export function HomeScreenInstallPrompt() {
       window.removeEventListener("appinstalled", onInstalled);
       telegram?.offEvent?.("homeScreenAdded", onTelegramAdded);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   function dismiss() {
     setMode(null);
