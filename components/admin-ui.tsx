@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOutAction } from "@/app/admin/sign-out-action";
 
 const groups = [
-  { title: "UMUMIY", links: [{ href: "/admin", label: "Dashboard", icon: "◫" }] },
+  { title: "UMUMIY", links: [{ href: "/admin", label: "Dashboard", icon: "◫" }, { href: "/admin/customer-inquiries", label: "Mijozlar murojaatlari", icon: "✉" }] },
   { title: "YANGI AVTOMOBILLAR", links: [
     { href: "/admin/brands", label: "Brendlar", icon: "◈" },
     { href: "/admin/models", label: "Modellar", icon: "◇" },

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { getLocale } from "@/lib/locale";
 import { SiteAnnouncementBar } from "@/components/site-announcement-bar";
+import { CardriveChatWidget } from "@/components/cardrive-chat-widget";
 
 const siteUrl = "https://cardrive.uz";
 
@@ -98,30 +98,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
-        <style dangerouslySetInnerHTML={{ __html: `@media (max-width: 767px) { [id*="jivo"], [class*="jivo"], iframe[src*="jivo"] { bottom: 92px !important; } }` }} />
-        <Script src="//code.jivo.ru/widget/LO1U03jwav" strategy="afterInteractive" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                function liftJivoOnMobile() {
-                  if (window.innerWidth > 767) return;
-                  var nodes = document.querySelectorAll('[id*="jivo"], [class*="jivo"], iframe[src*="jivo"]');
-                  nodes.forEach(function (node) {
-                    if (node instanceof HTMLElement || node instanceof HTMLIFrameElement) {
-                      node.style.setProperty('bottom', '92px', 'important');
-                    }
-                  });
-                }
-
-                liftJivoOnMobile();
-                var observer = new MutationObserver(liftJivoOnMobile);
-                observer.observe(document.documentElement, { childList: true, subtree: true });
-                window.addEventListener('resize', liftJivoOnMobile);
-              })();
-            `,
-          }}
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -163,6 +139,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
         <SiteAnnouncementBar locale={locale} />
         {children}
+        <CardriveChatWidget />
       </body>
     </html>
   );
