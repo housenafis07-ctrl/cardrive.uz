@@ -61,5 +61,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261117120000_used_car_marketplace_mvp.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261118100000_used_car_condition_and_mileage.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261118130000_avtobozor_schema_reconciliation.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261124120000_avtobozor_monetization_foundation.sql
       - name: Verify mileage, condition, RLS, grants and Storage
         run: psql -v ON_ERROR_STOP=1 -f tests/sql/avtobozor-assertions.sql
+      - name: Verify monetization quota and entitlement lifecycle
+        run: psql -v ON_ERROR_STOP=1 -f tests/sql/avtobozor-monetization-assertions.sql
