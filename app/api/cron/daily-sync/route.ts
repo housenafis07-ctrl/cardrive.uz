@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
 import { syncCbuUsdRate } from "@/lib/cbu-exchange-rates";
 import { syncNewsFeeds } from "@/lib/news-aggregator";
+import { createServiceRoleClient } from "@/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+async function archiveExpiredUsedCarListings() {
+  const db = createServiceRoleClient();
+  const now = new Date().toISOString();
+  const { data, count, error } = await db
+    .from("used_car_listings")
+    .update({ status: "archived" }, { count: "exact" })
+    .eq("status", "active")
+    .lte("expires_at", now)
+    .select("id");
+
+  if (error) throw error;
+  return { archivedCount: count ?? data?.length ?? 0, checkedAt: now };
+}
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -18,9 +33,11 @@ export async function GET(request: Request) {
   const results: {
     cbu: { ok: boolean; data?: Awaited<ReturnType<typeof syncCbuUsdRate>>; error?: string };
     news: { ok: boolean; data?: Awaited<ReturnType<typeof syncNewsFeeds>>; error?: string };
+    usedCarListings: { ok: boolean; data?: Awaited<ReturnType<typeof archiveExpiredUsedCarListings>>; error?: string };
   } = {
     cbu: { ok: false },
     news: { ok: false },
+    usedCarListings: { ok: false },
   };
 
   try {
@@ -37,6 +54,13 @@ export async function GET(request: Request) {
     console.error("[cron:daily-sync] news sync failed", error);
   }
 
-  const ok = results.cbu.ok && results.news.ok;
+  try {
+    results.usedCarListings = { ok: true, data: await archiveExpiredUsedCarListings() };
+  } catch (error) {
+    results.usedCarListings = { ok: false, error: error instanceof Error ? error.message : "Unknown Avtobozor expiry error" };
+    console.error("[cron:daily-sync] expired Avtobozor listings archive failed", error);
+  }
+
+  const ok = results.cbu.ok && results.news.ok && results.usedCarListings.ok;
   return NextResponse.json({ ok, ...results }, { status: ok ? 200 : 502 });
 }
