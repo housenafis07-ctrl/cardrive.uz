@@ -1,5 +1,5 @@
 import { requireAdminUser } from "@/lib/admin-auth";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createCrmClient } from "@/supabase/server";
 import { UnifiedCrmInbox } from "@/components/unified-crm-inbox";
 export const dynamic = "force-dynamic";
 export default async function CustomerInquiriesPage({searchParams}:{searchParams:Promise<{source?:string;status?:string}>}) {
