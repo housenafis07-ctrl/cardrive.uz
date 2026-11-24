@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createCrmClient } from "@/supabase/server";
 export const dynamic="force-dynamic";
 export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}) {
  const user=await getAdminUser(); if(!user) return NextResponse.json({error:"Ruxsat yo‘q"},{status:401});
