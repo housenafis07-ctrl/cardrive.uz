@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export default async function CustomerInquiriesPage({searchParams}:{searchParams:Promise<{source?:string;status?:string}>}) {
  const user=await requireAdminUser();
  const p=await searchParams;
- const db=createServiceRoleClient();
+ const db=createCrmClient();
  let query=db.from("crm_leads").select("id,source,customer_name,phone,telegram_username,message,car_name,car_url,status,assigned_to,created_at,updated_at,metadata").order("created_at",{ascending:false}).limit(300);
  if(["jivo","telegram","new_car_advice","website_chat"].includes(p.source??"")) query=query.eq("source",p.source!);
  if(["new","in_progress","contacted","resolved","spam"].includes(p.status??"")) query=query.eq("status",p.status!);
