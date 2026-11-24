@@ -48,13 +48,13 @@ export async function POST(request:Request){
  }else if(/^\/app(?:@\w+)?(?:\s|$)/i.test(text)||text==="🚗 Cardrive Mini App"){
   await sendMessage(token,chatId,"Cardrive ilovasini ochish uchun quyidagi tugmani bosing. 🚗");
  }else if(contact){
-  const db=createServiceRoleClient();
+  const db=createCrmClient();
   const name=[contact.first_name??from.first_name,contact.last_name??from.last_name].filter(Boolean).join(" ").slice(0,160)||null;
   const {error}=await db.from("crm_leads").upsert({source:"telegram",external_id:String(chatId)+":"+String(messageId),customer_name:name,phone:contact.phone_number??null,telegram_username:from.username??null,message:"Mijoz telefon raqamini yubordi.",metadata:{chat_id:String(chatId),telegram_user_id:String(from.id),update_id:update.update_id??null,message_date:m.date??null,contact_shared:true}},{onConflict:"source,external_id",ignoreDuplicates:true});
   if(error){console.error("[telegram-webhook] contact save failed",{code:error.code});await sendMessage(token,chatId,"Telefon raqamingizni saqlashda xatolik yuz berdi. Iltimos, birozdan keyin qayta urinib ko‘ring.");return NextResponse.json({ok:true});}
   await sendMessage(token,chatId,"Rahmat! 📞 Telefon raqamingiz qabul qilindi. Cardrive menejeri tez orada siz bilan bog‘lanadi.");
  }else if(text&&!isCommand){
-  const db=createServiceRoleClient();
+  const db=createCrmClient();
   const name=[from.first_name,from.last_name].filter(Boolean).join(" ").slice(0,160)||null;
   const {error}=await db.from("crm_leads").upsert({source:"telegram",external_id:String(chatId)+":"+String(messageId),customer_name:name,telegram_username:from.username??null,message:text,metadata:{chat_id:String(chatId),telegram_user_id:String(from.id),update_id:update.update_id??null,message_date:m.date??null}},{onConflict:"source,external_id",ignoreDuplicates:true});
   if(error){console.error("[telegram-webhook] CRM insert failed",{code:error.code});await sendMessage(token,chatId,"Xabaringizni saqlashda xatolik yuz berdi. Iltimos, qayta yuboring.");return NextResponse.json({ok:true});}
