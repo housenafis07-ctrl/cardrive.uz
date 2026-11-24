@@ -1,13 +1,13 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-type Context={carName?:string;carUrl?:string;pageTitle?:string};
+type Context={carName?:string;carUrl?:string;pageTitle?:string;initialMessage?:string};
 declare global { interface Window { __cardriveChatContext?:Context } }
 export function CardriveChatWidget(){
  const [open,setOpen]=useState(false),[context,setContext]=useState<Context>({});
  const [name,setName]=useState(""),[phone,setPhone]=useState(""),[message,setMessage]=useState("");
  const [busy,setBusy]=useState(false),[sent,setSent]=useState(false),[error,setError]=useState("");
  useEffect(()=>{
-  const onOpen=(event:Event)=>{const detail=(event as CustomEvent<Context>).detail??{};setContext(detail);setOpen(true);setSent(false);setError("");};
+  const onOpen=(event:Event)=>{const detail=(event as CustomEvent<Context>).detail??{};setContext(detail);setMessage(detail.initialMessage??"");setOpen(true);setSent(false);setError("");};
   window.addEventListener("cardrive:open-chat",onOpen);
   return()=>window.removeEventListener("cardrive:open-chat",onOpen);
  },[]);
