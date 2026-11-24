@@ -1,6 +1,6 @@
 create table if not exists public.crm_leads (
   id uuid primary key default gen_random_uuid(),
-  source text not null check (source in ('jivo','telegram','new_car_advice')),
+  source text not null check (source in ('jivo','telegram','new_car_advice','website_chat')),
   external_id text,
   customer_name text,
   phone text,
