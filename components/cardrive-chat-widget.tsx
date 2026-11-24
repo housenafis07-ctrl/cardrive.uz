@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type Context = {
   carName?: string;
@@ -12,6 +13,7 @@ type Context = {
 const TELEGRAM_BOT_URL = "https://t.me/CarDriveUzBot";
 
 export function CardriveChatWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [context, setContext] = useState<Context>({});
   const [name, setName] = useState("");
@@ -61,6 +63,8 @@ export function CardriveChatWidget() {
       setBusy(false);
     }
   }
+
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;
 
   return (
     <>
