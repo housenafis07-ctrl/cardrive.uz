@@ -14,7 +14,14 @@ create table if not exists public.monetization_products (
   is_active boolean not null default false,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint monetization_products_duration_by_type_check check (
+    (product_type = 'extra_listing' and duration_days is null)
+    or (product_type <> 'extra_listing' and duration_days is not null)
+  ),
+  constraint monetization_products_active_price_check check (
+    not is_active or (amount is not null and amount > 0)
+  )
 );
 
 create table if not exists public.monetization_orders (
