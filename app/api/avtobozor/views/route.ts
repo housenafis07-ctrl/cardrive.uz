@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const cookieHeader = request.headers.get("cookie") || "";
   const rawCookie = cookieHeader.split(";").map(v => v.trim()).find(v => v.startsWith(COOKIE + "="))?.slice(COOKIE.length + 1);
-  const existing = readVisitor(rawCookie ? decodeURIComponent(rawCookie) : undefined);
+  const existing = readVisitor(rawCookie);
   const visitorId = existing || randomUUID();
   const visitorHash = createHmac("sha256", getServerEnv().SUPABASE_SERVICE_ROLE_KEY)
     .update("avtobozor-view:" + visitorId).digest("hex");
