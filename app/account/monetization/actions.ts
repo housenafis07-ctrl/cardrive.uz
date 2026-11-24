@@ -15,7 +15,7 @@ export async function startMonetizationPaymentAction(form: FormData) {
   if (!/^[a-z0-9_]{2,80}$/.test(code)) redirect("/account/monetization?error=Mahsulot+noto%27g%27ri");
 
   const env = getServerEnv();
-  if (!env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY || !env.PAYME_SERVER_CALLBACK_URL) {
+  if (!env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY) {
     redirect("/account/monetization?error=Payme+hali+sozlanmagan");
   }
 
@@ -41,14 +41,16 @@ export async function startMonetizationPaymentAction(form: FormData) {
     redirect("/account/monetization?error=Buyurtma+summasi+noto%27g%27ri");
   }
 
-  const responseUrl = env.PAYME_RESPONSE_URL ?? new URL("/account/monetization", env.NEXT_PUBLIC_SUPABASE_URL).toString();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cardrive.uz";
+  const responseUrl = env.PAYME_RESPONSE_URL ?? new URL("/account/monetization", siteUrl).toString();
+  const callbackUrl = env.PAYME_SERVER_CALLBACK_URL ?? new URL("/api/payments/payme/callback", siteUrl).toString();
   const params: Record<string, string | number> = {
     amount: amountTiyin,
     currency: "UZS",
     merchant_id: env.PAYME_MERCHANT_ID,
     order_desc: "Cardrive " + code,
     order_id: order.order_id,
-    server_callback_url: env.PAYME_SERVER_CALLBACK_URL,
+    server_callback_url: callbackUrl,
     response_url: responseUrl,
   };
   const signatureText = [env.PAYME_MERCHANT_KEY, ...Object.keys(params).sort().map(key => String(params[key]))].join("|");
