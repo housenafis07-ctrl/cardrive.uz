@@ -113,7 +113,10 @@ as $$
 declare
   v_order public.monetization_orders%rowtype;
   v_event_id uuid;
+  v_existing_event public.monetization_payment_events%rowtype;
   v_item record;
+  v_product_type text;
+  v_duration_days integer;
   v_now timestamptz := pg_catalog.now();
 begin
   if p_order_id is null or p_provider is null or length(p_provider) > 40
@@ -137,6 +140,14 @@ begin
   returning id into v_event_id;
 
   if v_event_id is null then
+    select * into v_existing_event
+    from public.monetization_payment_events
+    where provider = p_provider and provider_event_id = p_provider_event_id;
+    if not found or v_existing_event.order_id <> p_order_id
+       or v_existing_event.amount <> p_paid_amount
+       or v_existing_event.currency <> p_currency then
+      raise exception 'duplicate_provider_event_mismatch';
+    end if;
     return v_order.status = 'paid';
   end if;
 
@@ -157,18 +168,22 @@ begin
   where id = p_order_id;
 
   for v_item in
-    select oi.*, p.product_type, p.duration_days
+    select oi.*, oi.product_snapshot->>'product_type' as snapshot_product_type,
+      nullif(oi.product_snapshot->>'duration_days','')::integer as snapshot_duration_days
     from public.monetization_order_items oi
-    join public.monetization_products p on p.id = oi.product_id
     where oi.order_id = p_order_id
   loop
-    if v_item.product_type = 'extra_listing' then
+    v_product_type := v_item.snapshot_product_type;
+    v_duration_days := v_item.snapshot_duration_days;
+    if v_product_type = 'extra_listing' then
       insert into public.monetization_entitlements
         (customer_profile_id, product_id, order_item_id, quantity_total, starts_at, status)
       values
         (v_order.customer_profile_id, v_item.product_id, v_item.id, v_item.quantity, v_now, 'active');
     else
-      if v_item.target_listing_id is null or not exists (
+      if v_product_type not in ('top','bump','highlight','premium')
+         or v_duration_days is null or v_duration_days < 1
+         or v_item.target_listing_id is null or not exists (
         select 1 from public.used_car_listings l
         where l.id = v_item.target_listing_id and l.owner_profile_id = v_order.customer_profile_id
       ) then
@@ -180,7 +195,14 @@ begin
          starts_at, expires_at, status)
       values
         (v_order.customer_profile_id, v_item.product_id, v_item.id, v_item.target_listing_id,
-         v_item.quantity, v_now, v_now + pg_catalog.make_interval(days => v_item.duration_days), 'active');
+         v_item.quantity, v_now, v_now + pg_catalog.make_interval(days => v_duration_days), 'active');
+
+      insert into public.used_car_listing_promotions
+        (listing_id, customer_profile_id, entitlement_id, promotion_type, starts_at, expires_at)
+      select v_item.target_listing_id, v_order.customer_profile_id, e.id,
+        v_product_type, v_now, v_now + pg_catalog.make_interval(days => v_duration_days)
+      from public.monetization_entitlements e
+      where e.order_item_id = v_item.id;
     end if;
   end loop;
 
