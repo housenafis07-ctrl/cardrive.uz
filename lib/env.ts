@@ -11,7 +11,7 @@ const serverEnvSchema = z.object({
   ESKIZ_FROM: z.string().min(1).optional(),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
-  PAYME_MERCHANT_ID: z.string().regex(/^\\d+$/).optional(),
+  PAYME_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
   PAYME_MERCHANT_KEY: z.string().min(1).optional(),
   PAYME_SERVER_CALLBACK_URL: z.string().url().optional(),
   PAYME_RESPONSE_URL: z.string().url().optional(),
