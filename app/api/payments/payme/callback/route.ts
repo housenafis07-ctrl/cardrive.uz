@@ -54,23 +54,31 @@ export async function POST(request: Request) {
 
   const orderId = String(payload.order_id ?? "");
   const paymentId = String(payload.payment_id ?? "");
-  const amountTiyin = Number(payload.actual_amount);
   const requestedAmountTiyin = Number(payload.amount);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(orderId) || !paymentId ||
-      !Number.isSafeInteger(amountTiyin) || amountTiyin < 1 ||
-      !Number.isSafeInteger(requestedAmountTiyin) || requestedAmountTiyin !== amountTiyin ||
+      !Number.isSafeInteger(requestedAmountTiyin) || requestedAmountTiyin < 1 ||
       payload.currency !== "UZS" || payload.tran_type !== "purchase") {
     return NextResponse.json({ error: "Invalid payment fields" }, { status: 400 });
   }
 
   const db = createServiceRoleClient();
-  if (payload.response_status !== "success" || payload.order_status !== "approved") {
-    const failureStatus = payload.order_status === "expired" ? "cancelled" : "failed";
-    const { error } = await db.from("monetization_orders")
-      .update({ status: failureStatus, updated_at: new Date().toISOString() })
-      .eq("id", orderId).eq("status", "pending").eq("payment_provider", "payme");
-    if (error) return NextResponse.json({ error: "Order update failed" }, { status: 500 });
+  if (payload.order_status !== "approved") {
+    if (payload.order_status === "expired" || payload.order_status === "declined") {
+      const failureStatus = payload.order_status === "expired" ? "cancelled" : "failed";
+      const { error } = await db.from("monetization_orders")
+        .update({ status: failureStatus, updated_at: new Date().toISOString() })
+        .eq("id", orderId).eq("status", "pending").eq("payment_provider", "payme");
+      if (error) return NextResponse.json({ error: "Order update failed" }, { status: 500 });
+    } else if (payload.order_status !== "created" && payload.order_status !== "processing") {
+      return NextResponse.json({ error: "Unsupported Payme order status" }, { status: 400 });
+    }
     return NextResponse.json({ ok: true });
+  }
+
+  const amountTiyin = Number(payload.actual_amount);
+  if (payload.response_status !== "success" || !Number.isSafeInteger(amountTiyin) ||
+      amountTiyin < 1 || amountTiyin !== requestedAmountTiyin) {
+    return NextResponse.json({ error: "Paid amount mismatch" }, { status: 400 });
   }
 
   const { data, error } = await db.rpc("confirm_monetization_payment", {
