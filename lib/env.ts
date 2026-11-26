@@ -16,6 +16,7 @@ const serverEnvSchema = z.object({
   PAYME_SERVER_CALLBACK_URL: z.string().url().optional(),
   PAYME_RESPONSE_URL: z.string().url().optional(),
   CLICK_SERVICE_ID: z.string().regex(/^\d+$/).optional(),
+  CLICK_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
   CLICK_SECRET_KEY: z.string().min(1).optional(),
 }).refine((env) => Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), {
   message: "Set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
