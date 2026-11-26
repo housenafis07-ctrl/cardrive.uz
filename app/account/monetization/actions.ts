@@ -21,8 +21,11 @@ export async function startMonetizationPaymentAction(form: FormData) {
   if (!/^[a-z0-9_]{2,80}$/.test(code)) redirect("/account/monetization?error=Mahsulot+noto%27g%27ri");
 
   const env = getServerEnv();
-  if (!env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY) {
+  if (provider === "payme" && (!env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY)) {
     redirect("/account/monetization?error=Payme+hali+sozlanmagan");
+  }
+  if (provider === "click" && (!env.CLICK_SERVICE_ID || !env.CLICK_MERCHANT_ID || !env.CLICK_SECRET_KEY)) {
+    redirect("/account/monetization?error=Click+hali+sozlanmagan");
   }
 
   const db = createServiceRoleClient();
