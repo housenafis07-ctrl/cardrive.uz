@@ -190,3 +190,142 @@ begin
   end if;
 end
 $$;
+
+
+-- Click Shop API Prepare/Complete lifecycle: idempotency, amount validation and cancellation.
+do $$
+declare
+  v_listing_id uuid;
+  v_order_id uuid;
+  v_amount numeric;
+  v_currency text;
+  v_status text;
+  v_prepare_id bigint;
+  v_prepare_repeat bigint;
+  v_error integer;
+  v_note text;
+  v_confirm_id bigint;
+  v_entitlement_count integer;
+  v_order_status text;
+begin
+  select id into v_listing_id from public.used_car_listings
+  where slug = 'pending-owner'
+    and owner_profile_id = '10000000-0000-4000-8000-000000000001';
+
+  select order_id, total_amount, currency, status
+    into v_order_id, v_amount, v_currency, v_status
+  from public.create_monetization_order(
+    '10000000-0000-4000-8000-000000000001',
+    'top_1d', v_listing_id, 'test-click-order-key-success-0001'
+  );
+
+  if v_currency <> 'UZS' or v_status <> 'pending' then
+    raise exception 'Click test order was not created as pending UZS';
+  end if;
+
+  select error_code, error_note, merchant_prepare_id
+    into v_error, v_note, v_prepare_id
+  from public.click_prepare_monetization_payment(
+    '900000000001', '800000000001', v_order_id, v_amount, 'test-service', '2026-11-26 10:00:00'
+  );
+  if v_error <> 0 or v_prepare_id is null then
+    raise exception 'Click Prepare failed: % %', v_error, v_note;
+  end if;
+
+  select error_code, merchant_prepare_id
+    into v_error, v_prepare_repeat
+  from public.click_prepare_monetization_payment(
+    '900000000001', '800000000001', v_order_id, v_amount, 'test-service', '2026-11-26 10:00:00'
+  );
+  if v_error <> 0 or v_prepare_repeat <> v_prepare_id then
+    raise exception 'Duplicate Click Prepare did not return the original prepare ID';
+  end if;
+
+  select error_code, merchant_confirm_id
+    into v_error, v_confirm_id
+  from public.click_complete_monetization_payment(
+    '900000000001', v_order_id, v_prepare_id, v_amount, 0
+  );
+  if v_error <> 0 or v_confirm_id <> v_prepare_id then
+    raise exception 'Click Complete failed: %', v_error;
+  end if;
+
+  select error_code, merchant_confirm_id
+    into v_error, v_confirm_id
+  from public.click_complete_monetization_payment(
+    '900000000001', v_order_id, v_prepare_id, v_amount, 0
+  );
+  if v_error <> 0 or v_confirm_id <> v_prepare_id then
+    raise exception 'Duplicate Click Complete was not idempotent';
+  end if;
+
+  select status into v_order_status from public.monetization_orders where id = v_order_id;
+  if v_order_status <> 'paid' then
+    raise exception 'Click Complete did not mark order paid';
+  end if;
+
+  select count(*) into v_entitlement_count
+  from public.monetization_entitlements
+  where order_item_id in (
+    select id from public.monetization_order_items where order_id = v_order_id
+  );
+  if v_entitlement_count <> 1 then
+    raise exception 'Duplicate Click Complete granted duplicate entitlement';
+  end if;
+
+  -- Incorrect amount must be rejected before creating an attempt.
+  select order_id into v_order_id
+  from public.create_monetization_order(
+    '10000000-0000-4000-8000-000000000001',
+    'top_1d', v_listing_id, 'test-click-order-key-bad-amount-001'
+  );
+  select error_code into v_error
+  from public.click_prepare_monetization_payment(
+    '900000000002', '800000000002', v_order_id, 999999, 'test-service', '2026-11-26 10:01:00'
+  );
+  if v_error <> -2 then
+    raise exception 'Click Prepare did not reject incorrect amount';
+  end if;
+
+  -- A negative Click Complete cancels only the payment attempt, never grants an entitlement.
+  select order_id, total_amount into v_order_id, v_amount
+  from public.create_monetization_order(
+    '10000000-0000-4000-8000-000000000001',
+    'top_1d', v_listing_id, 'test-click-order-key-cancel-0001'
+  );
+  select error_code, merchant_prepare_id into v_error, v_prepare_id
+  from public.click_prepare_monetization_payment(
+    '900000000003', '800000000003', v_order_id, v_amount, 'test-service', '2026-11-26 10:02:00'
+  );
+  if v_error <> 0 then
+    raise exception 'Click Prepare for cancellation test failed';
+  end if;
+
+  select error_code into v_error
+  from public.click_complete_monetization_payment(
+    '900000000003', v_order_id, v_prepare_id, v_amount, -1
+  );
+  if v_error <> -9 then
+    raise exception 'Negative Click Complete did not return cancellation code';
+  end if;
+
+  select status into v_order_status from public.monetization_orders where id = v_order_id;
+  if v_order_status <> 'pending' then
+    raise exception 'Failed Click attempt must not mark order paid or cancel the reusable order';
+  end if;
+
+  select count(*) into v_entitlement_count
+  from public.monetization_entitlements
+  where order_item_id in (
+    select id from public.monetization_order_items where order_id = v_order_id
+  );
+  if v_entitlement_count <> 0 then
+    raise exception 'Cancelled Click transaction granted an entitlement';
+  end if;
+
+  if has_function_privilege('anon','public.click_prepare_monetization_payment(text,text,uuid,numeric,text,text)','EXECUTE')
+     or has_function_privilege('authenticated','public.click_complete_monetization_payment(text,uuid,bigint,numeric,integer)','EXECUTE') then
+    raise exception 'A public role can execute Click payment RPCs';
+  end if;
+end
+$$;
