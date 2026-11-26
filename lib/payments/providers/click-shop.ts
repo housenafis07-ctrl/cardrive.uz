@@ -35,6 +35,7 @@ export function verifyClickShopSignature(
   payload: ClickShopCallback,
   credentials: ClickShopCredentials,
 ): boolean {
+  if (payload.service_id !== credentials.serviceId) return false;
   const fields = [
     payload.click_trans_id,
     payload.service_id,
