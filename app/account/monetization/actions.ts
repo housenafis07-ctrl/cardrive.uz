@@ -13,6 +13,8 @@ export async function startMonetizationPaymentAction(form: FormData) {
   const code = String(form.get("product_code") ?? "").trim();
   const listingId = String(form.get("listing_id") ?? "").trim() || null;
   const idempotencyKey = String(form.get("idempotency_key") ?? "").trim();
+  const provider = String(form.get("provider") ?? "").trim();
+  if (provider !== "payme" && provider !== "click") redirect("/account/monetization?error=To%27lov+usulini+tanlang");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
     redirect("/account/monetization?error=Buyurtma+kaliti+noto%27g%27ri.+Sahifani+yangilang");
   }
@@ -41,6 +43,31 @@ export async function startMonetizationPaymentAction(form: FormData) {
 
   if (order.status !== "pending") {
     redirect("/account/monetization?error=Bu+buyurtma+allaqachon+qayta+ishlangan.+Yangi+xarid+uchun+sahifani+yangilang");
+  }
+
+  if (provider === "click") {
+    const amount = Number(order.total_amount);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(Math.round(amount * 100))) {
+      await db.from("monetization_orders").update({ status: "failed" }).eq("id", order.order_id).eq("status", "pending");
+      redirect("/account/monetization?error=Buyurtma+summasi+noto%27g%27ri");
+    }
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cardrive.uz";
+    const returnUrl = new URL("/account/monetization", siteUrl);
+    returnUrl.searchParams.set("payment", "click");
+    const checkout = new URL("https://my.click.uz/services/pay");
+    checkout.searchParams.set("service_id", env.CLICK_SERVICE_ID!);
+    checkout.searchParams.set("merchant_id", env.CLICK_MERCHANT_ID!);
+    checkout.searchParams.set("amount", amount.toFixed(2));
+    checkout.searchParams.set("transaction_param", order.order_id);
+    checkout.searchParams.set("return_url", returnUrl.toString());
+
+    const { error: updateError } = await db.from("monetization_orders")
+      .update({ payment_provider: "click", provider_reference: order.order_id })
+      .eq("id", order.order_id).eq("status", "pending");
+    if (updateError) {
+      redirect("/account/monetization?error=Buyurtma+to%27lovga+tayyorlanmadi");
+    }
+    redirect(checkout.toString());
   }
 
   const amountTiyin = Math.round(Number(order.total_amount) * 100);
