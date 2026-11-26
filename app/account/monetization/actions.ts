@@ -1,6 +1,6 @@
 "use server";
 
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-session";
 import { getServerEnv } from "@/lib/env";
@@ -12,6 +12,10 @@ export async function startMonetizationPaymentAction(form: FormData) {
 
   const code = String(form.get("product_code") ?? "").trim();
   const listingId = String(form.get("listing_id") ?? "").trim() || null;
+  const idempotencyKey = String(form.get("idempotency_key") ?? "").trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+    redirect("/account/monetization?error=Buyurtma+kaliti+noto%27g%27ri.+Sahifani+yangilang");
+  }
   if (!/^[a-z0-9_]{2,80}$/.test(code)) redirect("/account/monetization?error=Mahsulot+noto%27g%27ri");
 
   const env = getServerEnv();
@@ -24,7 +28,7 @@ export async function startMonetizationPaymentAction(form: FormData) {
     p_customer_profile_id: customer.id,
     p_product_code: code,
     p_target_listing_id: listingId,
-    p_idempotency_key: randomUUID(),
+    p_idempotency_key: idempotencyKey,
   });
   const order = Array.isArray(data) ? data[0] : data;
   if (error || !order?.order_id || order.currency !== "UZS") {
@@ -33,6 +37,10 @@ export async function startMonetizationPaymentAction(form: FormData) {
       order?.currency !== "UZS" ? "Payme orqali faqat UZS valyutasidagi mahsulotlar to‘lanadi" :
       "Buyurtma yaratilmadi. Qayta urinib ko‘ring"
     ));
+  }
+
+  if (order.status !== "pending") {
+    redirect("/account/monetization?error=Bu+buyurtma+allaqachon+qayta+ishlangan.+Yangi+xarid+uchun+sahifani+yangilang");
   }
 
   const amountTiyin = Math.round(Number(order.total_amount) * 100);
