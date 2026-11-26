@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerEnv } from "@/lib/env";
 import { createServiceRoleClient } from "@/supabase/server";
+import { confirmVerifiedPayment } from "@/lib/payments/service";
 
 export const dynamic = "force-dynamic";
 type PaymeCallback = Record<string, string | number | null | undefined> & {
@@ -81,16 +82,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Paid amount mismatch" }, { status: 400 });
   }
 
-  const { data, error } = await db.rpc("confirm_monetization_payment", {
-    p_order_id: orderId,
-    p_provider: "payme",
-    p_provider_event_id: paymentId,
-    p_provider_reference: paymentId,
-    p_paid_amount: amountTiyin / 100,
-    p_currency: "UZS",
-  });
-  if (error || data !== true) {
-    console.error("[payme-callback] payment confirmation failed", { code: error?.code ?? "not_confirmed" });
+  try {
+    await confirmVerifiedPayment({
+      provider: "payme",
+      providerEventId: paymentId,
+      providerReference: paymentId,
+      orderId,
+      amount: (amountTiyin / 100).toFixed(2),
+      currency: "UZS",
+    });
+  } catch (error) {
+    console.error("[payme-callback] payment confirmation failed", {
+      reason: error instanceof Error ? error.message : "unknown_error",
+    });
     return NextResponse.json({ error: "Payment confirmation failed" }, { status: 500 });
   }
 
