@@ -7,10 +7,12 @@ export const dynamic = "force-dynamic";
 type PaymeCallback = Record<string, string | number | null | undefined> & {
   order_id?: string;
   amount?: string | number;
+  actual_amount?: string | number;
   currency?: string;
   merchant_id?: string | number;
   payment_id?: string | number;
   order_status?: string;
+  tran_type?: string;
   response_status?: string;
   signature?: string;
   response_signature_string?: string;
@@ -52,9 +54,12 @@ export async function POST(request: Request) {
 
   const orderId = String(payload.order_id ?? "");
   const paymentId = String(payload.payment_id ?? "");
-  const amountTiyin = Number(payload.amount);
+  const amountTiyin = Number(payload.actual_amount);
+  const requestedAmountTiyin = Number(payload.amount);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(orderId) || !paymentId ||
-      !Number.isSafeInteger(amountTiyin) || amountTiyin < 1 || payload.currency !== "UZS") {
+      !Number.isSafeInteger(amountTiyin) || amountTiyin < 1 ||
+      !Number.isSafeInteger(requestedAmountTiyin) || requestedAmountTiyin !== amountTiyin ||
+      payload.currency !== "UZS" || payload.tran_type !== "purchase") {
     return NextResponse.json({ error: "Invalid payment fields" }, { status: 400 });
   }
 
