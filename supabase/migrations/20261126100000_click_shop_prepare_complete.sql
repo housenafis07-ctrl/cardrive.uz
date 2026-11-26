@@ -14,6 +14,7 @@ create table if not exists public.monetization_click_attempts (
   click_error integer,
   sign_time text not null,
   prepared_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '30 minutes'),
   completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -68,6 +69,11 @@ begin
     return query select -2, 'Incorrect amount', null::bigint;
     return;
   end if;
+
+  update public.monetization_click_attempts
+    set status = 'failed', updated_at = pg_catalog.now()
+  where order_id = p_order_id and status = 'prepared'
+    and expires_at <= pg_catalog.now();
 
   select * into v_attempt
   from public.monetization_click_attempts a
