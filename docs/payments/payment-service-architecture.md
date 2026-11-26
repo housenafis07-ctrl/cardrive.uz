@@ -46,6 +46,7 @@ The current implementation uses Payme hosted checkout URL creation and a signed 
 Server-side Vercel variables only:
 
 - `CLICK_SERVICE_ID`
+- `CLICK_MERCHANT_ID`
 - `CLICK_SECRET_KEY`
 
 Never expose provider secrets via `NEXT_PUBLIC_*`. Credentials are intentionally unset until Click provides the merchant onboarding details.
