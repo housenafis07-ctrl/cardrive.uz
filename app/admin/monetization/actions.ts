@@ -21,7 +21,7 @@ export async function updateMonetizationProductAction(form: FormData) {
     (amount !== null && (!Number.isFinite(amount) || amount < 0)) ||
     !["UZS", "USD"].includes(currency) ||
     (duration !== null && (!Number.isInteger(duration) || duration < 1 || duration > 3650)) ||
-    (isActive && (amount === null || amount <= 0))
+    (isActive && (amount === null || amount <= 0 || currency !== "UZS"))
   ) {
     redirect("/admin/monetization?error=Narx+yoki+parametrlarni+tekshiring");
   }
