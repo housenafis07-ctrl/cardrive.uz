@@ -27,10 +27,11 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
       .eq("id", found.data.id).is("claimed_profile_id", null).eq("status", "review").select("id").maybeSingle();
     if (claim.error || !claim.data) return <main className="mx-auto max-w-2xl p-8">Draft boshqa akkauntga bog‘langan yoki havola ishlatilgan. Botdan yangi havola oling.</main>;
   }
+  const photoCount = await db.from("telegram_ai_listing_draft_photos").select("id", { count: "exact", head: true }).eq("draft_id", found.data.id);
   return <main className="mx-auto max-w-3xl px-4 py-8">
     <Link href="/avtobozor" className="text-sm font-semibold text-blue-700">← Avtobozor</Link>
     <h1 className="mt-3 text-3xl font-black">AI tayyorlagan avtomobil e’loni</h1>
     <p className="mt-2 text-slate-600">Telefon raqamingiz SMS OTP orqali tasdiqlandi. Ma’lumotlarni tekshiring va qizil maydonlarni to‘ldiring.</p>
-    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: 8, plate_regions: Array.isArray(found.data.ai_payload?.plate_regions) ? found.data.ai_payload.plate_regions : [] }} />
+    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: photoCount.count ?? 0, plate_regions: Array.isArray(found.data.ai_payload?.plate_regions) ? found.data.ai_payload.plate_regions : [] }} />
   </main>;
 }
