@@ -28,7 +28,7 @@ create table if not exists public.telegram_link_challenges (
 
 create table if not exists public.telegram_ai_listing_drafts (
   id uuid primary key default gen_random_uuid(),
-  telegram_user_id text not null references public.telegram_user_links(telegram_user_id) on delete cascade,
+  telegram_user_id text not null,
   telegram_chat_id text not null,
   source text not null check (source in ('forwarded_post','separate_photos')),
   status text not null default 'collecting'
@@ -37,6 +37,9 @@ create table if not exists public.telegram_ai_listing_drafts (
   photo_file_ids jsonb not null default '[]'::jsonb
     check (jsonb_typeof(photo_file_ids) = 'array' and jsonb_array_length(photo_file_ids) <= 8),
   ai_payload jsonb,
+  handoff_token_hash text not null unique,
+  claimed_profile_id uuid references public.profiles(id) on delete set null,
+  claimed_at timestamptz,
   missing_fields jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -62,10 +65,6 @@ create table if not exists news_stage.telegram_user_links (
 alter table news_stage.telegram_user_links
   add constraint telegram_user_links_profile_fk
   foreign key (profile_id) references public.profiles(id) on delete cascade;
-create unique index if not exists news_stage_telegram_user_links_profile_unique
-  on news_stage.telegram_user_links(profile_id);
-create index if not exists news_stage_telegram_user_links_chat_idx
-  on news_stage.telegram_user_links(telegram_chat_id);
 
 create table if not exists news_stage.telegram_link_challenges (
   like public.telegram_link_challenges including all
@@ -73,14 +72,6 @@ create table if not exists news_stage.telegram_link_challenges (
 create table if not exists news_stage.telegram_ai_listing_drafts (
   like public.telegram_ai_listing_drafts including all
 );
-alter table news_stage.telegram_ai_listing_drafts
-  add constraint telegram_ai_listing_drafts_user_fk
-  foreign key (telegram_user_id) references news_stage.telegram_user_links(telegram_user_id) on delete cascade;
-create index if not exists news_stage_telegram_ai_listing_drafts_user_created_idx
-  on news_stage.telegram_ai_listing_drafts(telegram_user_id, created_at desc);
-create unique index if not exists news_stage_telegram_ai_listing_drafts_one_open_per_user
-  on news_stage.telegram_ai_listing_drafts(telegram_user_id)
-  where status in ('collecting','analyzing','review');
 
 alter table news_stage.telegram_user_links enable row level security;
 alter table news_stage.telegram_link_challenges enable row level security;
