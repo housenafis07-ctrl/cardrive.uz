@@ -1,6 +1,6 @@
 "use server";
 
-import { createHash } from "node:crypto";
+
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-session";
 import { getServerEnv } from "@/lib/env";
@@ -48,81 +48,61 @@ export async function startMonetizationPaymentAction(form: FormData) {
     redirect("/account/monetization?error=Bu+buyurtma+allaqachon+qayta+ishlangan.+Yangi+xarid+uchun+sahifani+yangilang");
   }
 
-  if (provider === "click") {
-    const amount = Number(order.total_amount);
-    if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(Math.round(amount * 100))) {
-      await db.from("monetization_orders").update({ status: "failed" }).eq("id", order.order_id).eq("status", "pending");
-      redirect("/account/monetization?error=Buyurtma+summasi+noto%27g%27ri");
-    }
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cardrive.uz";
-    const returnUrl = new URL("/account/monetization", siteUrl);
-    returnUrl.searchParams.set("payment", "click");
-    const checkout = new URL("https://my.click.uz/services/pay");
-    checkout.searchParams.set("service_id", env.CLICK_SERVICE_ID!);
-    checkout.searchParams.set("merchant_id", env.CLICK_MERCHANT_ID!);
-    checkout.searchParams.set("amount", amount.toFixed(2));
-    checkout.searchParams.set("transaction_param", order.order_id);
-    checkout.searchParams.set("return_url", returnUrl.toString());
-
-    const { error: updateError } = await db.from("monetization_orders")
-      .update({ payment_provider: "click", provider_reference: order.order_id })
-      .eq("id", order.order_id).eq("status", "pending");
-    if (updateError) {
-      redirect("/account/monetization?error=Buyurtma+to%27lovga+tayyorlanmadi");
-    }
-    redirect(checkout.toString());
-  }
-
-  const amountTiyin = Math.round(Number(order.total_amount) * 100);
-  if (!Number.isSafeInteger(amountTiyin) || amountTiyin < 1) {
-    await db.from("monetization_orders").update({ status: "failed" }).eq("id", order.order_id).eq("status", "pending");
-    redirect("/account/monetization?error=Buyurtma+summasi+noto%27g%27ri");
+  const { data: attemptData, error: attemptError } = await db.rpc("create_monetization_payment_attempt", {
+    p_order_id: order.order_id,
+    p_customer_profile_id: customer.id,
+    p_provider: provider,
+    p_idempotency_key: idempotencyKey,
+  });
+  const attempt = Array.isArray(attemptData) ? attemptData[0] : attemptData;
+  if (attemptError || !attempt?.id || attempt.currency !== "UZS" || Number(attempt.amount_uzs) <= 0) {
+    redirect("/account/monetization?error=To%27lov+urinishini+yaratib+bo%27lmadi");
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://cardrive.uz";
-  const responseUrl = env.PAYME_RESPONSE_URL ?? new URL("/account/monetization", siteUrl).toString();
-  const callbackUrl = env.PAYME_SERVER_CALLBACK_URL ?? new URL("/api/payments/payme/callback", siteUrl).toString();
-  const paymeMerchantId = env.PAYME_MERCHANT_ID;
-  const paymeMerchantKey = env.PAYME_MERCHANT_KEY;
-  if (!paymeMerchantId || !paymeMerchantKey) {
-    redirect("/account/monetization?error=Payme+hali+sozlanmagan");
+  let checkoutUrl = attempt.checkout_url as string | null;
+
+  if (provider === "click") {
+    if (!checkoutUrl) {
+      const checkout = new URL("https://my.click.uz/services/pay");
+      checkout.searchParams.set("service_id", env.CLICK_SERVICE_ID!);
+      checkout.searchParams.set("merchant_id", env.CLICK_MERCHANT_ID!);
+      checkout.searchParams.set("amount", Number(attempt.amount_uzs).toFixed(2));
+      checkout.searchParams.set("transaction_param", attempt.id);
+      checkout.searchParams.set("return_url", new URL("/account/monetization?payment=click", siteUrl).toString());
+      checkoutUrl = checkout.toString();
+    }
+  } else {
+    if (!checkoutUrl) {
+      const paymeParams = [
+        ["m", env.PAYME_MERCHANT_ID!],
+        ["ac.order_id", order.order_id],
+        ["a", String(Math.round(Number(attempt.amount_uzs) * 100))],
+        ["l", "uz"],
+        ["c", new URL("/account/monetization?payment=payme", siteUrl).toString()],
+        ["ct", "15000"],
+        ["cr", "860"],
+      ];
+      const raw = paymeParams.map(([key, value]) => key + "=" + value).join(";");
+      checkoutUrl = "https://checkout.paycom.uz/" + Buffer.from(raw, "utf8").toString("base64");
+    }
   }
 
-  const params: Record<string, string | number> = {
-    amount: amountTiyin,
-    currency: "UZS",
-    merchant_id: paymeMerchantId,
-    order_desc: "Cardrive " + code,
-    order_id: order.order_id,
-    server_callback_url: callbackUrl,
-    response_url: responseUrl,
-  };
-  const signatureText = [paymeMerchantKey, ...Object.keys(params).sort().map(key => String(params[key]))].join("|");
-  const signature = createHash("sha1").update(signatureText, "utf8").digest("hex");
-
-  let response: Response;
-  try {
-    response = await fetch("https://pay.payme.uz/api/checkout/url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request: { ...params, signature } }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(15000),
-    });
-  } catch {
-    await db.from("monetization_orders").update({ status: "failed" }).eq("id", order.order_id).eq("status", "pending");
-    redirect("/account/monetization?error=Payme+bilan+bog%27lanishda+xatolik");
+  const { error: checkoutSaveError } = await db.from("monetization_payment_attempts")
+    .update({
+      checkout_url: checkoutUrl,
+      provider_payload: {
+        ...(attempt.provider_payload || {}),
+        checkout: { mode: provider === "payme" ? "payme_hosted_base64" : "click_hosted", created_at: new Date().toISOString() },
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", attempt.id)
+    .eq("customer_profile_id", customer.id);
+  if (checkoutSaveError) {
+    console.error("[monetization-checkout] failed to persist checkout URL", { code: checkoutSaveError.code });
+    redirect("/account/monetization?error=To%27lov+havolasini+saqlab+bo%27lmadi");
   }
 
-  const payload = await response.json().catch(() => null) as { response?: { checkout_url?: string; response_status?: string } } | null;
-  if (!response.ok || payload?.response?.response_status !== "success" || !payload.response.checkout_url) {
-    await db.from("monetization_orders").update({ status: "failed" }).eq("id", order.order_id).eq("status", "pending");
-    redirect("/account/monetization?error=Payme+to%27lov+havolasini+yaratmadi");
-  }
-
-  await db.from("monetization_orders")
-    .update({ payment_provider: "payme", provider_reference: order.order_id })
-    .eq("id", order.order_id).eq("status", "pending");
-
-  redirect(payload.response.checkout_url);
+  redirect(checkoutUrl);
 }
