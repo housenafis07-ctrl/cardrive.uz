@@ -145,12 +145,13 @@ export async function POST(request:Request) {
       if(!attempt) return fail(body.id,-31003,"Transaction not found");
       const p=paymePayload(attempt);
       const cancel=objectValue(objectValue(attempt.provider_payload).cancel);
+      const cancelPayme=objectValue(cancel.payme);
       return result(body.id,{
         create_time:Number(p.create_time||Date.parse(attempt.created_at)),
         perform_time:Number(p.perform_time||0),
-        cancel_time:Number(cancel.payme?.cancel_time||p.cancel_time||0),
+        cancel_time:Number(cancelPayme.cancel_time||p.cancel_time||0),
         transaction:attempt.id,state:stateOf(attempt),
-        reason:cancel.payme?.cancel_reason??p.cancel_reason??null,
+        reason:cancelPayme.cancel_reason??p.cancel_reason??null,
       });
     }
 
