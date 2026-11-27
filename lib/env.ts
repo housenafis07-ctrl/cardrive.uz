@@ -9,6 +9,8 @@ const serverEnvSchema = z.object({
   ESKIZ_EMAIL: z.string().email().optional(),
   ESKIZ_PASSWORD: z.string().min(1).optional(),
   ESKIZ_FROM: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
   PAYME_ENABLED: z.enum(["true","false"]).default("false"),
