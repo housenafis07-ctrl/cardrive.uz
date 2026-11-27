@@ -31,6 +31,7 @@ export const avtobozorAiDraftSchema = z.object({
   uncertain_fields: z.array(z.string().max(80)).max(20),
   primary_image_index: z.number().int().nonnegative().nullable(),
   image_quality_scores: z.array(z.number().min(0).max(100)).max(8),
+  plate_regions: z.array(z.object({ image_index: z.number().int().nonnegative(), x: z.number().min(0).max(1000), y: z.number().min(0).max(1000), width: z.number().min(0).max(1000), height: z.number().min(0).max(1000), confidence: z.number().min(0).max(1) })).max(8),
 });
 
 export type AvtobozorAiDraft = z.infer<typeof avtobozorAiDraftSchema>;
@@ -42,7 +43,7 @@ const responseSchema = {
     "is_vehicle_listing", "brand", "model", "year", "mileage_km", "price", "currency",
     "country_of_origin", "region", "district", "body_type", "fuel_type", "transmission",
     "engine_volume", "color", "description", "contact_name", "contact_phone",
-    "vehicle_condition", "condition_description", "is_negotiable", "uncertain_fields", "primary_image_index", "image_quality_scores",
+    "vehicle_condition", "condition_description", "is_negotiable", "uncertain_fields", "primary_image_index", "image_quality_scores", "plate_regions",
   ],
   properties: {
     is_vehicle_listing: { type: "boolean" },
@@ -69,6 +70,7 @@ const responseSchema = {
     uncertain_fields: { type: "array", items: { type: "string" } },
     primary_image_index: { type: ["integer", "null"] },
     image_quality_scores: { type: "array", items: { type: "number" } },
+    plate_regions: { type: "array", items: { type: "object", additionalProperties: false, required: ["image_index", "x", "y", "width", "height", "confidence"], properties: { image_index: { type: "integer" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" }, confidence: { type: "number" } } } },
   },
 } as const;
 
@@ -94,6 +96,7 @@ export async function extractAvtobozorDraft(input: {
       "Normalize currency to UZS or USD only when clear. Normalize condition only when explicitly described.",
       "If the content is not a used-vehicle sale listing, set is_vehicle_listing=false.",
       "For each supplied photo in input order, score image quality from 0 to 100 based on sharpness, exposure, framing, and useful vehicle visibility. Return one score per image. Set primary_image_index to the clearest useful exterior photo (zero-based), preferring a front three-quarter view. Do not prefer a photo because it shows a visible plate or seller branding.",
+      "For each photo where a vehicle license plate is clearly visible, return a plate_regions item with image_index and a tight normalized bounding box: x,y,width,height use 0..1000 coordinates relative to image width and height. Include confidence 0..1. Do not return a box unless the visible plate is clearly identifiable; do not box windows, grilles, badges, signs, or text elsewhere.",
       "Do not claim to have edited any image. Image enhancement and plate masking are separate deterministic processing steps.",
       "Post text:\n" + input.text.slice(0, 12000),
     ].join("\n"),
