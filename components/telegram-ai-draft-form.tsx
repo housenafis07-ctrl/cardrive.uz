@@ -15,7 +15,8 @@ function cls(missing: boolean) {
 }
 export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
   const p = draft.ai_payload ?? {};
-  const missing = new Set(draft.missing_fields ?? []);
+  const aliases: Record<string, string> = { mileage_km: "mileageKm", condition_description: "conditionDescription", vehicle_condition: "vehicleCondition" };
+  const missing = new Set((draft.missing_fields ?? []).map(key => aliases[key] ?? key));
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoStatus, setPhotoStatus] = useState("Telegram rasmlari yuklanmoqda…");
   const [error, setError] = useState("");
