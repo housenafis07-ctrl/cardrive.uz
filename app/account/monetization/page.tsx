@@ -11,7 +11,7 @@ export const dynamic="force-dynamic";
 export default async function AccountMonetizationPage({searchParams}:{searchParams:Promise<{error?:string}>}) {
  const params=await searchParams;
  const customer=await getCurrentCustomer(); if(!customer) redirect("/account/login?next=%2Faccount%2Fmonetization");
- const ru=(await getLocale())==="ru"; const env=getServerEnv(); const paymeReady=Boolean(env.PAYME_MERCHANT_ID&&env.PAYME_MERCHANT_KEY); const clickReady=Boolean(env.CLICK_SERVICE_ID&&env.CLICK_MERCHANT_ID&&env.CLICK_SECRET_KEY); const db=createServiceRoleClient();
+ const ru=(await getLocale())==="ru"; const env=getServerEnv(); const paymeReady=Boolean(env.PAYME_MERCHANT_ID&&env.PAYME_MERCHANT_KEY); const clickReady=env.CLICK_ENABLED==="true"&&Boolean(env.CLICK_SERVICE_ID&&env.CLICK_MERCHANT_ID&&env.CLICK_SECRET_KEY); const db=createServiceRoleClient();
  const [{data:listings},{data:products},{data:orders},{data:entitlements}]=await Promise.all([
   db.from("used_car_listings").select("id,status,expires_at").eq("owner_profile_id",customer.id),
   db.from("monetization_products").select("id,code,title_uz,title_ru,product_type,duration_days,amount,currency,is_active").eq("is_active",true).order("product_type").order("duration_days"),
