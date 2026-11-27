@@ -6,7 +6,7 @@ export const dynamic="force-dynamic";
 const MINI_APP_URL="https://cardrive.uz";
 type TelegramUpdate={update_id?:number;message?:{message_id?:number;date?:number;text?:string;chat?:{id?:number;type?:string};from?:{id?:number;first_name?:string;last_name?:string;username?:string};contact?:{phone_number?:string;first_name?:string;last_name?:string;user_id?:number}}};
 function safeEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
-const keyboard={keyboard:[[{text:"🚗 Cardrive Mini App",web_app:{url:MINI_APP_URL}}],[{text:"📞 Telefon raqamimni yuborish",request_contact:true}]],resize_keyboard:true,is_persistent:true};
+const keyboard={keyboard:[[{text:"🚗 Cardrive Mini App",web_app:{url:MINI_APP_URL}}],[{text:"📞 Telefon raqamimni yuborish",request_contact:true}],[{text:"🚘 Avtomobil sotish"}]],resize_keyboard:true,is_persistent:true};
 const welcome=`Assalomu alaykum, {name}! 👋
 Cardrive’ga xush kelibsiz!
 
