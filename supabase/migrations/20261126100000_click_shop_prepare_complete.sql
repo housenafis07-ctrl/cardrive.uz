@@ -48,8 +48,8 @@ as $$
 declare
   v_order public.monetization_orders%rowtype;
   v_attempt public.monetization_payment_attempts%rowtype;
-  v_provider text := pg_catalog.lower(pg_catalog.btrim(pg_catalog.coalesce(p_provider,'')));
-  v_key text := pg_catalog.btrim(pg_catalog.coalesce(p_idempotency_key,''));
+  v_provider text := pg_catalog.lower(pg_catalog.btrim(coalesce(p_provider,'')));
+  v_key text := pg_catalog.btrim(coalesce(p_idempotency_key,''));
 begin
   if p_order_id is null or p_customer_profile_id is null or v_provider not in ('payme','click')
      or v_key = '' or pg_catalog.length(v_key) > 128 then
