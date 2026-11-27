@@ -265,6 +265,22 @@ begin
   );
   if v_confirm->>'paid'<>'true' then raise exception 'Payme PerformTransaction failed'; end if;
 
+  -- Payme CancelTransaction after PerformTransaction records a refund and revokes access.
+  v_confirm := public.cancel_monetization_payment_attempt(
+    v_attempt_id,5,'{"payme":{"cancel_reason":5,"state":-2}}'::jsonb
+  );
+  select status into v_status from public.monetization_orders where id=v_order_id;
+  if v_status<>'refunded' or v_confirm->>'state'<>'-2' then
+    raise exception 'Payme post-perform cancellation did not refund the order';
+  end if;
+  select count(*) into v_count from public.monetization_entitlements
+  where order_item_id in (select id from public.monetization_order_items where order_id=v_order_id)
+    and status='revoked';
+  if v_count<>1 then raise exception 'Payme refund did not revoke the entitlement'; end if;
+  select count(*) into v_count from public.monetization_payment_events
+  where order_id=v_order_id and event_type='payment.refunded';
+  if v_count<>1 then raise exception 'Payme refund event was not recorded'; end if;
+
   -- Amount mismatch is rejected by the shared confirmation layer.
   begin
     perform public.confirm_monetization_payment_attempt(
