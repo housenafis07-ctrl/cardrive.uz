@@ -28,13 +28,13 @@ function uuid(v:unknown):v is string {
   return typeof v==="string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 function ms(v:unknown) { const n=Number(v); return Number.isSafeInteger(n)&&n>=0?n:0; }
-function stateOf(a:any) {
+type PaymentAttempt = { id: string; order_id?: string; status: string; provider_payment_id?: string | null; provider_payload: unknown; created_at: string; amount_uzs?: number; currency?: string };\ntype PaymePayload = Record<string, unknown>;\nfunction objectValue(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }\nfunction stateOf(a: Pick<PaymentAttempt, "status">) {
   if(a.status==="paid") return 2;
   if(a.status==="refunded") return -2;
   if(a.status==="cancelled"||a.status==="failed") return -1;
   return 1;
 }
-function paymePayload(a:any) { return (a.provider_payload?.payme || {}) as Record<string,any>; }
+function paymePayload(a: Pick<PaymentAttempt, "provider_payload">): PaymePayload { return objectValue(objectValue(a.provider_payload).payme); }
 
 export async function POST(request:Request) {
   const env=getServerEnv();
@@ -158,15 +158,15 @@ export async function POST(request:Request) {
         .select("id,provider_payment_id,status,provider_payload,amount_uzs,created_at")
         .eq("provider","payme").not("provider_payment_id","is",null).order("created_at",{ascending:true}).limit(10000);
       if(error) throw error;
-      const transactions=(attempts||[]).map((a:any)=>{
+      const transactions=(attempts||[]).map((a)=>{
         const p=paymePayload(a);
         const time=Number(p.time||p.create_time||Date.parse(a.created_at));
-        const cancel=a.provider_payload?.cancel?.payme||{};
+        const cancel=objectValue(objectValue(objectValue(a.provider_payload).cancel).payme);
         return {id:a.provider_payment_id,time,amount:Number(p.amount||Math.round(Number(a.amount_uzs)*100)),
           account:p.account||{},create_time:Number(p.create_time||Date.parse(a.created_at)),
           perform_time:Number(p.perform_time||0),cancel_time:Number(cancel.cancel_time||p.cancel_time||0),
           transaction:a.id,state:stateOf(a),reason:cancel.cancel_reason??p.cancel_reason??null};
-      }).filter((t:any)=>t.id&&t.time>=from&&t.time<=to);
+      }).filter((t)=>t.id&&t.time>=from&&t.time<=to);
       return result(body.id,{transactions});
     }
 
