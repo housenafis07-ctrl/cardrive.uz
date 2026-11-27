@@ -56,10 +56,10 @@ export function verifyClickShopSignature(
 }
 
 export function parseClickAmount(value: string): number {
-  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) throw new Error("invalid_click_amount");
+  if (!/^\\d+$/.test(value)) throw new Error("invalid_click_amount");
   const amount = Number(value);
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("invalid_click_amount");
-  return Math.round(amount * 100) / 100;
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("invalid_click_amount");
+  return amount;
 }
 
 export function clickShopError(
