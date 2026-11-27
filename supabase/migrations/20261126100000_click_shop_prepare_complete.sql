@@ -196,7 +196,7 @@ begin
   update public.monetization_payment_attempts set
     status='paid', provider_payment_id=p_provider_payment_id,
     provider_paydoc_id=p_provider_paydoc_id,
-    provider_payload=coalesce(provider_payload,'{}'::jsonb)||jsonb_build_object('confirmation',coalesce(p_provider_payload,'{}'::jsonb)),
+    provider_payload=coalesce(provider_payload,'{}'::jsonb)||coalesce(p_provider_payload,'{}'::jsonb),
     paid_at=pg_catalog.now(), updated_at=pg_catalog.now()
   where id=p_attempt_id;
   return pg_catalog.jsonb_build_object('paid',true,'already_paid',false,'order_id',v_attempt.order_id);
