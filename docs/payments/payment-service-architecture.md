@@ -31,7 +31,8 @@ The integration model is adapted from the working RoyalHouse repository (housena
 
 ## Click Shop API
 
-- Hosted checkout URL uses https://my.click.uz/services/pay with service_id, merchant_id, amount, transaction_param (payment attempt UUID) and return_url.
+- Hosted checkout URL uses https://my.click.uz/services/pay with service_id, merchant_id, amount, transaction_param (payment attempt UUID) and return_url. If Click issues a Merchant User ID for the service, Cardrive also passes optional merchant_user_id; it is not part of the Shop API callback signature.
+- Click Merchant Cabinet must register the same HTTPS callback URL for Prepare and Complete: https://cardrive.uz/api/payments/click/callback. Configure the return URL as https://cardrive.uz/account/monetization?payment=click.
 - Click sends form-encoded POST callbacks with action=0 (Prepare) and action=1 (Complete).
 - Signature is MD5 over the Click-defined concatenated fields; comparison is constant-time.
 - Prepare validates service ID, signature, attempt, amount and order state, then allocates and persists merchant_prepare_id.
@@ -44,7 +45,7 @@ The integration model is adapted from the working RoyalHouse repository (housena
 Server-only Vercel environment variables:
 
 - Payme: PAYME_ENABLED=true, PAYME_MERCHANT_ID, PAYME_MERCHANT_KEY.
-- Click: CLICK_ENABLED=true, CLICK_SERVICE_ID, CLICK_MERCHANT_ID, CLICK_SECRET_KEY.
+- Click: CLICK_ENABLED=true, CLICK_SERVICE_ID, CLICK_MERCHANT_ID, CLICK_SECRET_KEY; optional CLICK_MERCHANT_USER_ID if provided by Click.
 
 Keep both enable switches false until merchant credentials, registered callback URLs, sandbox tests and production callback reachability have been verified. Never expose secrets through NEXT_PUBLIC_*.
 
