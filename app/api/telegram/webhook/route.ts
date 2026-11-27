@@ -90,7 +90,9 @@ async function downloadTelegramPhoto(token: string, fileId: string) {
 }
 async function analyzeDraft(token: string, chatId: number, telegramUserId: string, draft: any) {
   const db = createTelegramAiListingClient();
-  const fileIds = Array.isArray(draft.photo_file_ids) ? draft.photo_file_ids.filter((id: unknown): id is string => typeof id === "string").slice(0, 8) : [];
+  const photoRows = await db.from("telegram_ai_listing_draft_photos").select("telegram_file_id,sort_order").eq("draft_id", draft.id).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).limit(8);
+  if (photoRows.error) throw new Error("DRAFT_PHOTOS_UNAVAILABLE");
+  const fileIds = (photoRows.data ?? []).map((row: { telegram_file_id: string }) => row.telegram_file_id).slice(0, 8);
   if (!draft.source_text?.trim() && !fileIds.length) {
     await sendMessage(token, chatId, "Tahlil qilish uchun e’lon matni yoki kamida bitta avtomobil rasmini yuboring.");
     return;
