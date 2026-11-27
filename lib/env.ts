@@ -14,7 +14,6 @@ const serverEnvSchema = z.object({
   PAYME_ENABLED: z.enum(["true","false"]).default("false"),
   PAYME_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
   PAYME_MERCHANT_KEY: z.string().min(1).optional(),
-  PAYME_SERVER_CALLBACK_URL: z.string().url().optional(),
   PAYME_RESPONSE_URL: z.string().url().optional(),
   CLICK_ENABLED: z.enum(["true","false"]).default("false"),
   CLICK_SERVICE_ID: z.string().regex(/^\d+$/).optional(),
