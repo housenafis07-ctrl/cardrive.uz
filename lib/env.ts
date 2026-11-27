@@ -11,8 +11,23 @@ const serverEnvSchema = z.object({
   ESKIZ_FROM: z.string().min(1).optional(),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
+  PAYME_ENABLED: z.enum(["true","false"]).default("false"),
+  PAYME_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
+  PAYME_MERCHANT_KEY: z.string().min(1).optional(),
+  PAYME_RESPONSE_URL: z.string().url().optional(),
+  CLICK_ENABLED: z.enum(["true","false"]).default("false"),
+  CLICK_SERVICE_ID: z.string().regex(/^\d+$/).optional(),
+  CLICK_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
+  CLICK_MERCHANT_USER_ID: z.string().regex(/^\d+$/).optional(),
+  CLICK_SECRET_KEY: z.string().min(1).optional(),
 }).refine((env) => Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), {
   message: "Set NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+}).refine((env) => Boolean(env.PAYME_MERCHANT_ID) === Boolean(env.PAYME_MERCHANT_KEY), {
+  message: "Set both PAYME_MERCHANT_ID and PAYME_MERCHANT_KEY, or leave both unset",
+  path: ["PAYME_MERCHANT_ID"],
+}).refine((env) => Boolean(env.CLICK_SERVICE_ID) === Boolean(env.CLICK_SECRET_KEY) && Boolean(env.CLICK_SERVICE_ID) === Boolean(env.CLICK_MERCHANT_ID), {
+  message: "Set CLICK_SERVICE_ID, CLICK_MERCHANT_ID and CLICK_SECRET_KEY together, or leave all unset",
+  path: ["CLICK_SERVICE_ID"],
 });
 
 export const getServerEnv = () => serverEnvSchema.parse(process.env);

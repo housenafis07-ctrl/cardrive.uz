@@ -47,6 +47,24 @@ export async function createUsedCarListingAction(form: FormData) {
   if (profile.error || !profile.data || profile.data.is_active === false || !profile.data.phone) redirect("/account/login");
 
   const id = randomUUID();
+  const reservation = await db.rpc("reserve_used_car_listing_slot", {
+    p_customer_profile_id: customer.id,
+    p_listing_id: id,
+  });
+  const reservationRow = Array.isArray(reservation.data) ? reservation.data[0] : reservation.data;
+  if (reservation.error || !reservationRow?.allowed) {
+    redirect("/avtobozor/yangi-elon?error=" + encodeURIComponent(
+      reservationRow?.reason === "free_limit_reached"
+        ? "3 ta bepul e'lon limiti tugagan. Yangi e'lon uchun qo'shimcha e'lon slotini xarid qiling."
+        : "E'lon limiti tekshiruvida xatolik. Qayta urinib ko'ring."
+    ));
+  }
+  const releaseSlot = async () => {
+    await db.rpc("release_used_car_listing_slot", {
+      p_customer_profile_id: customer.id,
+      p_listing_id: id,
+    });
+  };
   const slug = `${slugPart(brand)}-${slugPart(model)}-${year}-${id.slice(0, 8)}`;
   const inserted = await db.from("used_car_listings").insert({
     id, owner_profile_id: customer.id, slug, brand, model, year, mileage_km: mileage,
@@ -59,7 +77,10 @@ export async function createUsedCarListingAction(form: FormData) {
     contact_phone: profile.data.phone, seller_type: "private",
     is_negotiable: form.get("isNegotiable") === "on", status: "pending_review",
   }).select("id").single();
-  if (inserted.error) redirect(`/avtobozor/yangi-elon?error=${encodeURIComponent("E'lonni saqlab bo'lmadi. Qayta urinib ko'ring.")}`);
+  if (inserted.error) {
+    await releaseSlot();
+    redirect(`/avtobozor/yangi-elon?error=${encodeURIComponent("E'lonni saqlab bo'lmadi. Qayta urinib ko'ring.")}`);
+  }
 
   const uploaded: string[] = [];
   try {
@@ -81,7 +102,19 @@ export async function createUsedCarListingAction(form: FormData) {
   } catch {
     await db.from("used_car_listings").delete().eq("id", id);
     if (uploaded.length) await db.storage.from("used-car-images").remove(uploaded);
+    await releaseSlot();
     redirect("/avtobozor/yangi-elon?error=Rasmlarni+yuklashda+xatolik.+Qayta+urinib+koring");
+  }
+
+  const finalized = await db.rpc("finalize_used_car_listing_slot", {
+    p_customer_profile_id: customer.id,
+    p_listing_id: id,
+  });
+  if (finalized.error || finalized.data !== true) {
+    await db.from("used_car_listings").delete().eq("id", id).eq("owner_profile_id", customer.id);
+    if (uploaded.length) await db.storage.from("used-car-images").remove(uploaded);
+    await releaseSlot();
+    redirect("/avtobozor/yangi-elon?error=Limit+tasdigida+xatolik.+Qayta+urinib+koring");
   }
 
   await db.from("audit_logs").insert({
