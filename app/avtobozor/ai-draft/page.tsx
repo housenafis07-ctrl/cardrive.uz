@@ -24,8 +24,8 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
   }
   if (!found.data.claimed_profile_id) {
     const claim = await db.from("telegram_ai_listing_drafts").update({ claimed_profile_id: customer.id, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", found.data.id).is("claimed_profile_id", null).eq("status", "review");
-    if (claim.error) return <main className="mx-auto max-w-2xl p-8">Draft’ni akkauntga bog‘lab bo‘lmadi. Qayta urinib ko‘ring.</main>;
+      .eq("id", found.data.id).is("claimed_profile_id", null).eq("status", "review").select("id").maybeSingle();
+    if (claim.error || !claim.data) return <main className="mx-auto max-w-2xl p-8">Draft boshqa akkauntga bog‘langan yoki havola ishlatilgan. Botdan yangi havola oling.</main>;
   }
   return <main className="mx-auto max-w-3xl px-4 py-8">
     <Link href="/avtobozor" className="text-sm font-semibold text-blue-700">← Avtobozor</Link>
