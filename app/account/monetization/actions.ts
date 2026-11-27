@@ -81,7 +81,7 @@ export async function startMonetizationPaymentAction(form: FormData) {
         ["ac.order_id", order.order_id],
         ["a", String(Math.round(Number(attempt.amount_uzs) * 100))],
         ["l", "uz"],
-        ["c", new URL("/account/monetization?payment=payme", siteUrl).toString()],
+        ["c", env.PAYME_RESPONSE_URL ?? new URL("/account/monetization?payment=payme", siteUrl).toString()],
         ["ct", "15000"],
         ["cr", "860"],
       ];
