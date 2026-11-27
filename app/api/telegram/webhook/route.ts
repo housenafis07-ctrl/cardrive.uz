@@ -111,6 +111,7 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
       ["region", result.region], ["vehicle_condition", result.vehicle_condition],
       ["condition_description", result.condition_description?.length >= 10 ? result.condition_description : null],
       ["description", result.description?.length >= 20 ? result.description : null],
+      ["contact_name", result.contact_name],
     ].filter(([, value]) => value === null || value === undefined || value === "").map(([key]) => key);
     const rawToken = randomBytes(32).toString("hex");
     const updated = await db.from("telegram_ai_listing_drafts").update({
