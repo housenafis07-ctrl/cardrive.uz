@@ -39,7 +39,7 @@ export async function POST(request:Request){
  const m=update.message,chatId=m?.chat?.id,messageId=m?.message_id,from=m?.from;
  if(!m||!chatId||!messageId||!from?.id)return NextResponse.json({ok:true});
  const text=(m.text??"").trim().slice(0,4000),contact=m.contact;
- const isCommand=/^\/(start|help|app)(?:@\w+)?(?:\s|$)/i.test(text);
+ const isCommand=/^\/(start|help|app|sell)(?:@\w+)?(?:\s|$)/i.test(text);
  if(text==="/start"||/^\/start(?:@\w+)?(?:\s|$)/i.test(text)){
   const firstName=(from.first_name??"").trim()||"do‘stimiz";
   await sendMessage(token,chatId,welcome.replace("{name}",firstName));
@@ -47,7 +47,13 @@ export async function POST(request:Request){
   await sendMessage(token,chatId,help);
  }else if(/^\/app(?:@\w+)?(?:\s|$)/i.test(text)||text==="🚗 Cardrive Mini App"){
   await sendMessage(token,chatId,"Cardrive ilovasini ochish uchun quyidagi tugmani bosing. 🚗");
- }else if(/^\\/sell(?:@\\w+)?(?:\\s|$)/i.test(text)||text==="🚘 Avtomobil sotish"){\n  await sendMessage(token,chatId,"🚘 Avtomobilingizni Cardrive Avtobozor’ga joylashtirish uchun tayyormiz!\\n\\nKeyingi bosqichda tayyor Telegram e’lonini shu chatga forward qiling yoki avtomobil rasmlarini matn/tavsif bilan yuboring. AI e’lon ma’lumotlarini ajratib, sizga tekshirish va tasdiqlash uchun ko‘rsatadi.\\n\\n⚠️ E’lon siz tasdiqlamaguningizcha saytga joylanmaydi.");\n }else if(contact){
+ }else if(/^\/sell(?:@\w+)?(?:\s|$)/i.test(text)||text==="🚘 Avtomobil sotish"){
+  await sendMessage(token,chatId,`🚘 Avtomobilingizni Cardrive Avtobozor’ga joylashtirish uchun tayyormiz!
+
+Tayyor Telegram e’lonini shu chatga forward qiling yoki avtomobil rasmlarini matn/tavsif bilan yuboring. AI e’lon ma’lumotlarini ajratib, sizga tekshirish va tasdiqlash uchun ko‘rsatadi.
+
+⚠️ E’lon siz tasdiqlamaguningizcha saytga joylanmaydi.`);
+ }else if(contact){
   const db=createCrmClient();
   const name=[contact.first_name??from.first_name,contact.last_name??from.last_name].filter(Boolean).join(" ").slice(0,160)||null;
   const {error}=await db.from("crm_leads").upsert({source:"telegram",external_id:String(chatId)+":"+String(messageId),customer_name:name,phone:contact.phone_number??null,telegram_username:from.username??null,message:"Mijoz telefon raqamini yubordi.",metadata:{chat_id:String(chatId),telegram_user_id:String(from.id),update_id:update.update_id??null,message_date:m.date??null,contact_shared:true}},{onConflict:"source,external_id",ignoreDuplicates:true});
