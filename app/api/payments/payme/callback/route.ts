@@ -141,7 +141,7 @@ export async function POST(request:Request) {
       if(error) throw error;
       if(!attempt) return fail(body.id,-31003,"Transaction not found");
       const p=paymePayload(attempt);
-      const cancel=attempt.provider_payload?.cancel||{};
+      const cancel=objectValue(objectValue(attempt.provider_payload).cancel);
       return result(body.id,{
         create_time:Number(p.create_time||Date.parse(attempt.created_at)),
         perform_time:Number(p.perform_time||0),
