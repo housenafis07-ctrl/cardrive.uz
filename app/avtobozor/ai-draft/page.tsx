@@ -31,6 +31,6 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
     <Link href="/avtobozor" className="text-sm font-semibold text-blue-700">← Avtobozor</Link>
     <h1 className="mt-3 text-3xl font-black">AI tayyorlagan avtomobil e’loni</h1>
     <p className="mt-2 text-slate-600">Telefon raqamingiz SMS OTP orqali tasdiqlandi. Ma’lumotlarni tekshiring va qizil maydonlarni to‘ldiring.</p>
-    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: Array.isArray(found.data.photo_file_ids) ? found.data.photo_file_ids.length : 0 }} />
+    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: Array.isArray(found.data.photo_file_ids) ? found.data.photo_file_ids.length : 0, plate_regions: Array.isArray(found.data.ai_payload?.plate_regions) ? found.data.ai_payload.plate_regions : [] }} />
   </main>;
 }
