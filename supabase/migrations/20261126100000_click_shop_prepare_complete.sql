@@ -203,6 +203,111 @@ begin
 end;
 $$;
 
+
+create or replace function public.bind_payme_monetization_transaction(
+  p_order_id uuid,
+  p_payme_transaction_id text,
+  p_amount_tiyin bigint,
+  p_payme_payload jsonb
+) returns table(attempt_id uuid, attempt_status text, error_code integer)
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_order public.monetization_orders%rowtype;
+  v_attempt public.monetization_payment_attempts%rowtype;
+  v_amount numeric(14,2);
+begin
+  if p_order_id is null or p_payme_transaction_id is null or p_payme_transaction_id = ''
+     or p_amount_tiyin is null or p_amount_tiyin < 1 then
+    return query select null::uuid, null::text, -32602; return;
+  end if;
+  v_amount := p_amount_tiyin::numeric / 100;
+  select * into v_order from public.monetization_orders where id=p_order_id for update;
+  if not found then return query select null::uuid, null::text, -31050; return; end if;
+  if v_order.currency <> 'UZS' or v_order.total_amount <> v_amount then
+    return query select null::uuid, null::text, -31001; return;
+  end if;
+  if v_order.status='paid' then return query select null::uuid, 'paid', -31008; return; end if;
+  if v_order.status <> 'pending' or v_order.payment_provider <> 'payme' then
+    return query select null::uuid, null::text, -31008; return;
+  end if;
+
+  select * into v_attempt from public.monetization_payment_attempts
+    where order_id=p_order_id and provider='payme' and status in ('pending','processing')
+    order by created_at desc limit 1 for update;
+  if not found then return query select null::uuid, null::text, -31008; return; end if;
+  if v_attempt.provider_payment_id is not null then
+    if v_attempt.provider_payment_id <> p_payme_transaction_id then
+      return query select null::uuid, null::text, -31099; return;
+    end if;
+    return query select v_attempt.id, v_attempt.status, 0; return;
+  end if;
+
+  update public.monetization_payment_attempts set
+    provider_payment_id=p_payme_transaction_id,
+    status='processing',
+    provider_payload=coalesce(provider_payload,'{}'::jsonb)||jsonb_build_object('payme',coalesce(p_payme_payload,'{}'::jsonb)),
+    updated_at=pg_catalog.now()
+  where id=v_attempt.id;
+  return query select v_attempt.id, 'processing'::text, 0;
+end;
+$;
+
+create or replace function public.cancel_monetization_payment_attempt(
+  p_attempt_id uuid,
+  p_cancel_reason integer,
+  p_cancel_payload jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_attempt public.monetization_payment_attempts%rowtype;
+  v_order public.monetization_orders%rowtype;
+  v_item record;
+begin
+  select * into v_attempt from public.monetization_payment_attempts where id=p_attempt_id for update;
+  if not found then raise exception 'payment_attempt_not_found'; end if;
+  select * into v_order from public.monetization_orders where id=v_attempt.order_id for update;
+  if v_attempt.status='cancelled' then
+    return pg_catalog.jsonb_build_object('cancelled',true,'state',-1);
+  end if;
+  if v_attempt.status='refunded' then
+    return pg_catalog.jsonb_build_object('cancelled',true,'state',-2);
+  end if;
+  if v_attempt.status='paid' then
+    update public.monetization_payment_attempts set status='refunded',
+      provider_payload=coalesce(provider_payload,'{}'::jsonb)||jsonb_build_object('cancel',coalesce(p_cancel_payload,'{}'::jsonb)),
+      updated_at=pg_catalog.now()
+    where id=p_attempt_id;
+    update public.monetization_orders set status='refunded',updated_at=pg_catalog.now()
+      where id=v_order.id and status='paid';
+    update public.monetization_entitlements set status='revoked',quantity_used=quantity_total
+      where order_item_id in (select id from public.monetization_order_items where order_id=v_order.id)
+        and status in ('active','exhausted');
+    update public.used_car_listing_promotions set expires_at=pg_catalog.now()
+      where entitlement_id in (select id from public.monetization_entitlements
+        where order_item_id in (select id from public.monetization_order_items where order_id=v_order.id));
+    return pg_catalog.jsonb_build_object('cancelled',true,'state',-2);
+  end if;
+  update public.monetization_payment_attempts set status='cancelled',
+    provider_payload=coalesce(provider_payload,'{}'::jsonb)||jsonb_build_object('cancel',coalesce(p_cancel_payload,'{}'::jsonb)),
+    updated_at=pg_catalog.now()
+  where id=p_attempt_id and status in ('pending','processing');
+  update public.monetization_orders set status='cancelled',updated_at=pg_catalog.now()
+    where id=v_order.id and status='pending';
+  return pg_catalog.jsonb_build_object('cancelled',true,'state',-1);
+end;
+$;
+
+revoke all on function public.bind_payme_monetization_transaction(uuid,text,bigint,jsonb) from public, anon, authenticated;
+revoke all on function public.cancel_monetization_payment_attempt(uuid,integer,jsonb) from public, anon, authenticated;
+grant execute on function public.bind_payme_monetization_transaction(uuid,text,bigint,jsonb) to service_role;
+grant execute on function public.cancel_monetization_payment_attempt(uuid,integer,jsonb) to service_role;
+
 revoke all on function public.create_monetization_payment_attempt(uuid,uuid,text,text) from public, anon, authenticated;
 revoke all on function public.allocate_monetization_click_prepare_id() from public, anon, authenticated;
 revoke all on function public.prepare_monetization_click_payment(uuid,text,text,numeric,text,jsonb) from public, anon, authenticated;
