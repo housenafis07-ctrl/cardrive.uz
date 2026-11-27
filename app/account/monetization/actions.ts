@@ -67,6 +67,7 @@ export async function startMonetizationPaymentAction(form: FormData) {
       const checkout = new URL("https://my.click.uz/services/pay");
       checkout.searchParams.set("service_id", env.CLICK_SERVICE_ID!);
       checkout.searchParams.set("merchant_id", env.CLICK_MERCHANT_ID!);
+      if (env.CLICK_MERCHANT_USER_ID) checkout.searchParams.set("merchant_user_id", env.CLICK_MERCHANT_USER_ID);
       const clickAmount = Number(attempt.amount_uzs);
       if (!Number.isSafeInteger(clickAmount) || clickAmount <= 0) redirect("/account/monetization?error=Click+uchun+summa+butun+UZS+bo%27lishi+kerak");
       checkout.searchParams.set("amount", String(clickAmount));
