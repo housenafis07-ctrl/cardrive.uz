@@ -17,7 +17,8 @@ Cardrive’ga xush kelibsiz!
 2. Yangi avtomobillar yoki Avtobozor bo‘limini tanlang.
 3. Marka, model, narx va boshqa mezonlar bo‘yicha qidiring.
 4. Avtomobil sahifasida rasmlar, tavsif va mavjud moliyalashtirish shartlarini ko‘ring.
-5. Savolingiz bo‘lsa, shu botga xabar yozing yoki telefon raqamingizni yuboring — menejerimiz siz bilan bog‘lanadi.\n6. Avtomobilingizni sotmoqchi bo‘lsangiz, “🚘 Avtomobil sotish” tugmasini bosing.
+5. Savolingiz bo‘lsa, shu botga xabar yozing yoki telefon raqamingizni yuboring — menejerimiz siz bilan bog‘lanadi.
+6. Avtomobilingizni sotmoqchi bo‘lsangiz, “🚘 Avtomobil sotish” tugmasini bosing.
 
 💬 Murojaatingiz shu yerning o‘zida qabul qilinadi.
 👇 Ilovani ochish, telefon raqamingizni yuborish yoki avtomobil sotish uchun quyidagi tugmalardan foydalaning.`;
@@ -26,7 +27,8 @@ const help=`Cardrive’dan foydalanish:
 🔎 Qidiruv va filtrlar — kerakli avtomobilni topishga yordam beradi.
 📄 Avtomobil sahifasi — narx, tavsif va moliyalashtirish ma’lumotlarini ko‘rsatadi.
 💬 Murojaat — shu chatga savolingizni yozing.
-📞 Telefon — “Telefon raqamimni yuborish” tugmasini bosing, menejer sizga aloqaga chiqadi.\n🚘 Avtomobil sotish — “Avtomobil sotish” tugmasini bosing yoki /sell buyrug‘ini yuboring.
+📞 Telefon — “Telefon raqamimni yuborish” tugmasini bosing, menejer sizga aloqaga chiqadi.
+🚘 Avtomobil sotish — “Avtomobil sotish” tugmasini bosing yoki /sell buyrug‘ini yuboring.
 
 Ilovani ochish uchun “🚗 Cardrive Mini App” tugmasini bosing.`;
 async function sendMessage(token:string,chatId:number,text:string,withKeyboard=true){const response=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:chatId,text,reply_markup:withKeyboard?keyboard:undefined}),cache:"no-store"});if(!response.ok)console.error("[telegram-webhook] sendMessage failed",{status:response.status});}
