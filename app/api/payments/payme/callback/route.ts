@@ -41,7 +41,7 @@ function paymePayload(a: Pick<PaymentAttempt, "provider_payload">): PaymePayload
 
 export async function POST(request:Request) {
   const env=getServerEnv();
-  if(!env.PAYME_MERCHANT_KEY) return fail(null,-32400,"Payme is not configured");
+  if(env.PAYME_ENABLED !== "true" || !env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY) return fail(null,-32400,"Payme is not configured");
   if(!authorized(request,env.PAYME_MERCHANT_KEY)) return fail(null,-32504,"Insufficient privileges");
 
   let body:Rpc;
