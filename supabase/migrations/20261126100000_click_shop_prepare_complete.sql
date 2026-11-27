@@ -285,6 +285,12 @@ begin
     where id=p_attempt_id;
     update public.monetization_orders set status='refunded',updated_at=pg_catalog.now()
       where id=v_order.id and status='paid';
+    insert into public.monetization_payment_events
+      (provider,provider_event_id,order_id,event_type,amount,currency,processed_at)
+    values
+      (v_attempt.provider,'refund:'||coalesce(v_attempt.provider_payment_id,v_attempt.id::text),
+       v_attempt.order_id,'payment.refunded',v_attempt.amount_uzs,v_attempt.currency,pg_catalog.now())
+    on conflict (provider,provider_event_id) do nothing;
     update public.monetization_entitlements set status='revoked',quantity_used=quantity_total
       where order_item_id in (select id from public.monetization_order_items where order_id=v_order.id)
         and status in ('active','exhausted');
