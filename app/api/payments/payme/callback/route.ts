@@ -28,7 +28,10 @@ function uuid(v:unknown):v is string {
   return typeof v==="string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 function ms(v:unknown) { const n=Number(v); return Number.isSafeInteger(n)&&n>=0?n:0; }
-type PaymentAttempt = { id: string; order_id?: string; status: string; provider_payment_id?: string | null; provider_payload: unknown; created_at: string; amount_uzs?: number; currency?: string };\ntype PaymePayload = Record<string, unknown>;\nfunction objectValue(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }\nfunction stateOf(a: Pick<PaymentAttempt, "status">) {
+type PaymentAttempt = { id: string; order_id?: string; status: string; provider_payment_id?: string | null; provider_payload: unknown; created_at: string; amount_uzs?: number; currency?: string };
+type PaymePayload = Record<string, unknown>;
+function objectValue(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
+function stateOf(a: Pick<PaymentAttempt, "status">) {
   if(a.status==="paid") return 2;
   if(a.status==="refunded") return -2;
   if(a.status==="cancelled"||a.status==="failed") return -1;
