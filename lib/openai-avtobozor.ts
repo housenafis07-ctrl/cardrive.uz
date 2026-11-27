@@ -29,6 +29,8 @@ export const avtobozorAiDraftSchema = z.object({
   condition_description: z.string().trim().max(1200),
   is_negotiable: z.boolean(),
   uncertain_fields: z.array(z.string().max(80)).max(20),
+  primary_image_index: z.number().int().nonnegative().nullable(),
+  image_quality_scores: z.array(z.number().min(0).max(100)).max(8),
 });
 
 export type AvtobozorAiDraft = z.infer<typeof avtobozorAiDraftSchema>;
@@ -40,7 +42,7 @@ const responseSchema = {
     "is_vehicle_listing", "brand", "model", "year", "mileage_km", "price", "currency",
     "country_of_origin", "region", "district", "body_type", "fuel_type", "transmission",
     "engine_volume", "color", "description", "contact_name", "contact_phone",
-    "vehicle_condition", "condition_description", "is_negotiable", "uncertain_fields",
+    "vehicle_condition", "condition_description", "is_negotiable", "uncertain_fields", "primary_image_index", "image_quality_scores",
   ],
   properties: {
     is_vehicle_listing: { type: "boolean" },
@@ -65,6 +67,8 @@ const responseSchema = {
     condition_description: { type: "string" },
     is_negotiable: { type: "boolean" },
     uncertain_fields: { type: "array", items: { type: "string" } },
+    primary_image_index: { type: ["integer", "null"] },
+    image_quality_scores: { type: "array", items: { type: "number" } },
   },
 } as const;
 
@@ -89,6 +93,8 @@ export async function extractAvtobozorDraft(input: {
       "Keep the description factual and concise in the source language. Do not invent promotional claims.",
       "Normalize currency to UZS or USD only when clear. Normalize condition only when explicitly described.",
       "If the content is not a used-vehicle sale listing, set is_vehicle_listing=false.",
+      "For each supplied photo in input order, score image quality from 0 to 100 based on sharpness, exposure, framing, and useful vehicle visibility. Return one score per image. Set primary_image_index to the clearest useful exterior photo (zero-based), preferring a front three-quarter view. Do not prefer a photo because it shows a visible plate or seller branding.",
+      "Do not claim to have edited any image. Image enhancement and plate masking are separate deterministic processing steps.",
       "Post text:\n" + input.text.slice(0, 12000),
     ].join("\n"),
   }];
