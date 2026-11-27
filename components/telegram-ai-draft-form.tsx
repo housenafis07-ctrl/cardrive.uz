@@ -39,8 +39,29 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
             canvas.height = Math.max(1, Math.round(bitmap.height * scale));
             const context = canvas.getContext("2d");
             if (!context) continue;
+            context.filter = "brightness(1.035) contrast(1.045)";
             context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-            const webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", 0.82));
+            context.filter = "none";
+            const plate = (draft.plate_regions ?? []).find(region => region.image_index === index && region.confidence >= 0.92);
+            if (plate && plate.width > 15 && plate.height > 8 && plate.x + plate.width <= 1000 && plate.y + plate.height <= 1000) {
+              const x = plate.x / 1000 * canvas.width, y = plate.y / 1000 * canvas.height;
+              const w = plate.width / 1000 * canvas.width, h = plate.height / 1000 * canvas.height;
+              context.fillStyle = "#f8fafc";
+              context.fillRect(x, y, w, h);
+              context.strokeStyle = "#0f5132";
+              context.lineWidth = Math.max(1, h * 0.045);
+              context.strokeRect(x, y, w, h);
+              context.fillStyle = "#14532d";
+              context.font = "900 " + Math.max(8, Math.floor(h * 0.52)) + "px Arial";
+              context.textAlign = "center";
+              context.textBaseline = "middle";
+              context.fillText("CARDRIVE", x + w / 2, y + h / 2, w * 0.92);
+            }
+            let webp: Blob | null = null;
+            for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
+              webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
+              if (webp && webp.size <= 220 * 1024) break;
+            }
             if (webp) files.push(new File([webp], "cardrive-" + (index + 1) + ".webp", { type: "image/webp" }));
           } finally {
             bitmap.close();
@@ -64,7 +85,11 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     setError("");
     const data = new FormData(event.currentTarget);
     data.set("aiDraftId", draft.id);
-    for (const file of photos) data.append("photos", file, file.name);
+    const primary = Number.isInteger(p.primary_image_index) ? Number(p.primary_image_index) : 0;
+    const orderedPhotos = photos.length && primary >= 0 && primary < photos.length
+      ? [photos[primary], ...photos.filter((_, index) => index !== primary)]
+      : photos;
+    for (const file of orderedPhotos) data.append("photos", file, file.name);
     startTransition(() => {
       void createUsedCarListingAction(data).catch(e => setError(e instanceof Error ? e.message : "E’lon yuborilmadi"));
     });
