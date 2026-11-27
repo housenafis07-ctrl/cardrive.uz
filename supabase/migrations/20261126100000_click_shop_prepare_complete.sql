@@ -213,7 +213,7 @@ create or replace function public.bind_payme_monetization_transaction(
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_order public.monetization_orders%rowtype;
   v_attempt public.monetization_payment_attempts%rowtype;
@@ -253,7 +253,7 @@ begin
   where id=v_attempt.id;
   return query select v_attempt.id, 'processing'::text, 0;
 end;
-$;
+$$;
 
 create or replace function public.cancel_monetization_payment_attempt(
   p_attempt_id uuid,
@@ -263,7 +263,7 @@ create or replace function public.cancel_monetization_payment_attempt(
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_attempt public.monetization_payment_attempts%rowtype;
   v_order public.monetization_orders%rowtype;
@@ -307,7 +307,7 @@ begin
     where id=v_order.id and status='pending';
   return pg_catalog.jsonb_build_object('cancelled',true,'state',-1);
 end;
-$;
+$$;
 
 revoke all on function public.bind_payme_monetization_transaction(uuid,text,bigint,jsonb) from public, anon, authenticated;
 revoke all on function public.cancel_monetization_payment_attempt(uuid,integer,jsonb) from public, anon, authenticated;
