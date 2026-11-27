@@ -13,7 +13,7 @@ function field(form: URLSearchParams, key: string) { return (form.get(key) || ""
 
 export async function POST(request: Request) {
   const env = getServerEnv();
-  if (!env.CLICK_SERVICE_ID || !env.CLICK_MERCHANT_ID || !env.CLICK_SECRET_KEY) {
+  if (env.CLICK_ENABLED !== "true" || !env.CLICK_SERVICE_ID || !env.CLICK_MERCHANT_ID || !env.CLICK_SECRET_KEY) {
     return NextResponse.json({ error: "CLICK_NOT_CONFIGURED" }, { status: 503 });
   }
   try {
