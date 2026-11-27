@@ -87,8 +87,11 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     const data = new FormData(event.currentTarget);
     data.set("aiDraftId", draft.id);
     const primary = Number.isInteger(p.primary_image_index) ? Number(p.primary_image_index) : 0;
-    const orderedPhotos = photos.length && primary >= 0 && primary < photos.length
-      ? [photos[primary], ...photos.filter((_, index) => index !== primary)]
+    const ranked = photos.map((file, index) => ({ file, index, score: Number(p.image_quality_scores?.[index] ?? 0) }))
+      .sort((a, b) => b.score - a.score);
+    const mainIndex = primary >= 0 && primary < photos.length ? primary : ranked[0]?.index ?? 0;
+    const orderedPhotos = photos.length
+      ? [photos[mainIndex], ...ranked.filter(item => item.index !== mainIndex).map(item => item.file)]
       : photos;
     for (const file of orderedPhotos) data.append("photos", file, file.name);
     startTransition(() => {
