@@ -14,7 +14,7 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
   if (!customer) redirect("/account/login?next=" + encodeURIComponent(next));
   const db = createTelegramAiListingClient();
   const hash = createHash("sha256").update(token).digest("hex");
-  const found = await db.from("telegram_ai_listing_drafts").select("id,status,ai_payload,missing_fields,photo_file_ids,claimed_profile_id,expires_at")
+  const found = await db.from("telegram_ai_listing_drafts").select("id,status,ai_payload,missing_fields,claimed_profile_id,expires_at")
     .eq("handoff_token_hash", hash).eq("status", "review").maybeSingle();
   if (found.error || !found.data || new Date(found.data.expires_at).getTime() < Date.now()) {
     return <main className="mx-auto max-w-2xl p-8"><h1 className="text-2xl font-black">Draft topilmadi</h1><p className="mt-2 text-slate-600">Havola eskirgan yoki e’lon allaqachon yuborilgan. Bot orqali yangi Draft yarating.</p><Link className="mt-4 inline-block text-blue-700 underline" href="/avtobozor">Avtobozorga qaytish</Link></main>;
@@ -31,6 +31,6 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
     <Link href="/avtobozor" className="text-sm font-semibold text-blue-700">← Avtobozor</Link>
     <h1 className="mt-3 text-3xl font-black">AI tayyorlagan avtomobil e’loni</h1>
     <p className="mt-2 text-slate-600">Telefon raqamingiz SMS OTP orqali tasdiqlandi. Ma’lumotlarni tekshiring va qizil maydonlarni to‘ldiring.</p>
-    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: Array.isArray(found.data.photo_file_ids) ? found.data.photo_file_ids.length : 0, plate_regions: Array.isArray(found.data.ai_payload?.plate_regions) ? found.data.ai_payload.plate_regions : [] }} />
+    <TelegramAiDraftForm draft={{ id: found.data.id, ai_payload: found.data.ai_payload ?? {}, missing_fields: found.data.missing_fields ?? [], photo_count: 8, plate_regions: Array.isArray(found.data.ai_payload?.plate_regions) ? found.data.ai_payload.plate_regions : [] }} />
   </main>;
 }
