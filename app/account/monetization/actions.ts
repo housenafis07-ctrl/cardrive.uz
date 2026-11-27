@@ -24,7 +24,7 @@ export async function startMonetizationPaymentAction(form: FormData) {
   if (provider === "payme" && (!env.PAYME_MERCHANT_ID || !env.PAYME_MERCHANT_KEY)) {
     redirect("/account/monetization?error=Payme+hali+sozlanmagan");
   }
-  if (provider === "click" && (!env.CLICK_SERVICE_ID || !env.CLICK_MERCHANT_ID || !env.CLICK_SECRET_KEY)) {
+  if (provider === "click" && (env.CLICK_ENABLED !== "true" || !env.CLICK_SERVICE_ID || !env.CLICK_MERCHANT_ID || !env.CLICK_SECRET_KEY)) {
     redirect("/account/monetization?error=Click+hali+sozlanmagan");
   }
 
@@ -67,7 +67,9 @@ export async function startMonetizationPaymentAction(form: FormData) {
       const checkout = new URL("https://my.click.uz/services/pay");
       checkout.searchParams.set("service_id", env.CLICK_SERVICE_ID!);
       checkout.searchParams.set("merchant_id", env.CLICK_MERCHANT_ID!);
-      checkout.searchParams.set("amount", Number(attempt.amount_uzs).toFixed(2));
+      const clickAmount = Number(attempt.amount_uzs);
+      if (!Number.isSafeInteger(clickAmount) || clickAmount <= 0) redirect("/account/monetization?error=Click+uchun+summa+butun+UZS+bo%27lishi+kerak");
+      checkout.searchParams.set("amount", String(clickAmount));
       checkout.searchParams.set("transaction_param", attempt.id);
       checkout.searchParams.set("return_url", new URL("/account/monetization?payment=click", siteUrl).toString());
       checkoutUrl = checkout.toString();
