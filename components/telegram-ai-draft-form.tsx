@@ -92,7 +92,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       : photos;
     for (const file of orderedPhotos) data.append("photos", file, file.name);
     startTransition(() => {
-      void createUsedCarListingAction(data).catch(e => setError(e instanceof Error ? e.message : "E’lon yuborilmadi"));
+      void createUsedCarListingAction(data).catch(e => { if (e && typeof e === "object" && "digest" in e && String((e as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw e; setError(e instanceof Error ? e.message : "E’lon yuborilmadi"); });
     });
   }
 
