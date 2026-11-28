@@ -83,10 +83,24 @@ async function downloadTelegramPhoto(token: string, fileId: string) {
   if (!meta.ok || !path || path.includes("..")) throw new Error("TELEGRAM_FILE_LOOKUP_FAILED");
   const imageResponse = await fetch("https://api.telegram.org/file/bot" + token + "/" + path, { cache: "no-store" });
   if (!imageResponse.ok) throw new Error("TELEGRAM_FILE_DOWNLOAD_FAILED");
-  const contentType = imageResponse.headers.get("content-type")?.split(";")[0] ?? "image/jpeg";
-  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) throw new Error("UNSUPPORTED_TELEGRAM_IMAGE");
   const bytes = Buffer.from(await imageResponse.arrayBuffer());
   if (!bytes.length || bytes.length > 8 * 1024 * 1024) throw new Error("TELEGRAM_IMAGE_SIZE_INVALID");
+
+  // Telegram's file endpoint may label valid photo bytes as application/octet-stream.
+  // Detect the actual image format from its binary signature instead of trusting
+  // the HTTP Content-Type header, which is not reliable for bot file downloads.
+  const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes.length >= 8 &&
+    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isWebp = bytes.length >= 12 &&
+    bytes.toString("ascii", 0, 4) === "RIFF" &&
+    bytes.toString("ascii", 8, 12) === "WEBP";
+  const contentType = isJpeg ? "image/jpeg" : isPng ? "image/png" : isWebp ? "image/webp" : null;
+  if (!contentType) {
+    const headerType = imageResponse.headers.get("content-type")?.split(";")[0] ?? "unknown";
+    console.warn("[telegram-ai-listing] unsupported image signature", { contentType: headerType, fileExtension: path.split(".").pop()?.toLowerCase() ?? "unknown" });
+    throw new Error("UNSUPPORTED_TELEGRAM_IMAGE");
+  }
   return "data:" + contentType + ";base64," + bytes.toString("base64");
 }
 async function analyzeDraft(token: string, chatId: number, telegramUserId: string, draft: { id: string; source_text: string | null }) {
