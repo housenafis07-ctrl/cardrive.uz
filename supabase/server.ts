@@ -36,3 +36,17 @@ export function createCrmClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+
+/**
+ * Telegram AI drafts are isolated in news_stage on Preview.
+ * Production uses public after the reviewed additive migration is applied.
+ */
+export function createTelegramAiListingClient() {
+  const env = getServerEnv();
+  const schema = process.env.VERCEL_ENV === "preview" ? "news_stage" : "public";
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    db: { schema },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentCustomer } from "@/lib/customer-session";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createServiceRoleClient, createTelegramAiListingClient } from "@/supabase/server";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
@@ -17,6 +17,17 @@ const slugPart = (value: string) => value.toLowerCase().normalize("NFKD").replac
 export async function createUsedCarListingAction(form: FormData) {
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/account/login?next=%2Favtobozor%2Fyangi-elon");
+  const aiDraftId = text(form, "aiDraftId");
+  const db = createServiceRoleClient();
+  if (aiDraftId) {
+    const draftDb = createTelegramAiListingClient();
+    const draft = await draftDb.from("telegram_ai_listing_drafts").select("id,status,claimed_profile_id,expires_at")
+      .eq("id", aiDraftId).maybeSingle();
+    if (draft.error || !draft.data || draft.data.status !== "review" ||
+        draft.data.claimed_profile_id !== customer.id || new Date(draft.data.expires_at).getTime() < Date.now()) {
+      redirect("/avtobozor?error=AI+Draft+tasdiqlanmadi+yoki+muddati+tugagan");
+    }
+  }
 
   const brand = text(form, "brand");
   const model = text(form, "model");
@@ -27,7 +38,8 @@ export async function createUsedCarListingAction(form: FormData) {
   const conditionDescription = text(form, "conditionDescription");
   const price = number(form, "price");
   const region = text(form, "region");
-  const description = text(form, "description");
+  const descriptionBase = text(form, "description");
+  const description = [descriptionBase, text(form, "trim") ? "Komplektatsiya: " + text(form, "trim") : "", text(form, "gasCylinder") ? "Gaz balloni: " + text(form, "gasCylinder") : ""].filter(Boolean).join("\n");
   const contactName = text(form, "contactName");
   const currency = text(form, "currency") || "UZS";
   const files = form.getAll("photos").filter((file): file is File => file instanceof File && file.size > 0);
@@ -42,7 +54,6 @@ export async function createUsedCarListingAction(form: FormData) {
   if (files.length > 8) redirect("/avtobozor/yangi-elon?error=Eng+kopi+8+ta+rasm+yuklash+mumkin");
   if (files.some(file => !allowedMime.has(file.type) || file.size > 8 * 1024 * 1024)) redirect("/avtobozor/yangi-elon?error=Rasmlar+JPG,+PNG+yoki+WEBP+va+8MB+dan+kichik+bolishi+kerak");
 
-  const db = createServiceRoleClient();
   const profile = await db.from("profiles").select("full_name,phone,is_active").eq("id", customer.id).maybeSingle();
   if (profile.error || !profile.data || profile.data.is_active === false || !profile.data.phone) redirect("/account/login");
 
@@ -117,6 +128,13 @@ export async function createUsedCarListingAction(form: FormData) {
     redirect("/avtobozor/yangi-elon?error=Limit+tasdigida+xatolik.+Qayta+urinib+koring");
   }
 
+  if (aiDraftId) {
+    const draftDb = createTelegramAiListingClient();
+    const draftUpdate = await draftDb.from("telegram_ai_listing_drafts")
+      .update({ status: "submitted", updated_at: new Date().toISOString() })
+      .eq("id", aiDraftId).eq("claimed_profile_id", customer.id).eq("status", "review");
+    if (draftUpdate.error) console.error("[avtobozor-ai-draft] status update failed", { code: draftUpdate.error.code });
+  }
   await db.from("audit_logs").insert({
     actor_id: customer.id, action: "used_car_listing.created",
     entity_type: "used_car_listing", entity_id: id, metadata: { status: "pending_review", image_count: uploaded.length },
