@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { getServerEnv } from "@/lib/env";
+import { getTelegramRuntimeConfig } from "@/lib/telegram-runtime";
 import { createCrmClient, createServiceRoleClient, createTelegramAiListingClient } from "@/supabase/server";
 import { normalizeUzbekPhone } from "@/schemas/common";
 import { extractAvtobozorDraft } from "@/lib/openai-avtobozor";
 
 export const dynamic = "force-dynamic";
-const MINI_APP_URL = "https://cardrive.uz";
+const MINI_APP_URL = process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://cardrive.uz";
 type TelegramPhoto = { file_id: string; file_unique_id?: string; width: number; height: number; file_size?: number };
 type TelegramUpdate = {
   update_id?: number;
@@ -143,7 +143,7 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
   }
 }
 export async function POST(request: Request) {
-  const env = getServerEnv(); const token = env.TELEGRAM_BOT_TOKEN, secret = env.TELEGRAM_WEBHOOK_SECRET;
+  const { token, secret } = getTelegramRuntimeConfig();
   if (!token || !secret) return NextResponse.json({ error: "Telegram webhook sozlanmagan" }, { status: 503 });
   const provided = request.headers.get("x-telegram-bot-api-secret-token") ?? "";
   if (!safeEqual(provided, secret)) return NextResponse.json({ error: "Ruxsat yo‘q" }, { status: 401 });
