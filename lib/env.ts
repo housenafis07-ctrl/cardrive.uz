@@ -13,6 +13,8 @@ const serverEnvSchema = z.object({
   OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
+  TELEGRAM_PREVIEW_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_PREVIEW_WEBHOOK_SECRET: z.string().min(1).optional(),
   PAYME_ENABLED: z.enum(["true","false"]).default("false"),
   PAYME_MERCHANT_ID: z.string().regex(/^\d+$/).optional(),
   PAYME_MERCHANT_KEY: z.string().min(1).optional(),
