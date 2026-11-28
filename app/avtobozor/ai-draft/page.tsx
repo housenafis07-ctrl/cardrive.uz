@@ -25,7 +25,15 @@ export default async function TelegramAiDraftPage({ searchParams }: { searchPara
   if (!found.data.claimed_profile_id) {
     const claim = await db.from("telegram_ai_listing_drafts").update({ claimed_profile_id: customer.id, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("id", found.data.id).is("claimed_profile_id", null).eq("status", "review").select("id").maybeSingle();
-    if (claim.error || !claim.data) return <main className="mx-auto max-w-2xl p-8">Draft boshqa akkauntga bog‘langan yoki havola ishlatilgan. Botdan yangi havola oling.</main>;
+    if (claim.error || !claim.data) {
+      // Two tabs can attempt the first claim simultaneously. Accept the race
+      // only if the winning claim belongs to this same signed-in profile.
+      const retry = await db.from("telegram_ai_listing_drafts").select("claimed_profile_id")
+        .eq("id", found.data.id).eq("status", "review").maybeSingle();
+      if (retry.error || retry.data?.claimed_profile_id !== customer.id) {
+        return <main className="mx-auto max-w-2xl p-8">Draft boshqa Cardrive akkauntiga bog‘langan. Botdan yangi havola oling yoki avval bog‘langan akkauntga kiring.</main>;
+      }
+    }
   }
   const photoCount = await db.from("telegram_ai_listing_draft_photos").select("id", { count: "exact", head: true }).eq("draft_id", found.data.id);
   return <main className="mx-auto max-w-3xl px-4 py-8">
