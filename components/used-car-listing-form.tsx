@@ -145,15 +145,16 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
     setSubmitError("");
     try {
       if (photoProcessing) throw new Error("Rasmlar tayyorlanmoqda. Biroz kuting.");
-      // Always rebuild the upload payload from the original File objects captured by the form.
-      // The preview state is display-only; it must never determine which bytes reach Storage.
+      // Use the exact, already watermarked files shown in the preview.
+      // This mirrors Telegram AI draft submission and prevents raw input files
+      // from replacing the successfully prepared images after OTP authentication.
       const originalFiles = data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
-      const chosenFiles = originalFiles.length ? originalFiles : selectedPhotos;
+      const chosenFiles = selectedPhotos.length ? selectedPhotos : originalFiles;
       data.delete("photos");
       let totalBytes = 0;
       for (const original of chosenFiles) {
-        // Apply watermark to the exact file that will be uploaded, after OTP as well.
-        const branded = await prepareCarDriveListingImage(original);
+        // selectedPhotos are already branded; only process raw files as a safe fallback.
+        const branded = selectedPhotos.length ? original : await prepareCarDriveListingImage(original);
         totalBytes += branded.size;
         if (totalBytes > 2_400 * 1024) {
           throw new Error("Rasmlarning umumiy hajmi katta. Rasmlar sonini yoki sifatini kamaytiring.");
