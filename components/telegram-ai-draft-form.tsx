@@ -85,7 +85,13 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
   const [uploadStatus, setUploadStatus] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const normalizedFieldValue = (value: unknown) => {
+    const text = value == null ? "" : String(value).trim();
+    return /^(null|undefined|n\\/a)$/i.test(text) ? "" : text;
+  };
+  const isBlank = (value: unknown) => normalizedFieldValue(value).length === 0;
 
   useEffect(() => {
     const urls = photos.map(file => URL.createObjectURL(file));
@@ -191,15 +197,23 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     });
   }
 
-  const field = (key: string, label: string, value: unknown, type = "text", required = true) => (
-    <label className="block space-y-1.5">
-      <span className={"text-sm font-semibold " + (missing.has(key) ? "text-red-700" : "text-slate-700")}>
-        {label}{required ? " *" : ""}{missing.has(key) ? " — to‘ldirish/tekshirish shart" : ""}
-      </span>
-      <input name={key} type={type} required={required} defaultValue={value == null ? "" : String(value)}
-        className={cls(missing.has(key))} />
-    </label>
-  );
+  const field = (key: string, label: string, value: unknown, type = "text", required = true) => {
+    const currentValue = Object.prototype.hasOwnProperty.call(fieldValues, key)
+      ? fieldValues[key]
+      : normalizedFieldValue(value);
+    const invalid = required && isBlank(currentValue);
+    return (
+      <label className="block space-y-1.5">
+        <span className={"text-sm font-semibold " + (invalid ? "text-red-700" : "text-slate-700")}>
+          {label}{required ? " *" : ""}{invalid ? " — to‘ldirish shart" : ""}
+        </span>
+        <input name={key} type={type} required={required} value={currentValue}
+          onChange={event => setFieldValues(current => ({ ...current, [key]: event.target.value }))}
+          aria-invalid={invalid}
+          className={cls(invalid)} />
+      </label>
+    );
+  };
 
   return <form onSubmit={submit} className="mt-6 space-y-5">
     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
@@ -209,7 +223,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       <label className="block space-y-1.5"><span className="text-sm font-semibold">Brend *</span>
         <span className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
           {brandInfo?.logo ? <img src={brandInfo.logo} alt="" className="h-8 w-8 object-contain" /> : <span className="flex h-8 w-8 items-center justify-center text-xs font-black">{brand.slice(0,2).toUpperCase()}</span>}
-          <select value={brand} onChange={e => { setBrand(e.target.value); setModel(""); }} className="min-w-0 flex-1 bg-transparent p-3 outline-none">
+          <select value={brand} onChange={e => { setBrand(e.target.value); setModel(""); }} aria-invalid={!brand || (brand === "Other" && !customBrand.trim())} className={"min-w-0 flex-1 bg-transparent p-3 outline-none " + (!brand || (brand === "Other" && !customBrand.trim()) ? "text-red-700" : "")}>
             {VEHICLE_BRANDS.map(item => <option key={item.slug} value={item.name}>{item.name}</option>)}
             {!initialBrand && <option value={brand}>{brand}</option>}
             <option value="Other">Boshqa brend</option>
@@ -218,18 +232,18 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
         {brand === "Other" && <input aria-label="Brend nomi" value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Brend nomini kiriting" className={cls(false)} />}
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-semibold">Model *</span>
-        {brandInfo?.models.length ? <select value={model} onChange={e => setModel(e.target.value)} className={cls(missing.has("model"))}>
+        {brandInfo?.models.length ? <select value={model} onChange={e => setModel(e.target.value)} aria-invalid={!model.trim()} className={cls(!model.trim())}>
           <option value="">Modelni tanlang</option>{brandInfo.models.map(item => <option key={item} value={item}>{item}</option>)}<option value="__other__">Boshqa model</option>
         </select> : null}
-        {(!brandInfo?.models.length || model === "__other__") && <input value={model === "__other__" ? "" : model} onChange={e => setModel(e.target.value)} placeholder="Model nomini kiriting" className={cls(missing.has("model"))} />}
+        {(!brandInfo?.models.length || model === "__other__") && <input value={model === "__other__" ? "" : model} onChange={e => setModel(e.target.value)} placeholder="Model nomini kiriting" aria-invalid={!model.trim() || model === "__other__"} className={cls(!model.trim() || model === "__other__")} />}
       </label>
       {field("trim", "Komplektatsiya / pozitsiya", p.trim, "text", false)}
       {field("gasCylinder", "Gaz balloni", p.gas_cylinder, "text", false)}
       {field("year", "Ishlab chiqarilgan yil", p.year, "number")}
       {field("mileageKm", "Yurgan masofasi (km)", p.mileage_km, "number")}
       {field("price", "Narx", p.price, "number")}
-      <label className="block space-y-1.5"><span className="text-sm font-semibold">Valyuta *</span><select name="currency" required defaultValue={p.currency ?? ""} className={cls(missing.has("currency"))}><option value="">Tanlang</option><option value="USD">USD</option><option value="UZS">UZS</option></select></label>
-      <label className="block space-y-1.5"><span className="text-sm font-semibold">Kelib chiqishi *</span><select name="countryOfOrigin" required defaultValue={p.country_of_origin === "unknown" ? "" : p.country_of_origin ?? ""} className={cls(missing.has("country_of_origin"))}><option value="">Tanlang</option><option value="uzbekistan">O‘zbekistonda ishlab chiqarilgan</option><option value="foreign">Import</option></select></label>
+      <label className="block space-y-1.5"><span className={"text-sm font-semibold " + (!p.currency ? "text-red-700" : "text-slate-700")}>Valyuta *</span><select name="currency" required defaultValue={p.currency ?? ""} aria-invalid={!p.currency} className={cls(!p.currency)}><option value="">Tanlang</option><option value="USD">USD</option><option value="UZS">UZS</option></select></label>
+      <label className="block space-y-1.5"><span className={"text-sm font-semibold " + (!p.country_of_origin || p.country_of_origin === "unknown" ? "text-red-700" : "text-slate-700")}>Kelib chiqishi *</span><select name="countryOfOrigin" required defaultValue={p.country_of_origin === "unknown" ? "" : p.country_of_origin ?? ""} aria-invalid={!p.country_of_origin || p.country_of_origin === "unknown"} className={cls(!p.country_of_origin || p.country_of_origin === "unknown")}><option value="">Tanlang</option><option value="uzbekistan">O‘zbekistonda ishlab chiqarilgan</option><option value="foreign">Import</option></select></label>
       {field("region", "Hudud", p.region)}
       {field("district", "Tuman/shahar", p.district, "text", false)}
       {field("bodyType", "Kuzov turi", p.body_type, "text", false)}
@@ -242,16 +256,16 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
         <p className="text-xs text-slate-500">Tanlangan rang: {color}</p>
       </fieldset>
       <label className="block space-y-1.5"><span className="text-sm font-semibold">Avtomobil holati *</span>
-        <select value={vehicleCondition} onChange={e => { setVehicleCondition(e.target.value); const item=conditionChoices.find(x=>x.value===e.target.value); if(item && conditionDescription.trim().length<10) setConditionDescription(item.template); }} className={cls(missing.has("vehicle_condition"))}>
+        <select value={vehicleCondition} onChange={e => { setVehicleCondition(e.target.value); const item=conditionChoices.find(x=>x.value===e.target.value); if(item && conditionDescription.trim().length<10) setConditionDescription(item.template); }} aria-invalid={!vehicleCondition} className={cls(!vehicleCondition)}>
           {conditionChoices.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       </label>
     </div>
     <label className="block space-y-1.5 sm:col-span-2"><span className="text-sm font-semibold">Holati haqida izoh *</span>
-      <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={e=>setConditionDescription(e.target.value)} className={cls(missing.has("condition_description"))} />
+      <textarea name="conditionDescription" required minLength={10} maxLength={1200} rows={3} value={conditionDescription} onChange={e=>setConditionDescription(e.target.value)} aria-invalid={conditionDescription.trim().length < 10} className={cls(conditionDescription.trim().length < 10)} />
     </label>
     {field("contactName", "Aloqa uchun ism", p.contact_name)}
-    <label className="block space-y-1.5"><span className="text-sm font-semibold">E’lon tavsifi *</span><textarea name="description" required minLength={20} maxLength={5000} defaultValue={p.description ?? ""} className={cls(missing.has("description")) + " min-h-32"} /></label>
+    <label className="block space-y-1.5"><span className={"text-sm font-semibold " + (isBlank(p.description) ? "text-red-700" : "text-slate-700")}>E’lon tavsifi *</span><textarea name="description" required minLength={20} maxLength={5000} defaultValue={normalizedFieldValue(p.description)} aria-invalid={isBlank(p.description)} className={cls(isBlank(p.description)) + " min-h-32"} /></label>
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isNegotiable" defaultChecked={Boolean(p.is_negotiable)} /> Narx kelishiladi</label>
     <div className="rounded-2xl border border-slate-200 p-4">
       <p className="font-bold">Avtomobil rasmlari</p>
