@@ -57,6 +57,27 @@ async function sendMessage(token: string, chatId: number, text: string, withKeyb
   if (!response.ok) console.error("[telegram-webhook] sendMessage failed", { status: response.status });
 }
 function hashToken(value: string) { return createHash("sha256").update(value).digest("hex"); }
+
+function explicitUsdPrice(sourceText: string): number | null {
+  const patterns = [
+    /(?:\\$|\\bUSD\\b)\\s*([0-9][0-9\\s.,]*)/giu,
+    /([0-9][0-9\\s.,]*)\\s*(?:\\$|\\bUSD\\b|доллар(?:а|ов)?)/giu,
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(sourceText);
+    if (!match?.[1]) continue;
+    const raw = match[1].trim().replace(/\\s+/g, "");
+    const parts = raw.split(/[.,]/);
+    const groupedThousands = parts.length > 1 && parts.slice(1).every(part => part.length === 3);
+    const normalized = groupedThousands ? raw.replace(/[.,]/g, "") : raw.replace(",", ".");
+    const amount = Number(normalized);
+    if (Number.isFinite(amount) && amount > 0 && amount <= 100_000_000) return amount;
+  }
+  return null;
+}
+function displayValue(value: unknown): string {
+  return value === null || value === undefined || value === "" ? "Aniqlanmadi" : String(value);
+}
 async function getOrCreateDraft(db: ReturnType<typeof createTelegramAiListingClient>, args: {
   telegramUserId: string; chatId: string; source: "forwarded_post" | "separate_photos";
 }) {
@@ -115,7 +136,16 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
   await db.from("telegram_ai_listing_drafts").update({ status: "analyzing", updated_at: new Date().toISOString() }).eq("id", draft.id);
   try {
     const images = await Promise.all(fileIds.map((id: string) => downloadTelegramPhoto(token, id)));
-    const result = await extractAvtobozorDraft({ text: String(draft.source_text ?? "").slice(0, 12000), imageDataUrls: images });
+    let result = await extractAvtobozorDraft({ text: String(draft.source_text ?? "").slice(0, 12000), imageDataUrls: images });
+    // An explicit dollar marker in the source is authoritative: "15,000$" is 15,000 USD.
+    const sourceUsdPrice = explicitUsdPrice(String(draft.source_text ?? ""));
+    if (sourceUsdPrice !== null) result = { ...result, price: sourceUsdPrice, currency: "USD" };
+    // Keep AI-selected image indices inside the actual Telegram upload list.
+    const safeScores = result.image_quality_scores.slice(0, images.length);
+    const safePrimary = result.primary_image_index !== null && result.primary_image_index < images.length
+      ? result.primary_image_index
+      : (safeScores.length ? safeScores.indexOf(Math.max(...safeScores)) : null);
+    result = { ...result, primary_image_index: safePrimary, image_quality_scores: safeScores };
     if (!result.is_vehicle_listing) {
       await db.from("telegram_ai_listing_drafts").update({ status: "collecting", updated_at: new Date().toISOString() }).eq("id", draft.id);
       await sendMessage(token, chatId, "Bu materialdan avtomobil sotish e’loni ekanini aniqlay olmadim. Iltimos, avtomobil e’lonini yuboring.");
@@ -145,13 +175,26 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
         ? "https://" + process.env.VERCEL_URL
         : "https://cardrive.uz";
     const loginUrl = siteOrigin + "/account/login?next=" + encodeURIComponent(next);
-    await sendMessage(token, chatId,
-      "✅ AI tahlili tayyor.\n\n" +
-      "🚘 " + [result.brand, result.model, result.year].filter(Boolean).join(" ") + "\n" +
-      "💰 " + (result.price ? new Intl.NumberFormat("uz-UZ").format(result.price) + " " + (result.currency ?? "") : "Narx aniqlanmadi") + "\n" +
-      "📷 Rasmlar: " + fileIds.length + " ta. Asosiy rasm indeksi: " + (result.primary_image_index ?? "tanlanmadi") + "\n" +
-      "🟠 To‘ldirish yoki tekshirish kerak: " + missing.length + " ta maydon.\n\n" +
-      "Davom etish uchun Cardrive’ga kirib, SMS kod bilan telefon raqamingizni tasdiqlang:\n" + loginUrl);
+    const summary = [
+      "✅ AI tahlili tayyor.",
+      "",
+      "🚘 " + [result.brand, result.model, result.trim, result.year].filter(Boolean).join(" "),
+      "💰 " + (result.price ? new Intl.NumberFormat("uz-UZ").format(result.price) + " " + (result.currency ?? "") : "Narx aniqlanmadi"),
+      "🛣 Yurgan masofa: " + displayValue(result.mileage_km) + " km",
+      "⛽ Yoqilg‘i: " + displayValue(result.fuel_type),
+      "⚙️ Uzatma: " + displayValue(result.transmission),
+      "🎨 Rang: " + displayValue(result.color),
+      "📍 Hudud: " + displayValue(result.region),
+      "🔧 Holati: " + displayValue(result.condition_description || result.vehicle_condition),
+      "📷 Telegram fayllari: " + fileIds.length + " ta. Asosiy rasm: " + (result.primary_image_index === null ? "tanlanmadi" : (result.primary_image_index + 1) + "-rasm"),
+      "🟠 Tekshirish/to‘ldirish: " + missing.length + " ta — " + (missing.length ? missing.join(", ") : "yo‘q"),
+      "",
+      "Tavsif: " + displayValue(result.description).slice(0, 400),
+      "",
+      "Davom etish uchun Cardrive’ga kirib, SMS kod bilan telefon raqamingizni tasdiqlang:",
+      loginUrl,
+    ].join("\\n");
+    await sendMessage(token, chatId, summary);
   } catch (error) {
     await db.from("telegram_ai_listing_drafts").update({ status: "collecting", updated_at: new Date().toISOString() }).eq("id", draft.id);
     const code = error instanceof Error ? error.message : "UNKNOWN";
