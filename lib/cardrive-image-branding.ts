@@ -55,7 +55,7 @@ export async function prepareCarDriveListingImage(file: File, plateBox?: CarDriv
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
       if (!blob) throw new Error("Rasmni WebP formatiga o‘tkazib bo‘lmadi.");
       if (blob.size <= 220 * 1024) {
-        const name = file.name.replace(/\\.[^.]+$/, "") + ".webp";
+        const name = file.name.replace(/\.[^.]+$/, "") + ".webp";
         return new File([blob], name, { type: "image/webp", lastModified: Date.now() });
       }
       width = Math.max(1, Math.round(width * 0.86));
