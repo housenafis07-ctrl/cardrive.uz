@@ -90,10 +90,6 @@ const colors = [
 ] as const;
 
 
-async function compressListingImage(file: File): Promise<File> {
-  return prepareCarDriveListingImage(file);
-}
-
 export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale: Locale; isAuthenticated: boolean; error?: string }) {
   const ru = locale === "ru";
   const pendingForm = useRef<FormData | null>(null);
