@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
@@ -214,6 +214,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
             <option value="Other">Boshqa brend</option>
           </select>
         </span>
+        {brand === "Other" && <input aria-label="Brend nomi" value={brand === "Other" ? "" : brand} onChange={e => setBrand(e.target.value || "Other")} placeholder="Brend nomini kiriting" className={cls(false)} />}
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-semibold">Model *</span>
         {brandInfo?.models.length ? <select value={model} onChange={e => setModel(e.target.value)} className={cls(missing.has("model"))}>
