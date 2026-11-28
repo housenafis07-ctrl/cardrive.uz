@@ -100,6 +100,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [submitError, setSubmitError] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoProcessing, setPhotoProcessing] = useState(false);
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
@@ -116,17 +117,42 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
     return () => urls.forEach(url => URL.revokeObjectURL(url));
   }, [selectedPhotos]);
 
+  async function handlePhotoSelection(files: File[]) {
+    const originals = files.slice(0, 8);
+    setSelectedPhotos([]);
+    setSubmitError("");
+    if (!originals.length) return;
+    setPhotoProcessing(true);
+    try {
+      const prepared: File[] = [];
+      let totalBytes = 0;
+      for (const original of originals) {
+        const branded = await prepareCarDriveListingImage(original);
+        totalBytes += branded.size;
+        if (totalBytes > 2_400 * 1024) throw new Error("Rasmlarning umumiy hajmi 2.4 MB dan oshdi.");
+        prepared.push(branded);
+      }
+      setSelectedPhotos(prepared);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Rasmlarni tayyorlab bo‘lmadi.");
+    } finally {
+      setPhotoProcessing(false);
+    }
+  }
+
   async function submitListing(data: FormData) {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const originalFiles = selectedPhotos.length
+      if (photoProcessing) throw new Error("Rasmlar tayyorlanmoqda. Biroz kuting.");
+      const chosenFiles = selectedPhotos.length
         ? selectedPhotos
         : data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
       data.delete("photos");
       let totalBytes = 0;
-      for (const [index, original] of originalFiles.entries()) {
-        const branded = await prepareCarDriveListingImage(original);
+      for (const original of chosenFiles) {
+        // Selected photos are already watermarked; only process the no-preview fallback.
+        const branded = selectedPhotos.length ? original : await prepareCarDriveListingImage(original);
         totalBytes += branded.size;
         if (totalBytes > 2_400 * 1024) {
           throw new Error("Rasmlarning umumiy hajmi katta. Rasmlar sonini yoki sifatini kamaytiring.");
@@ -241,13 +267,13 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
         </fieldset>
 
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
-        <div className="col-span-full min-w-0 text-sm font-semibold"><label>{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setSelectedPhotos(Array.from(event.target.files ?? []).slice(0, 8))} className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /></label><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Перед загрузкой все фото оптимизируются и получают водяной знак cardrive.uz в углу." : "Yuklashdan oldin barcha rasmlar optimallashtiriladi va burchagiga cardrive.uz watermark qo‘yiladi."}</span>
-          {selectedPhotos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{selectedPhotos.map((file, index) => <div key={file.name + index} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><div className="relative"><img src={photoUrls[index]} alt={"Avtomobil rasmi " + (index + 1)} draggable={false} className="block h-auto w-full" /><span className="absolute bottom-2 right-2 rounded bg-slate-900/80 px-2 py-1 text-[9px] font-bold text-white">cardrive.uz</span></div><div className="p-2 text-[10px] text-slate-600">{ru ? "Водяной знак будет добавлен" : "cardrive.uz watermark qo‘yiladi"}</div></div>)}</div>}
+        <div className="col-span-full min-w-0 text-sm font-semibold"><label>{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { void handlePhotoSelection(Array.from(event.target.files ?? [])); }} className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /></label><span className="mt-1 block text-xs font-normal text-slate-500">{photoProcessing ? (ru ? "Добавляем водяной знак cardrive.uz…" : "Rasmlarga cardrive.uz watermark qo‘yilmoqda…") : (ru ? "Водяной знак cardrive.uz уже встроен в подготовленные фото." : "cardrive.uz watermark rasmlarning o‘ziga qo‘yildi.")}</span>
+          {selectedPhotos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{selectedPhotos.map((file, index) => <div key={file.name + index} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><div className="relative"><img src={photoUrls[index]} alt={"Avtomobil rasmi " + (index + 1)} draggable={false} className="block h-auto w-full" /><span className="absolute bottom-2 right-2 rounded bg-emerald-700 px-2 py-1 text-[9px] font-bold text-white">Watermark ichiga yozilgan</span></div><div className="p-2 text-[10px] text-slate-600">{ru ? "Водяной знак будет добавлен" : "cardrive.uz watermark qo‘yiladi"}</div></div>)}</div>}
         </div>
         <label className="col-span-full flex min-w-0 items-center gap-2 text-sm"><input type="checkbox" name="isNegotiable" defaultChecked />{ru ? "Возможен торг" : "Savdolashish mumkin"}</label>
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Имя продавца" : "Sotuvchi ismi"} *<input name="contactName" required maxLength={100} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
         <p className="col-span-full rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{ru ? "Номер телефона будет использован из подтверждённого аккаунта. Если вы ещё не зарегистрированы, подтверждение номера понадобится только после заполнения объявления. Объявление сначала проходит модерацию." : "Telefon raqamingiz tasdiqlangan akkauntingizdan olinadi. Ro'yxatdan o'tmagan bo'lsangiz, raqam faqat e'lon ma'lumotlarini to'ldirgandan keyin tasdiqlanadi. E'lon avval moderator tekshiruvidan o'tadi."}</p>
-        <button disabled={submitting} className="col-span-full rounded-full bg-slate-950 px-5 py-3.5 font-bold text-white disabled:opacity-50">{submitting ? (ru ? "Отправка..." : "Yuborilmoqda...") : (ru ? "Отправить на модерацию" : "Moderatsiyaga yuborish")}</button>
+        <button disabled={submitting || photoProcessing} className="col-span-full rounded-full bg-slate-950 px-5 py-3.5 font-bold text-white disabled:opacity-50">{photoProcessing ? (ru ? "Подготовка фото..." : "Rasmlar tayyorlanmoqda...") : submitting ? (ru ? "Отправка..." : "Yuborilmoqda...") : (ru ? "Отправить на модерацию" : "Moderatsiyaga yuborish")}</button>
       </form>
       {showAuth ? <section className="mt-6 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm"><h2 className="mb-4 text-lg font-black">{ru ? "Подтвердите номер для публикации" : "E'lonni yuborish uchun telefon raqamini tasdiqlang"}</h2><PhoneOtpAuth purpose="login" locale={locale} onAuthenticated={handleAuthenticated} title={ru ? "Вход или регистрация" : "Kirish yoki ro'yxatdan o'tish"} /></section> : null}
     </>
