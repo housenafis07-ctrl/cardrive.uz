@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { PhoneOtpAuth } from "@/components/phone-otp-auth";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
+import { prepareCarDriveListingImage } from "@/lib/cardrive-image-branding";
 import type { Locale } from "@/lib/i18n";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
@@ -90,32 +91,7 @@ const colors = [
 
 
 async function compressListingImage(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file);
-  try {
-    const maxDimension = 1600;
-    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-    let width = Math.max(1, Math.round(bitmap.width * scale));
-    let height = Math.max(1, Math.round(bitmap.height * scale));
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Rasmni qayta ishlash uchun canvas ochilmadi.");
-      context.drawImage(bitmap, 0, 0, width, height);
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", Math.max(0.52, 0.82 - attempt * 0.08)));
-      if (!blob) throw new Error("Rasmni siqib bo‘lmadi. Boshqa rasm tanlang.");
-      if (blob.size <= 220 * 1024) {
-        const name = file.name.replace(/\.[^.]+$/, "") + ".webp";
-        return new File([blob], name, { type: "image/webp", lastModified: Date.now() });
-      }
-      width = Math.round(width * 0.82);
-      height = Math.round(height * 0.82);
-    }
-    throw new Error("Rasm hajmi juda katta. Kichikroq rasm tanlang.");
-  } finally {
-    bitmap.close();
-  }
+  return prepareCarDriveListingImage(file);
 }
 
 export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale: Locale; isAuthenticated: boolean; error?: string }) {
@@ -257,7 +233,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
         </fieldset>
 
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
-        <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /></label>
+        <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Перед загрузкой фотографии оптимизируются и получают водяной знак cardrive.uz в углу." : "Yuklashdan oldin rasmlar optimallashtiriladi va burchagiga cardrive.uz watermark qo‘yiladi."}</span></label>
         <label className="col-span-full flex min-w-0 items-center gap-2 text-sm"><input type="checkbox" name="isNegotiable" defaultChecked />{ru ? "Возможен торг" : "Savdolashish mumkin"}</label>
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Имя продавца" : "Sotuvchi ismi"} *<input name="contactName" required maxLength={100} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
         <p className="col-span-full rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{ru ? "Номер телефона будет использован из подтверждённого аккаунта. Если вы ещё не зарегистрированы, подтверждение номера понадобится только после заполнения объявления. Объявление сначала проходит модерацию." : "Telefon raqamingiz tasdiqlangan akkauntingizdan olinadi. Ro'yxatdan o'tmagan bo'lsangiz, raqam faqat e'lon ma'lumotlarini to'ldirgandan keyin tasdiqlanadi. E'lon avval moderator tekshiruvidan o'tadi."}</p>
