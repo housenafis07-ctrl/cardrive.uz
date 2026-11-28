@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PhoneOtpAuth } from "@/components/phone-otp-auth";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
-import { prepareCarDriveListingImage } from "@/lib/cardrive-image-branding";
+import { prepareCarDriveListingImage, type CarDrivePlateBox } from "@/lib/cardrive-image-branding";
 import type { Locale } from "@/lib/i18n";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
@@ -101,6 +101,12 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [authenticated, setAuthenticated] = useState(isAuthenticated);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [plateBoxes, setPlateBoxes] = useState<Record<number, CarDrivePlateBox>>({});
+  const [selectingPlateIndex, setSelectingPlateIndex] = useState<number | null>(null);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+  const [selectionPreview, setSelectionPreview] = useState<CarDrivePlateBox | null>(null);
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("good");
   const [conditionDescription, setConditionDescription] = useState<string>(conditions[1][ru ? "ruTemplate" : "uzTemplate"]);
   const [color, setColor] = useState("Oq");
@@ -111,20 +117,61 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
   const [customModel, setCustomModel] = useState("");
   const selectedBrandInfo = VEHICLE_BRANDS.find(item => item.name === selectedBrand);
 
+  useEffect(() => {
+    const urls = selectedPhotos.map(file => URL.createObjectURL(file));
+    setPhotoUrls(urls);
+    return () => urls.forEach(url => URL.revokeObjectURL(url));
+  }, [selectedPhotos]);
+
+  function photoPoint(event: React.PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1000, ((event.clientX - rect.left) / rect.width) * 1000)),
+      y: Math.max(0, Math.min(1000, ((event.clientY - rect.top) / rect.height) * 1000)),
+    };
+  }
+  function beginPlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index) return;
+    const point = photoPoint(event);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSelectionStart(point);
+    setSelectionPreview({ x: point.x, y: point.y, width: 0, height: 0 });
+  }
+  function movePlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index || !selectionStart) return;
+    const point = photoPoint(event);
+    setSelectionPreview({ x: Math.min(selectionStart.x, point.x), y: Math.min(selectionStart.y, point.y),
+      width: Math.abs(point.x - selectionStart.x), height: Math.abs(point.y - selectionStart.y) });
+  }
+  function finishPlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index || !selectionStart) return;
+    const point = photoPoint(event);
+    const box = { x: Math.min(selectionStart.x, point.x), y: Math.min(selectionStart.y, point.y),
+      width: Math.abs(point.x - selectionStart.x), height: Math.abs(point.y - selectionStart.y) };
+    if (box.width >= 18 && box.height >= 10) {
+      setPlateBoxes(current => ({ ...current, [index]: box }));
+      setSelectingPlateIndex(null);
+    }
+    setSelectionStart(null);
+    setSelectionPreview(null);
+  }
+
   async function submitListing(data: FormData) {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const originalFiles = data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
+      const originalFiles = selectedPhotos.length
+        ? selectedPhotos
+        : data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
       data.delete("photos");
       let totalBytes = 0;
-      for (const original of originalFiles) {
-        const compressed = await compressListingImage(original);
-        totalBytes += compressed.size;
+      for (const [index, original] of originalFiles.entries()) {
+        const branded = await prepareCarDriveListingImage(original, plateBoxes[index]);
+        totalBytes += branded.size;
         if (totalBytes > 2_400 * 1024) {
           throw new Error("Rasmlarning umumiy hajmi katta. Rasmlar sonini yoki sifatini kamaytiring.");
         }
-        data.append("photos", compressed, compressed.name);
+        data.append("photos", branded, branded.name);
       }
       await createUsedCarListingAction(data);
     } catch (error) {
@@ -233,7 +280,9 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
         </fieldset>
 
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Дополнительное описание" : "Qo'shimcha tavsif"} *<textarea name="description" required minLength={20} maxLength={5000} rows={5} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 font-normal" placeholder={ru ? "Комплектация, история обслуживания, дополнительные особенности..." : "Komplektatsiyasi, texnik xizmat tarixi va boshqa qo'shimcha ma'lumotlar..."} /></label>
-        <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Перед загрузкой фотографии оптимизируются и получают водяной знак cardrive.uz в углу." : "Yuklashdan oldin rasmlar optimallashtiriladi va burchagiga cardrive.uz watermark qo‘yiladi."}</span></label>
+        <div className="col-span-full min-w-0 text-sm font-semibold"><label>{ru ? "Фотографии (до 8, JPG/PNG/WEBP, до 8 МБ каждая)" : "Rasmlar (8 tagacha, JPG/PNG/WEBP, har biri 8 MB gacha)"}<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { setSelectedPhotos(Array.from(event.target.files ?? []).slice(0, 8)); setPlateBoxes({}); setSelectingPlateIndex(null); }} className="mt-2 block box-border w-full min-w-0 max-w-full rounded-xl border p-3 text-sm" /></label><span className="mt-1 block text-xs font-normal text-slate-500">{ru ? "Перед загрузкой фотографии оптимизируются. Вы можете отметить номерной знак на каждом фото — вместо него появится CARDRIVE; если не отмечать, будет небольшой watermark cardrive.uz." : "Yuklashdan oldin rasmlar optimallashtiriladi. Har bir rasmda avtoraqam joyini belgilasangiz, uning o‘rniga CARDRIVE yoziladi; belgilanmasa, kichik cardrive.uz watermark qo‘yiladi."}</span>
+          {selectedPhotos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{selectedPhotos.map((file, index) => { const box = plateBoxes[index] ?? null; const preview = selectingPlateIndex === index ? selectionPreview : box; return <div key={file.name + index} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><div className={selectingPlateIndex === index ? "relative cursor-crosshair touch-none" : "relative"} onPointerDown={event => beginPlateSelection(event, index)} onPointerMove={event => movePlateSelection(event, index)} onPointerUp={event => finishPlateSelection(event, index)} onPointerCancel={() => { setSelectionStart(null); setSelectionPreview(null); }}><img src={photoUrls[index]} alt={"Avtomobil rasmi " + (index + 1)} draggable={false} className="block h-auto w-full" />{preview && <div className="pointer-events-none absolute flex items-center justify-center border-2 border-emerald-700 bg-white/85 text-[9px] font-black text-emerald-900" style={{ left: preview.x / 10 + "%", top: preview.y / 10 + "%", width: preview.width / 10 + "%", height: preview.height / 10 + "%" }}>CARDRIVE</div>}</div><div className="p-2"><button type="button" onClick={() => { setSelectingPlateIndex(index); setSelectionStart(null); setSelectionPreview(null); }} className="rounded-lg border border-slate-300 px-2 py-1 text-[10px]">{selectingPlateIndex === index ? (ru ? "Отметьте номер на фото" : "Raqam joyini rasmda belgilang") : box ? (ru ? "Изменить область номера" : "Raqam joyini o‘zgartirish") : (ru ? "Отметить номер" : "Avtoraqamni belgilang")}</button>{box && <button type="button" onClick={() => setPlateBoxes(current => { const next = { ...current }; delete next[index]; return next; })} className="ml-1 text-[10px] text-red-700">{ru ? "Сбросить" : "Bekor qilish"}</button>}</div></div>; })}</div>}
+        </div>
         <label className="col-span-full flex min-w-0 items-center gap-2 text-sm"><input type="checkbox" name="isNegotiable" defaultChecked />{ru ? "Возможен торг" : "Savdolashish mumkin"}</label>
         <label className="col-span-full min-w-0 text-sm font-semibold">{ru ? "Имя продавца" : "Sotuvchi ismi"} *<input name="contactName" required maxLength={100} className="mt-1 block box-border w-full min-w-0 max-w-full rounded-xl border p-3" /></label>
         <p className="col-span-full rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{ru ? "Номер телефона будет использован из подтверждённого аккаунта. Если вы ещё не зарегистрированы, подтверждение номера понадобится только после заполнения объявления. Объявление сначала проходит модерацию." : "Telefon raqamingiz tasdiqlangan akkauntingizdan olinadi. Ro'yxatdan o'tmagan bo'lsangiz, raqam faqat e'lon ma'lumotlarini to'ldirgandan keyin tasdiqlanadi. E'lon avval moderator tekshiruvidan o'tadi."}</p>
