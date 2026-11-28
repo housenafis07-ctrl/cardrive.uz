@@ -197,6 +197,22 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
             context.textBaseline = "middle";
             context.fillText("CARDRIVE", x + w / 2, y + h / 2, Math.max(1, w * 0.92));
           }
+          else {
+            // No reliable plate location: use a subtle diagonal site watermark instead.
+            context.save();
+            context.translate(canvas.width / 2, canvas.height / 2);
+            context.rotate(-Math.PI / 7);
+            const fontSize = Math.max(18, Math.min(54, Math.round(canvas.width * 0.075)));
+            context.font = "900 " + fontSize + "px Arial, sans-serif";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.lineWidth = Math.max(1, fontSize * 0.055);
+            context.strokeStyle = "rgba(15, 23, 42, 0.42)";
+            context.fillStyle = "rgba(255, 255, 255, 0.68)";
+            context.strokeText("cardrive.uz", 0, 0);
+            context.fillText("cardrive.uz", 0, 0);
+            context.restore();
+          }
           let webp: Blob | null = null;
           for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
             webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
@@ -210,7 +226,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       if (!cancelled) {
         setPhotos(files);
         setPhotoStatus(files.length + " ta rasm e’lon uchun tayyor");
-        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; belgilangan avtoraqamlarga CARDRIVE yozildi");
+        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; raqam topilgan joyga CARDRIVE, qolgan rasmlarga cardrive.uz watermark qo‘yildi");
       }
     }
     void processPhotos().catch(error => {
