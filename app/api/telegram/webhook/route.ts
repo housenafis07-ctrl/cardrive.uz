@@ -314,7 +314,20 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       }).eq("id", draft.id).eq("telegram_user_id", String(from.id));
       if (result.error) throw new Error("DRAFT_UPDATE_FAILED");
-      await sendMessage(token, chatId, "📥 Qabul qilindi. Matn va rasmlar yig‘ilmoqda. Barchasini yuborganingizdan keyin /analyze buyrug‘ini bosing.");
+      // Telegram sends each item in an album as a separate update.
+      // Wait briefly for sibling photo updates, then acknowledge the draft only once.
+      if (incoming.length) {
+        if (m.media_group_id) await new Promise(resolve => setTimeout(resolve, 1200));
+        const firstPhoto = await db.from("telegram_ai_listing_draft_photos")
+          .select("sort_order").eq("draft_id", draft.id)
+          .order("sort_order", { ascending: true }).limit(1).maybeSingle();
+        if (firstPhoto.error) throw new Error("DRAFT_PHOTOS_UNAVAILABLE");
+        if (Number(firstPhoto.data?.sort_order) === messageId) {
+          await sendMessage(token, chatId, "📥 Qabul qilindi. Matn va rasmlar yig‘ilmoqda. Barchasini yuborganingizdan keyin /analyze buyrug‘ini bosing.");
+        }
+      } else {
+        await sendMessage(token, chatId, "📥 E’lon matni qabul qilindi. Barcha materiallarni yuborgach /analyze buyrug‘ini bosing.");
+      }
     } catch (error) {
       console.error("[telegram-ai-listing] media intake failed", { code: error instanceof Error ? error.message : "UNKNOWN" });
       await sendMessage(token, chatId, "Materialni Draft’ga saqlab bo‘lmadi. Keyinroq qayta urinib ko‘ring.");
