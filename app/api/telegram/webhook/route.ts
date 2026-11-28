@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { getServerEnv } from "@/lib/env";
-import { createCrmClient, createTelegramAiListingClient } from "@/supabase/server";
+import { createCrmClient, createServiceRoleClient, createTelegramAiListingClient } from "@/supabase/server";
+import { normalizeUzbekPhone } from "@/schemas/common";
 import { extractAvtobozorDraft } from "@/lib/openai-avtobozor";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +69,7 @@ async function getOrCreateDraft(db: ReturnType<typeof createTelegramAiListingCli
   const insert = await db.from("telegram_ai_listing_drafts").insert({
     telegram_user_id: args.telegramUserId, telegram_chat_id: args.chatId,
     source: args.source, status: "collecting", source_text: "",
-    photo_file_ids: [], handoff_token_hash: hashToken(randomBytes(32).toString("hex")),
+    handoff_token_hash: hashToken(randomBytes(32).toString("hex")),
     expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
   }).select("*").single();
   if (insert.error || !insert.data) throw new Error("DRAFT_STORAGE_UNAVAILABLE");
@@ -123,7 +124,8 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
     }).eq("id", draft.id).eq("telegram_user_id", telegramUserId).select("id").single();
     if (updated.error) throw new Error("DRAFT_SAVE_FAILED");
     const next = "/avtobozor/ai-draft?token=" + encodeURIComponent(rawToken);
-    const loginUrl = "https://cardrive-uz-git-feat-avtobozor-telegram-ai-listing-nafis10.vercel.app/account/login?next=" + encodeURIComponent(next);
+    const previewHost = process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://cardrive.uz";
+    const loginUrl = previewHost + "/account/login?next=" + encodeURIComponent(next);
     await sendMessage(token, chatId,
       "✅ AI tahlili tayyor.\n\n" +
       "🚘 " + [result.brand, result.model, result.year].filter(Boolean).join(" ") + "\n" +
@@ -185,22 +187,65 @@ export async function POST(request: Request) {
       await sendMessage(token, chatId, "Faol Draft topilmadi. Avval “🚘 Avtomobil sotish” tugmasini bosing.");
     }
   } else if (contact) {
-    const db = createCrmClient();
+    const crm = createCrmClient();
     const name = [contact.first_name ?? from.first_name, contact.last_name ?? from.last_name].filter(Boolean).join(" ").slice(0, 160) || null;
-    const { error } = await db.from("crm_leads").upsert({ source: "telegram", external_id: String(chatId) + ":" + String(messageId), customer_name: name, phone: contact.phone_number ?? null, telegram_username: from.username ?? null, message: "Mijoz telefon raqamini yubordi.", metadata: { chat_id: String(chatId), telegram_user_id: String(from.id), update_id: update.update_id ?? null, message_date: m.date ?? null, contact_shared: true } }, { onConflict: "source,external_id", ignoreDuplicates: true });
+    const { error } = await crm.from("crm_leads").upsert({ source: "telegram", external_id: String(chatId) + ":" + String(messageId), customer_name: name, phone: contact.phone_number ?? null, telegram_username: from.username ?? null, message: "Mijoz telefon raqamini yubordi.", metadata: { chat_id: String(chatId), telegram_user_id: String(from.id), update_id: update.update_id ?? null, message_date: m.date ?? null, contact_shared: true } }, { onConflict: "source,external_id", ignoreDuplicates: true });
     if (error) { console.error("[telegram-webhook] contact save failed", { code: error.code }); await sendMessage(token, chatId, "Telefon raqamingizni saqlashda xatolik yuz berdi. Iltimos, birozdan keyin qayta urinib ko‘ring."); return NextResponse.json({ ok: true }); }
-    await sendMessage(token, chatId, "Rahmat! 📞 Telefon raqamingiz qabul qilindi. Cardrive menejeri tez orada siz bilan bog‘lanadi.");
+    if (contact.user_id !== from.id) {
+      await sendMessage(token, chatId, "Telefon raqamingiz murojaat uchun qabul qilindi. Akkauntga bog‘lash uchun Telegram’dagi o‘zingizning kontakt kartangizni yuboring.");
+    } else {
+      const phone = normalizeUzbekPhone(contact.phone_number ?? "");
+      if (!/^\\+998\\d{9}$/.test(phone)) {
+        await sendMessage(token, chatId, "Telefon raqami formati noto‘g‘ri. Iltimos, +998 formatidagi o‘z raqamingizni yuboring.");
+      } else {
+        const profiles = createServiceRoleClient();
+        const profile = await profiles.from("profiles").select("id,is_active").eq("phone", phone).maybeSingle();
+        if (profile.error || !profile.data || profile.data.is_active === false) {
+          await sendMessage(token, chatId, "Telefon raqamingiz murojaat uchun qabul qilindi. Kabinetga bog‘lash uchun SMS OTP orqali kirishingiz kerak bo‘ladi.");
+        } else {
+          const links = createTelegramAiListingClient();
+          const currentLink = await links.from("telegram_user_links").select("profile_id").eq("telegram_user_id", String(from.id)).maybeSingle();
+          if (currentLink.error || (currentLink.data && currentLink.data.profile_id !== profile.data.id)) {
+            await sendMessage(token, chatId, "Bu Telegram akkaunti boshqa Cardrive profiliga bog‘langan. Yordam uchun menejerga murojaat qiling.");
+          } else {
+            const linked = await links.from("telegram_user_links").upsert({
+              telegram_user_id: String(from.id), profile_id: profile.data.id, phone,
+            }, { onConflict: "telegram_user_id" });
+            if (linked.error) {
+              console.error("[telegram-webhook] account link failed", { code: linked.error.code });
+              await sendMessage(token, chatId, "Telefon qabul qilindi, lekin akkauntni bog‘lashda xatolik yuz berdi. SMS OTP orqali kiring.");
+            } else {
+              await sendMessage(token, chatId, "✅ Telegram akkauntingiz mavjud Cardrive profilingizga bog‘landi. Endi Draft’laringizni shu akkaunt bilan davom ettirishingiz mumkin.");
+            }
+          }
+        }
+      }
+    }
   } else if (hasPhoto || forward) {
     try {
       const db = createTelegramAiListingClient();
       const draft = await getOrCreateDraft(db, { telegramUserId: String(from.id), chatId: String(chatId), source: forward ? "forwarded_post" : "separate_photos" });
-      const currentIds = Array.isArray(draft.photo_file_ids) ? draft.photo_file_ids.filter((id: unknown): id is string => typeof id === "string") : [];
-      const incoming = (m.photo ?? []).slice(-1).map(photo => photo.file_id);
-      const nextIds = [...currentIds, ...incoming].slice(0, 8);
+      const incoming = (m.photo ?? []).slice(-1);
+      if (incoming.length) {
+        const photo = incoming[0];
+        const existing = await db.from("telegram_ai_listing_draft_photos")
+          .select("id").eq("draft_id", draft.id);
+        if (existing.error) throw new Error("DRAFT_PHOTOS_UNAVAILABLE");
+        const alreadyStored = existing.data?.length ?? 0;
+        if (alreadyStored < 8) {
+          const savedPhoto = await db.from("telegram_ai_listing_draft_photos").upsert({
+            draft_id: draft.id,
+            telegram_file_id: photo.file_id,
+            telegram_file_unique_id: photo.file_unique_id ?? photo.file_id,
+            sort_order: messageId,
+          }, { onConflict: "draft_id,telegram_file_unique_id", ignoreDuplicates: true });
+          if (savedPhoto.error) throw new Error("DRAFT_PHOTO_SAVE_FAILED");
+        }
+      }
       const sourceText = [String(draft.source_text ?? ""), text, caption].filter(Boolean).join("\n").slice(0, 12000);
       const result = await db.from("telegram_ai_listing_drafts").update({
         source: forward ? "forwarded_post" : draft.source,
-        source_text: sourceText, photo_file_ids: nextIds,
+        source_text: sourceText,
         updated_at: new Date().toISOString(),
       }).eq("id", draft.id).eq("telegram_user_id", String(from.id));
       if (result.error) throw new Error("DRAFT_UPDATE_FAILED");
