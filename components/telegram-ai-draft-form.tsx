@@ -6,6 +6,8 @@ import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 type DraftAiPayload = {
   brand?: string | null;
   model?: string | null;
+  trim?: string | null;
+  gas_cylinder?: string | null;
   year?: number | null;
   mileage_km?: number | null;
   price?: number | null;
@@ -141,6 +143,8 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     <div className="grid gap-4 sm:grid-cols-2">
       {field("brand", "Marka", p.brand)}
       {field("model", "Model", p.model)}
+      {field("trim", "Komplektatsiya / pozitsiya", p.trim, "text", false)}
+      {field("gasCylinder", "Gaz balloni", p.gas_cylinder, "text", false)}
       {field("year", "Ishlab chiqarilgan yil", p.year, "number")}
       {field("mileageKm", "Yurgan masofasi (km)", p.mileage_km, "number")}
       {field("price", "Narx", p.price, "number")}
