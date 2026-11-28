@@ -60,13 +60,13 @@ function hashToken(value: string) { return createHash("sha256").update(value).di
 
 function explicitUsdPrice(sourceText: string): number | null {
   const patterns = [
-    /(?:\\$|\\bUSD\\b)\\s*([0-9][0-9\\s.,]*)/giu,
-    /([0-9][0-9\\s.,]*)\\s*(?:\\$|\\bUSD\\b|доллар(?:а|ов)?)/giu,
+    /(?:\$|\bUSD\b)\s*([0-9][0-9\s.,]*)/giu,
+    /([0-9][0-9\s.,]*)\s*(?:\$|\bUSD\b|доллар(?:а|ов)?)/giu,
   ];
   for (const pattern of patterns) {
     const match = pattern.exec(sourceText);
     if (!match?.[1]) continue;
-    const raw = match[1].trim().replace(/\\s+/g, "");
+    const raw = match[1].trim().replace(/\s+/g, "");
     const parts = raw.split(/[.,]/);
     const groupedThousands = parts.length > 1 && parts.slice(1).every(part => part.length === 3);
     const normalized = groupedThousands ? raw.replace(/[.,]/g, "") : raw.replace(",", ".");
@@ -193,7 +193,7 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
       "",
       "Davom etish uchun Cardrive’ga kirib, SMS kod bilan telefon raqamingizni tasdiqlang:",
       loginUrl,
-    ].join("\\n");
+    ].join("\n");
     await sendMessage(token, chatId, summary);
   } catch (error) {
     await db.from("telegram_ai_listing_drafts").update({ status: "collecting", updated_at: new Date().toISOString() }).eq("id", draft.id);
