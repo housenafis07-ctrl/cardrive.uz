@@ -386,7 +386,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
             onPointerMove={event => movePlateSelection(event, i)}
             onPointerUp={event => finishPlateSelection(event, i)}
             onPointerCancel={() => { setSelectionStart(null); setSelectionPreview(null); }}>
-            {photoUrls[i] ? <img src={photoUrls[i]} alt={"Avtomobil rasmi " + (i+1)} draggable={false} className="block max-h-52 w-full object-contain" /> : <div className="aspect-[4/3] animate-pulse bg-slate-200" />}
+            {photoUrls[i] ? <img src={photoUrls[i]} alt={"Avtomobil rasmi " + (i+1)} draggable={false} className="block h-auto w-full" /> : <div className="aspect-[4/3] animate-pulse bg-slate-200" />}
             {visibleBox && <div className="pointer-events-none absolute border-2 border-emerald-600 bg-white/80 flex items-center justify-center text-[9px] font-black text-emerald-900"
               style={{ left: (visibleBox.x / 10) + "%", top: (visibleBox.y / 10) + "%", width: (visibleBox.width / 10) + "%", height: (visibleBox.height / 10) + "%" }}>CARDRIVE</div>}
           </div>
