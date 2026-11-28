@@ -273,10 +273,10 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
         <span className="block truncate px-2 py-1.5 text-xs">{i === (p.primary_image_index ?? 0) ? "⭐ Asosiy rasm" : "Rasm " + (i + 1)}</span>
       </div>)}</div>}
       <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => {
-        const selected = Array.from(e.target.files ?? []).slice(0, Math.max(0, 8 - photos.length));
-        setPhotos(current => [...current, ...selected].slice(0, 8));
-        setPhotoStatus("Qo‘lda tanlangan rasmlar qo‘shildi");
-        setPhotoProgress((photos.length + selected.length) + " ta rasm tayyor");
+        const selected = Array.from(e.target.files ?? []).slice(0, Math.max(0, 8 - sourcePhotos.length));
+        setSourcePhotos(current => [...current, ...selected].slice(0, 8));
+        setPhotoStatus("Qo‘lda tanlangan rasmlar cardrive.uz watermark bilan tayyorlanmoqda…");
+        setPhotoProgress((sourcePhotos.length + selected.length) + " ta rasm qayta ishlanmoqda");
         e.currentTarget.value = "";
       }} />
       <p className="mt-2 text-xs text-slate-500">Rasm soni 8 tagacha. Telegram’dan kelgan rasmlar avtomatik qo‘shiladi.</p>
