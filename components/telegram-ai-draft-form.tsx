@@ -67,6 +67,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
   const [color, setColor] = useState(String(p.color ?? "Oq"));
   const initialBrand = VEHICLE_BRANDS.find(item => item.name.toLowerCase() === String(p.brand ?? "").toLowerCase());
   const [brand, setBrand] = useState(initialBrand?.name ?? String(p.brand ?? "Chevrolet"));
+  const [customBrand, setCustomBrand] = useState("");
   const [model, setModel] = useState(String(p.model ?? ""));
   const brandInfo = VEHICLE_BRANDS.find(item => item.name === brand);
   const colorChoices = [
@@ -163,7 +164,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     setError("");
     const data = new FormData(event.currentTarget);
     data.set("aiDraftId", draft.id);
-    data.set("brand", brand.trim());
+    data.set("brand", (brand === "Other" ? customBrand : brand).trim());
     data.set("model", model.trim());
     data.set("vehicleCondition", vehicleCondition);
     data.set("conditionDescription", conditionDescription.trim());
@@ -214,7 +215,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
             <option value="Other">Boshqa brend</option>
           </select>
         </span>
-        {brand === "Other" && <input aria-label="Brend nomi" value={brand === "Other" ? "" : brand} onChange={e => setBrand(e.target.value || "Other")} placeholder="Brend nomini kiriting" className={cls(false)} />}
+        {brand === "Other" && <input aria-label="Brend nomi" value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Brend nomini kiriting" className={cls(false)} />}
       </label>
       <label className="block space-y-1.5"><span className="text-sm font-semibold">Model *</span>
         {brandInfo?.models.length ? <select value={model} onChange={e => setModel(e.target.value)} className={cls(missing.has("model"))}>
