@@ -34,8 +34,23 @@ export async function createUsedCarListingAction(form: FormData) {
   const year = number(form, "year");
   const mileageRaw = text(form, "mileageKm");
   const mileage = Number(mileageRaw);
-  const vehicleCondition = text(form, "vehicleCondition");
-  const conditionDescription = text(form, "conditionDescription");
+  const submittedCondition = text(form, "vehicleCondition");
+  const validConditions = ["ideal", "good", "minor_defects", "body_repair", "major_repair", "parts_only"];
+  // AI may return a natural-language condition instead of the form's enum.
+  // Normalize only the AI draft path; keep strict validation for the regular form.
+  const vehicleCondition = validConditions.includes(submittedCondition)
+    ? submittedCondition
+    : aiDraftId
+      ? (/ideal/i.test(submittedCondition) ? "ideal"
+        : /ta.?mir|repair/i.test(submittedCondition) ? "body_repair"
+        : /kamchilik|defect/i.test(submittedCondition) ? "minor_defects" : "good")
+      : submittedCondition;
+  const submittedConditionDescription = text(form, "conditionDescription");
+  const conditionDescription = submittedConditionDescription.length >= 10
+    ? submittedConditionDescription
+    : aiDraftId
+      ? "Avtomobil holati sotuvchi tomonidan tekshiriladi va tasdiqlanadi."
+      : submittedConditionDescription;
   const price = number(form, "price");
   const region = text(form, "region");
   const descriptionBase = text(form, "description");
