@@ -98,7 +98,7 @@ export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedV
   const recommendations=items.filter(x=>x.brand&&viewedBrands.has(x.brand.toLowerCase())&&!recent.some(r=>r.key===x.key)).slice(0,4);
   const top=[...items].sort((a,b)=>(b.views??0)-(a.views??0)).slice(0,4);
   const fallbackRecommendations=items.filter(x=>!top.some(t=>t.key===x.key)).slice(0,4);
-  const enrichedRecent=recent.map(item=>{const current=items.find(candidate=>candidate.key===item.key);return current?.credit?{...item,credit:current.credit}:item;});
+  const enrichedRecent=recent.map(item=>{const current=items.find(candidate=>candidate.key===item.key);return current?{...item,credit:current.credit,sellerType:current.sellerType}:item;});
   const sections=[
     {key:"top",title:locale==="ru"?"Популярные объявления":"Top e’lonlar",list:top},
     {key:"recommended",title:locale==="ru"?"Похожие вам":"Sizga tavsiya etamiz",list:recommendations.length?recommendations:fallbackRecommendations},
