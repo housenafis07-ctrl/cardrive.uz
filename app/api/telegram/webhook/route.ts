@@ -195,7 +195,7 @@ export async function POST(request: Request) {
       await sendMessage(token, chatId, "Telefon raqamingiz murojaat uchun qabul qilindi. Akkauntga bog‘lash uchun Telegram’dagi o‘zingizning kontakt kartangizni yuboring.");
     } else {
       const phone = normalizeUzbekPhone(contact.phone_number ?? "");
-      if (!/^\\+998\\d{9}$/.test(phone)) {
+      if (!/^\+998\d{9}$/.test(phone)) {
         await sendMessage(token, chatId, "Telefon raqami formati noto‘g‘ri. Iltimos, +998 formatidagi o‘z raqamingizni yuboring.");
       } else {
         const profiles = createServiceRoleClient();
