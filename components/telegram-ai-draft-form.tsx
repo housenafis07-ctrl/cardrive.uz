@@ -30,17 +30,6 @@ type DraftAiPayload = {
   image_quality_scores?: number[];
 };
 type PlateBox = { x: number; y: number; width: number; height: number };
-function isPlausiblePlateRegion(region: PlateRegion, imageIndex: number): boolean {
-  if (region.image_index !== imageIndex || region.confidence < 0.8) return false;
-  if (![region.x, region.y, region.width, region.height].every(Number.isFinite)) return false;
-  if (region.x < 0 || region.y < 0 || region.width <= 0 || region.height <= 0) return false;
-  if (region.x + region.width > 1000 || region.y + region.height > 1000) return false;
-  const area = (region.width * region.height) / 1_000_000;
-  const ratio = region.width / region.height;
-  return region.width >= 35 && region.height >= 12 &&
-    region.width <= 420 && region.height <= 190 &&
-    area >= 0.0008 && area <= 0.09 && ratio >= 1.7 && ratio <= 8;
-}
 type Draft = {
   id: string;
   ai_payload: DraftAiPayload;
@@ -234,7 +223,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       }
     });
     return () => { cancelled = true; };
-  }, [sourcePhotos, manualPlateRegions, draft.plate_regions]);
+  }, [sourcePhotos, manualPlateRegions]);
 
   function pointerBox(event: React.PointerEvent<HTMLDivElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -391,8 +380,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       <p className="mt-1 text-xs text-slate-600">{photoStatus}</p>
       {photoProgress && <p className="mt-1 text-xs font-medium text-emerald-700">{photoProgress}</p>}
       {photos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((file, i) => {
-        const aiRegion = (draft.plate_regions ?? []).find(region => isPlausiblePlateRegion(region, i));
-        const box = manualPlateRegions[i] ?? (aiRegion ? { x: aiRegion.x, y: aiRegion.y, width: aiRegion.width, height: aiRegion.height } : null);
+        const box = manualPlateRegions[i] ?? null;
         const visibleBox = selectingPlateIndex === i ? selectionPreview : box;
         return <div key={file.name + i} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
           <div className={"relative select-none " + (selectingPlateIndex === i ? "cursor-crosshair touch-none" : "")}
