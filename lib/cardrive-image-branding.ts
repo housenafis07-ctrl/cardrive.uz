@@ -37,18 +37,23 @@ export async function prepareCarDriveListingImage(file: File, plateBox?: CarDriv
         context.textBaseline = "middle";
         context.fillText("CARDRIVE", x + w / 2, y + h / 2, Math.max(1, w * 0.92));
       } else {
-        // Safe fallback for both website uploads and Telegram drafts: unobtrusive corner watermark.
-        const fontSize = Math.max(12, Math.min(24, Math.round(width * 0.032)));
-        context.font = "800 " + fontSize + "px Arial, sans-serif";
-        context.textAlign = "right";
-        context.textBaseline = "bottom";
-        context.lineWidth = Math.max(1, fontSize * 0.045);
-        context.strokeStyle = "rgba(15, 23, 42, 0.28)";
-        context.fillStyle = "rgba(255, 255, 255, 0.58)";
-        const x = width - Math.max(10, width * 0.025);
-        const y = height - Math.max(10, height * 0.025);
-        context.strokeText("cardrive.uz", x, y);
-        context.fillText("cardrive.uz", x, y);
+        // Stronger corner watermark remains legible in small admin/listing thumbnails.
+        const fontSize = Math.max(18, Math.min(72, Math.round(width * 0.05)));
+        context.font = "900 " + fontSize + "px Arial, sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        const paddingX = Math.round(fontSize * 0.55);
+        const paddingY = Math.round(fontSize * 0.34);
+        const textWidth = context.measureText("cardrive.uz").width;
+        const badgeWidth = textWidth + paddingX * 2;
+        const badgeHeight = fontSize + paddingY * 2;
+        const margin = Math.max(10, Math.round(width * 0.025));
+        const badgeX = width - margin - badgeWidth;
+        const badgeY = height - margin - badgeHeight;
+        context.fillStyle = "rgba(8, 47, 73, 0.82)";
+        context.fillRect(badgeX, badgeY, badgeWidth, badgeHeight);
+        context.fillStyle = "#ffffff";
+        context.fillText("cardrive.uz", badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
       }
 
       const quality = Math.max(0.5, 0.84 - attempt * 0.07);
