@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { UsedCarFinancingBadge } from "@/components/used-car-financing-badge";
 import type { UsedCarBestCredit } from "@/lib/used-car-financing";
+import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
 export type SavedVehicle = {
   key: string;
@@ -17,6 +18,7 @@ export type SavedVehicle = {
   year?: number;
   views?: number;
   credit?: UsedCarBestCredit | null;
+  sellerType?: "private" | "dealer" | null;
   savedAt?: number;
 };
 
@@ -65,10 +67,25 @@ export function VehicleViewTracker({ vehicle, listingId, initialViews = 0, local
 }
 
 function DiscoveryCard({ item, locale }: { item: SavedVehicle; locale: "uz" | "ru" }) {
-  return <Link href={item.href} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
-    {item.image ? <img src={item.image} alt="" className="aspect-[16/10] w-full bg-slate-100 object-cover transition group-hover:scale-[1.02]"/> : <div className="flex aspect-[16/10] items-center justify-center bg-slate-100 text-4xl">🚘</div>}
-    <span className="block p-2 sm:p-3"><span className="block truncate text-xs font-bold text-slate-900 sm:text-sm">{item.title}</span><span className="mt-1 block truncate text-sm font-black text-blue-700">{item.price||""}</span>{item.credit ? <span className="mt-2 block"><UsedCarFinancingBadge offer={item.credit} locale={locale} compact/></span> : null}</span>
-  </Link>;
+  const brand = VEHICLE_BRANDS.find(entry => entry.name.toLowerCase() === (item.brand ?? "").toLowerCase());
+  const sellerLabel = locale === "ru"
+    ? (item.sellerType === "dealer" ? "Автосалон" : "Частное лицо")
+    : (item.sellerType === "dealer" ? "Avtosalon" : "Jismoniy shaxs");
+  return <article className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
+    <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+      {item.image ? <Link href={item.href} aria-label={item.title} className="block h-full w-full"><img src={item.image} alt="" className="h-full w-full object-cover transition group-hover:scale-[1.02]"/></Link> : <Link href={item.href} className="flex h-full items-center justify-center text-4xl">🚘</Link>}
+      <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-slate-800 shadow-sm">{sellerLabel}</span>
+      <span className="absolute bottom-2 left-2 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        {brand?.logo ? <img src={brand.logo} alt={item.brand ?? ""} className="h-full w-full object-contain"/> : <span className="text-[10px] font-black">{(item.brand ?? "🚘").slice(0,2).toUpperCase()}</span>}
+      </span>
+      <VehicleFavoriteButton locale={locale} vehicle={item}/>
+    </div>
+    <Link href={item.href} className="block p-2 sm:p-3">
+      <span className="block truncate text-xs font-bold text-slate-900 sm:text-sm">{item.title}</span>
+      <span className="mt-1 block truncate text-sm font-black text-blue-700">{item.price||""}</span>
+      {item.credit ? <span className="mt-2 block"><UsedCarFinancingBadge offer={item.credit} locale={locale} compact/></span> : null}
+    </Link>
+  </article>;
 }
 
 export function UsedCarDiscoverySections({ items, locale="uz" }: { items: SavedVehicle[]; locale?:"uz"|"ru" }) {
