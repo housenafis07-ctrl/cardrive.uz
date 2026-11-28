@@ -145,14 +145,15 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
     setSubmitError("");
     try {
       if (photoProcessing) throw new Error("Rasmlar tayyorlanmoqda. Biroz kuting.");
-      const chosenFiles = selectedPhotos.length
-        ? selectedPhotos
-        : data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
+      // Always rebuild the upload payload from the original File objects captured by the form.
+      // The preview state is display-only; it must never determine which bytes reach Storage.
+      const originalFiles = data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
+      const chosenFiles = originalFiles.length ? originalFiles : selectedPhotos;
       data.delete("photos");
       let totalBytes = 0;
       for (const original of chosenFiles) {
-        // Selected photos are already watermarked; only process the no-preview fallback.
-        const branded = selectedPhotos.length ? original : await prepareCarDriveListingImage(original);
+        // Apply watermark to the exact file that will be uploaded, after OTP as well.
+        const branded = await prepareCarDriveListingImage(original);
         totalBytes += branded.size;
         if (totalBytes > 2_400 * 1024) {
           throw new Error("Rasmlarning umumiy hajmi katta. Rasmlar sonini yoki sifatini kamaytiring.");
