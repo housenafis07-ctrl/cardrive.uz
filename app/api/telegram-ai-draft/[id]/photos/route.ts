@@ -27,10 +27,24 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (!meta.ok || !path || path.includes("..")) return NextResponse.json({ error: "TELEGRAM_FILE_UNAVAILABLE" }, { status: 502 });
     const imageResponse = await fetch("https://api.telegram.org/file/bot" + token + "/" + path, { cache: "no-store" });
     if (!imageResponse.ok) return NextResponse.json({ error: "TELEGRAM_FILE_UNAVAILABLE" }, { status: 502 });
-    const type = imageResponse.headers.get("content-type")?.split(";")[0] ?? "image/jpeg";
-    if (!["image/jpeg", "image/png", "image/webp"].includes(type)) continue;
     const bytes = Buffer.from(await imageResponse.arrayBuffer());
     if (!bytes.length || bytes.length > 8 * 1024 * 1024) continue;
+
+    // Telegram may serve valid photos as application/octet-stream.
+    // Detect the actual image format from the file signature, not HTTP headers.
+    const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    const isPng = bytes.length >= 8 &&
+      bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const isWebp = bytes.length >= 12 &&
+      bytes.toString("ascii", 0, 4) === "RIFF" &&
+      bytes.toString("ascii", 8, 12) === "WEBP";
+    const type = isJpeg ? "image/jpeg" : isPng ? "image/png" : isWebp ? "image/webp" : null;
+    if (!type) {
+      console.warn("[telegram-ai-draft-photos] unsupported image signature", {
+        headerType: imageResponse.headers.get("content-type")?.split(";")[0] ?? "unknown",
+      });
+      continue;
+    }
     images.push({ name: "telegram-photo-" + (images.length + 1), dataUrl: "data:" + type + ";base64," + bytes.toString("base64") });
   }
   return NextResponse.json({ images }, { headers: { "Cache-Control": "private, no-store" } });
