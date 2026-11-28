@@ -77,8 +77,11 @@ export class EskizSmsProvider implements SmsProvider {
     const messageId = data?.id ?? data?.data?.id ?? data?.data?.message_id;
     if (!response.ok || data?.success === false || ["error", "failed", "rejected"].includes(status) ||
         (!messageId && !["success", "waiting", "queued", "sent"].includes(status))) {
+      console.error("[sms:eskiz] OTP request rejected", { httpStatus: response.status, providerStatus: status || "unknown" });
       throw new Error(data?.message || data?.error || "Eskiz SMS so‘rovini qabul qilmadi");
     }
+    // Provider acceptance is not proof of handset delivery; log a non-sensitive receipt for diagnosis.
+    console.info("[sms:eskiz] OTP request accepted", { httpStatus: response.status, providerStatus: status || "accepted", messageId: messageId ? String(messageId) : null });
   }
 
   async sendMessage(input: { phone: string; message: string }): Promise<void> {
