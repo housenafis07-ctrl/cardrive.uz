@@ -215,7 +215,10 @@ export async function POST(request: Request) {
               console.error("[telegram-webhook] account link failed", { code: linked.error.code });
               await sendMessage(token, chatId, "Telefon qabul qilindi, lekin akkauntni bog‘lashda xatolik yuz berdi. SMS OTP orqali kiring.");
             } else {
-              await sendMessage(token, chatId, "✅ Telegram akkauntingiz mavjud Cardrive profilingizga bog‘landi. Endi Draft’laringizni shu akkaunt bilan davom ettirishingiz mumkin.");
+              await links.from("telegram_ai_listing_drafts").update({
+                claimed_profile_id: profile.data.id, claimed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+              }).eq("telegram_user_id", String(from.id)).eq("telegram_chat_id", String(chatId)).eq("status", "review").is("claimed_profile_id", null);
+              await sendMessage(token, chatId, "✅ Telegram akkauntingiz mavjud Cardrive profilingizga bog‘landi. SMS OTP orqali saytga kirganingizdan keyin Draft’ni davom ettirishingiz mumkin.");
             }
           }
         }
