@@ -89,7 +89,8 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
   const [pending, startTransition] = useTransition();
   const normalizedFieldValue = (value: unknown) => {
     const text = value == null ? "" : String(value).trim();
-    return /^(null|undefined|n\\/a)$/i.test(text) ? "" : text;
+    const marker = text.toLowerCase();
+    return marker === "null" || marker === "undefined" || marker === "n/a" ? "" : text;
   };
   const isBlank = (value: unknown) => normalizedFieldValue(value).length === 0;
 
