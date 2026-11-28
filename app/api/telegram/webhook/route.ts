@@ -89,7 +89,7 @@ async function downloadTelegramPhoto(token: string, fileId: string) {
   if (!bytes.length || bytes.length > 8 * 1024 * 1024) throw new Error("TELEGRAM_IMAGE_SIZE_INVALID");
   return "data:" + contentType + ";base64," + bytes.toString("base64");
 }
-async function analyzeDraft(token: string, chatId: number, telegramUserId: string, draft: any) {
+async function analyzeDraft(token: string, chatId: number, telegramUserId: string, draft: { id: string; source_text: string | null }) {
   const db = createTelegramAiListingClient();
   const photoRows = await db.from("telegram_ai_listing_draft_photos").select("telegram_file_id,sort_order").eq("draft_id", draft.id).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).limit(8);
   if (photoRows.error) throw new Error("DRAFT_PHOTOS_UNAVAILABLE");
