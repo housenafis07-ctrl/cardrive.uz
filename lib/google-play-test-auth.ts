@@ -6,6 +6,8 @@ const TEST_PHONE = normalizeUzbekPhone(process.env.GOOGLE_PLAY_TEST_PHONE?.trim(
 const TEST_OTP = process.env.GOOGLE_PLAY_TEST_OTP?.trim() ?? "";
 
 export function isGooglePlayTestAccount(phone: string): boolean {
+  // Never bypass real SMS OTP in Production. Test credentials are Preview/dev only.
+  if (process.env.VERCEL_ENV === "production") return false;
   return Boolean(TEST_PHONE && TEST_OTP && normalizeUzbekPhone(phone) === TEST_PHONE);
 }
 
