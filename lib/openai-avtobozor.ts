@@ -38,6 +38,28 @@ export const avtobozorAiDraftSchema = z.object({
 
 export type AvtobozorAiDraft = z.infer<typeof avtobozorAiDraftSchema>;
 
+function normalizeUzbekVehicleColor(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLocaleLowerCase("uz-UZ")
+    .replace(/[’‘`]/g, "'")
+    .replace(/\s+/g, " ");
+  const aliases: Record<string, string> = {
+    "aq": "Oq", "oq": "Oq", "oq rang": "Oq", "white": "Oq", "белый": "Oq", "белая": "Oq",
+    "qora": "Qora", "черный": "Qora", "чёрный": "Qora", "black": "Qora",
+    "kulrang": "Kulrang", "kul rang": "Kulrang", "серый": "Kulrang", "grey": "Kulrang", "gray": "Kulrang",
+    "kumushrang": "Kumushrang", "серебристый": "Kumushrang", "silver": "Kumushrang",
+    "ko'k": "Ko‘k", "kok": "Ko‘k", "синий": "Ko‘k", "blue": "Ko‘k",
+    "moviy": "Moviy", "голубой": "Moviy",
+    "qizil": "Qizil", "красный": "Qizil", "red": "Qizil",
+    "yashil": "Yashil", "зеленый": "Yashil", "зелёный": "Yashil", "green": "Yashil",
+    "sariq": "Sariq", "желтый": "Sariq", "жёлтый": "Sariq", "yellow": "Sariq",
+    "jigarrang": "Jigarrang", "коричневый": "Jigarrang", "brown": "Jigarrang",
+    "bej": "Bej", "бежевый": "Bej", "beige": "Bej",
+    "bordo": "Bordo", "бордовый": "Bordo",
+  };
+  return aliases[normalized] ?? value.trim();
+}
+
 const responseSchema = {
   type: "object",
   additionalProperties: false,
@@ -97,6 +119,7 @@ export async function extractAvtobozorDraft(input: {
       "Use null for unknown fields. Put uncertain field names in uncertain_fields.",
       "Do not infer accident history or technical safety from photos.",
       "Keep the description factual and concise in the source language. Do not invent promotional claims.",
+      "Write all Uzbek Latin text with correct standard orthography. For vehicle colors use canonical Uzbek Latin spellings: Oq (never Aq), Qora, Kulrang, Kumushrang, Ko‘k, Moviy, Qizil, Yashil, Sariq, Jigarrang, Bej. Normalize obvious typos and Cyrillic/Russian color words into these forms. If color is uncertain, use null rather than inventing it.",
       "Normalize currency to UZS or USD only when clear. Normalize condition only when explicitly described. Extract trim/position and gas cylinder details (for example 4-pok) only if present in the source text.",
       "If the content is not a used-vehicle sale listing, set is_vehicle_listing=false.",
       "For each supplied photo in input order, score image quality from 0 to 100 based on sharpness, exposure, framing, and useful vehicle visibility. Return one score per image. Set primary_image_index to the clearest useful exterior photo (zero-based), preferring a front three-quarter view. Do not prefer a photo because it shows a visible plate or seller branding.",
@@ -163,5 +186,9 @@ export async function extractAvtobozorDraft(input: {
     throw new Error("OPENAI_INVALID_JSON");
   }
 
-  return avtobozorAiDraftSchema.parse(parsed);
+  const validated = avtobozorAiDraftSchema.parse(parsed);
+  return {
+    ...validated,
+    color: normalizeUzbekVehicleColor(validated.color),
+  };
 }
