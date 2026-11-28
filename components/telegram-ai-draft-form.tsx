@@ -29,7 +29,6 @@ type DraftAiPayload = {
   primary_image_index?: number | null;
   image_quality_scores?: number[];
 };
-type PlateRegion = { image_index: number; x: number; y: number; width: number; height: number; confidence: number };
 type PlateBox = { x: number; y: number; width: number; height: number };
 function isPlausiblePlateRegion(region: PlateRegion, imageIndex: number): boolean {
   if (region.image_index !== imageIndex || region.confidence < 0.8) return false;
@@ -47,7 +46,6 @@ type Draft = {
   ai_payload: DraftAiPayload;
   missing_fields: string[];
   photo_count: number;
-  plate_regions?: PlateRegion[];
 };
 function cls(missing: boolean) {
   return "w-full rounded-xl border px-3 py-3 text-sm outline-none focus:ring-2 " +
