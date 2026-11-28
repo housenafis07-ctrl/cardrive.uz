@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
+import { prepareCarDriveListingImage } from "@/lib/cardrive-image-branding";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
 
 type DraftAiPayload = {
@@ -147,73 +148,14 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       setPhotoStatus("Rasmlar optimallashtirilmoqda va avtoraqamlar CARDRIVE bilan yopilmoqda…");
       const files: File[] = [];
       for (const [index, file] of sourcePhotos.entries()) {
-        const bitmap = await createImageBitmap(file);
-        try {
-          const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-          const context = canvas.getContext("2d");
-          if (!context) continue;
-          context.filter = "brightness(1.035) contrast(1.045)";
-          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-          context.filter = "none";
-
-          // Vision model boxes are suggestions only and can confuse grilles, steering wheels,
-          // dashboards and other rectangular details with plates. Never apply them automatically.
-          // CARDRIVE plate branding is applied only to a region explicitly selected by the seller.
-          const box = manualPlateRegions[index] ?? null;
-          if (box) {
-            const x = box.x / 1000 * canvas.width;
-            const y = box.y / 1000 * canvas.height;
-            const w = box.width / 1000 * canvas.width;
-            const h = box.height / 1000 * canvas.height;
-            context.fillStyle = "#f8fafc";
-            context.fillRect(x, y, w, h);
-            context.strokeStyle = "#14532d";
-            context.lineWidth = Math.max(1, h * 0.045);
-            context.strokeRect(x, y, w, h);
-            context.fillStyle = "#14532d";
-            let fontSize = Math.max(7, Math.floor(h * 0.52));
-            context.font = "900 " + fontSize + "px Arial, sans-serif";
-            while (context.measureText("CARDRIVE").width > w * 0.9 && fontSize > 5) {
-              fontSize -= 1;
-              context.font = "900 " + fontSize + "px Arial, sans-serif";
-            }
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-            context.fillText("CARDRIVE", x + w / 2, y + h / 2, Math.max(1, w * 0.92));
-          }
-          else {
-            // No reliable plate location: use a subtle diagonal site watermark instead.
-            context.save();
-            const fontSize = Math.max(12, Math.min(24, Math.round(canvas.width * 0.032)));
-            context.font = "800 " + fontSize + "px Arial, sans-serif";
-            context.textAlign = "right";
-            context.textBaseline = "bottom";
-            context.lineWidth = Math.max(1, fontSize * 0.045);
-            context.strokeStyle = "rgba(15, 23, 42, 0.28)";
-            context.fillStyle = "rgba(255, 255, 255, 0.58)";
-            const x = canvas.width - Math.max(10, canvas.width * 0.025);
-            const y = canvas.height - Math.max(10, canvas.height * 0.025);
-            context.strokeText("cardrive.uz", x, y);
-            context.fillText("cardrive.uz", x, y);
-            context.restore();
-          }
-          let webp: Blob | null = null;
-          for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
-            webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
-            if (webp && webp.size <= 220 * 1024) break;
-          }
-          if (webp) files.push(new File([webp], "cardrive-" + (index + 1) + ".webp", { type: "image/webp" }));
-        } finally {
-          bitmap.close();
-        }
+        const plateBox = manualPlateRegions[index];
+        const branded = await prepareCarDriveListingImage(file, plateBox);
+        files.push(new File([branded], "cardrive-" + (index + 1) + ".webp", { type: "image/webp" }));
       }
       if (!cancelled) {
         setPhotos(files);
         setPhotoStatus(files.length + " ta rasm e’lon uchun tayyor");
-        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; CARDRIVE faqat qo‘lda belgilangan raqam joyiga qo‘yiladi, boshqalarda cardrive.uz watermark bor");
+        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm umumiy CARDRIVE standartida tayyorlandi");
       }
     }
     void processPhotos().catch(error => {
