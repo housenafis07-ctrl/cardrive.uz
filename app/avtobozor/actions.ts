@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentCustomer } from "@/lib/customer-session";
-import { createServiceRoleClient } from "@/supabase/server";
+import { createServiceRoleClient, createTelegramAiListingClient } from "@/supabase/server";
 
 const text = (form: FormData, key: string) => {
   const value = form.get(key);
@@ -20,7 +20,8 @@ export async function createUsedCarListingAction(form: FormData) {
   const aiDraftId = text(form, "aiDraftId");
   const db = createServiceRoleClient();
   if (aiDraftId) {
-    const draft = await db.from("telegram_ai_listing_drafts").select("id,status,claimed_profile_id,expires_at")
+    const draftDb = createTelegramAiListingClient();
+    const draft = await draftDb.from("telegram_ai_listing_drafts").select("id,status,claimed_profile_id,expires_at")
       .eq("id", aiDraftId).maybeSingle();
     if (draft.error || !draft.data || draft.data.status !== "review" ||
         draft.data.claimed_profile_id !== customer.id || new Date(draft.data.expires_at).getTime() < Date.now()) {
@@ -127,7 +128,8 @@ export async function createUsedCarListingAction(form: FormData) {
   }
 
   if (aiDraftId) {
-    const draftUpdate = await db.from("telegram_ai_listing_drafts")
+    const draftDb = createTelegramAiListingClient();
+    const draftUpdate = await draftDb.from("telegram_ai_listing_drafts")
       .update({ status: "submitted", updated_at: new Date().toISOString() })
       .eq("id", aiDraftId).eq("claimed_profile_id", customer.id).eq("status", "review");
     if (draftUpdate.error) console.error("[avtobozor-ai-draft] status update failed", { code: draftUpdate.error.code });
