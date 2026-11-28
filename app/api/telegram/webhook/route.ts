@@ -64,7 +64,10 @@ async function getOrCreateDraft(db: ReturnType<typeof createTelegramAiListingCli
     .eq("telegram_user_id", args.telegramUserId).eq("telegram_chat_id", args.chatId)
     .eq("status", "collecting").gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (existing.error) throw new Error("DRAFT_STORAGE_UNAVAILABLE");
+  if (existing.error) {
+    console.error("[telegram-ai-listing] draft lookup failed", { code: existing.error.code ?? "UNKNOWN" });
+    throw new Error("DRAFT_STORAGE_UNAVAILABLE");
+  }
   if (existing.data) return existing.data;
   const insert = await db.from("telegram_ai_listing_drafts").insert({
     telegram_user_id: args.telegramUserId, telegram_chat_id: args.chatId,
@@ -72,7 +75,10 @@ async function getOrCreateDraft(db: ReturnType<typeof createTelegramAiListingCli
     handoff_token_hash: hashToken(randomBytes(32).toString("hex")),
     expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
   }).select("*").single();
-  if (insert.error || !insert.data) throw new Error("DRAFT_STORAGE_UNAVAILABLE");
+  if (insert.error || !insert.data) {
+    console.error("[telegram-ai-listing] draft insert failed", { code: insert.error?.code ?? "UNKNOWN" });
+    throw new Error("DRAFT_STORAGE_UNAVAILABLE");
+  }
   return insert.data;
 }
 async function downloadTelegramPhoto(token: string, fileId: string) {
