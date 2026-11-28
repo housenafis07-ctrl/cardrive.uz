@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 import { prepareCarDriveListingImage } from "@/lib/cardrive-image-branding";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
+import { followServerActionRedirect } from "@/lib/follow-server-action-redirect";
 
 type DraftAiPayload = {
   brand?: string | null;
@@ -240,7 +241,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     setUploadStatus("E’lon va " + orderedPhotos.length + " ta rasm serverga yuborilmoqda…");
     startTransition(() => {
       void createUsedCarListingAction(data).catch(e => {
-        if (e && typeof e === "object" && "digest" in e && String((e as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw e;
+        if (followServerActionRedirect(e)) return;
         setError(e instanceof Error ? e.message : "E’lon yuborilmadi");
         setUploadStatus("Yuklash yakunlanmadi. Xatoni tuzatib qayta urinib ko‘ring.");
       });
