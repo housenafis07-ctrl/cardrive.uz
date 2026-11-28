@@ -172,10 +172,10 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
           context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
           context.filter = "none";
 
-          const aiRegion = (draft.plate_regions ?? []).find(region => isPlausiblePlateRegion(region, index));
-          const box = manualPlateRegions[index] ?? (aiRegion
-            ? { x: aiRegion.x, y: aiRegion.y, width: aiRegion.width, height: aiRegion.height }
-            : null);
+          // Vision model boxes are suggestions only and can confuse grilles, steering wheels,
+          // dashboards and other rectangular details with plates. Never apply them automatically.
+          // CARDRIVE plate branding is applied only to a region explicitly selected by the seller.
+          const box = manualPlateRegions[index] ?? null;
           if (box) {
             const x = box.x / 1000 * canvas.width;
             const y = box.y / 1000 * canvas.height;
@@ -200,17 +200,17 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
           else {
             // No reliable plate location: use a subtle diagonal site watermark instead.
             context.save();
-            context.translate(canvas.width / 2, canvas.height / 2);
-            context.rotate(-Math.PI / 7);
-            const fontSize = Math.max(18, Math.min(54, Math.round(canvas.width * 0.075)));
-            context.font = "900 " + fontSize + "px Arial, sans-serif";
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-            context.lineWidth = Math.max(1, fontSize * 0.055);
-            context.strokeStyle = "rgba(15, 23, 42, 0.42)";
-            context.fillStyle = "rgba(255, 255, 255, 0.68)";
-            context.strokeText("cardrive.uz", 0, 0);
-            context.fillText("cardrive.uz", 0, 0);
+            const fontSize = Math.max(12, Math.min(24, Math.round(canvas.width * 0.032)));
+            context.font = "800 " + fontSize + "px Arial, sans-serif";
+            context.textAlign = "right";
+            context.textBaseline = "bottom";
+            context.lineWidth = Math.max(1, fontSize * 0.045);
+            context.strokeStyle = "rgba(15, 23, 42, 0.28)";
+            context.fillStyle = "rgba(255, 255, 255, 0.58)";
+            const x = canvas.width - Math.max(10, canvas.width * 0.025);
+            const y = canvas.height - Math.max(10, canvas.height * 0.025);
+            context.strokeText("cardrive.uz", x, y);
+            context.fillText("cardrive.uz", x, y);
             context.restore();
           }
           let webp: Blob | null = null;
@@ -226,7 +226,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       if (!cancelled) {
         setPhotos(files);
         setPhotoStatus(files.length + " ta rasm e’lon uchun tayyor");
-        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; raqam topilgan joyga CARDRIVE, qolgan rasmlarga cardrive.uz watermark qo‘yildi");
+        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; CARDRIVE faqat qo‘lda belgilangan raqam joyiga qo‘yiladi, boshqalarda cardrive.uz watermark bor");
       }
     }
     void processPhotos().catch(error => {
@@ -410,7 +410,7 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
           <div className="flex flex-wrap gap-1 p-2">
             <button type="button" onClick={() => { setSelectingPlateIndex(i); setSelectionStart(null); setSelectionPreview(null); }}
               className="rounded-lg border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700">
-              {selectingPlateIndex === i ? "Raqam joyini rasmda belgilang" : box ? "Raqam joyini o‘zgartirish" : "Raqam joyini belgilang"}
+              {selectingPlateIndex === i ? "Raqam joyini rasmda belgilang" : box ? "Raqam joyini o‘zgartirish" : "Avtoraqamni qo‘lda belgilang"}
             </button>
             {box && <button type="button" onClick={() => setManualPlateRegions(current => { const next = { ...current }; delete next[i]; return next; })}
               className="rounded-lg px-2 py-1 text-[10px] text-red-700">Belgilashni bekor qilish</button>}
