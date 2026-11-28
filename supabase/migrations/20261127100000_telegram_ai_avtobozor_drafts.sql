@@ -1,6 +1,18 @@
 -- Preview-only Telegram AI listing drafts. Production public schema is intentionally untouched.
 create schema if not exists news_stage;
 
+create table if not exists news_stage.telegram_user_links (
+  telegram_user_id text primary key,
+  profile_id uuid not null unique references public.profiles(id) on delete cascade,
+  phone text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table news_stage.telegram_user_links enable row level security;
+revoke all on news_stage.telegram_user_links from public, anon, authenticated;
+grant usage on schema news_stage to service_role;
+grant all on news_stage.telegram_user_links to service_role;
+
 create table if not exists news_stage.telegram_ai_listing_drafts (
   id uuid primary key default gen_random_uuid(),
   telegram_user_id text not null,
