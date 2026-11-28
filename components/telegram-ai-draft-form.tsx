@@ -30,6 +30,18 @@ type DraftAiPayload = {
   image_quality_scores?: number[];
 };
 type PlateRegion = { image_index: number; x: number; y: number; width: number; height: number; confidence: number };
+type PlateBox = { x: number; y: number; width: number; height: number };
+function isPlausiblePlateRegion(region: PlateRegion, imageIndex: number): boolean {
+  if (region.image_index !== imageIndex || region.confidence < 0.8) return false;
+  if (![region.x, region.y, region.width, region.height].every(Number.isFinite)) return false;
+  if (region.x < 0 || region.y < 0 || region.width <= 0 || region.height <= 0) return false;
+  if (region.x + region.width > 1000 || region.y + region.height > 1000) return false;
+  const area = (region.width * region.height) / 1_000_000;
+  const ratio = region.width / region.height;
+  return region.width >= 35 && region.height >= 12 &&
+    region.width <= 420 && region.height <= 190 &&
+    area >= 0.0008 && area <= 0.09 && ratio >= 1.7 && ratio <= 8;
+}
 type Draft = {
   id: string;
   ai_payload: DraftAiPayload;
@@ -79,7 +91,12 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     ["Kremrang","#eee0c2"],["Jigarrang","#80543b"],["Bronza","#9a6846"],["Oltinrang","#c5a34d"],
     ["To‘q sariq","#ea7a24"],["Sariq","#eabf32"],["Boshqa","conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)"]
   ] as const;
+  const [sourcePhotos, setSourcePhotos] = useState<File[]>([]);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [manualPlateRegions, setManualPlateRegions] = useState<Record<number, PlateBox>>({});
+  const [selectingPlateIndex, setSelectingPlateIndex] = useState<number | null>(null);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
+  const [selectionPreview, setSelectionPreview] = useState<PlateBox | null>(null);
   const [photoStatus, setPhotoStatus] = useState("Telegram rasmlari yuklanmoqda…");
   const [photoProgress, setPhotoProgress] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
@@ -108,47 +125,14 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
         if (!response.ok) throw new Error("Telegram rasmlarini olish imkoni bo‘lmadi");
         const payload = await response.json() as { images: Array<{ dataUrl: string; name: string }> };
         const files: File[] = [];
-        for (const [index, item] of payload.images.entries()) {
+        for (const item of payload.images.slice(0, 8)) {
           const blob = await (await fetch(item.dataUrl)).blob();
-          const bitmap = await createImageBitmap(blob);
-          try {
-            const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-            const context = canvas.getContext("2d");
-            if (!context) continue;
-            context.filter = "brightness(1.035) contrast(1.045)";
-            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-            context.filter = "none";
-            const plate = (draft.plate_regions ?? []).find(region => region.image_index === index && region.confidence >= 0.92);
-            if (plate && plate.width > 15 && plate.height > 8 && plate.x + plate.width <= 1000 && plate.y + plate.height <= 1000) {
-              const x = plate.x / 1000 * canvas.width, y = plate.y / 1000 * canvas.height;
-              const w = plate.width / 1000 * canvas.width, h = plate.height / 1000 * canvas.height;
-              context.fillStyle = "#f8fafc";
-              context.fillRect(x, y, w, h);
-              context.strokeStyle = "#0f5132";
-              context.lineWidth = Math.max(1, h * 0.045);
-              context.strokeRect(x, y, w, h);
-              context.fillStyle = "#14532d";
-              context.font = "900 " + Math.max(8, Math.floor(h * 0.52)) + "px Arial";
-              context.textAlign = "center";
-              context.textBaseline = "middle";
-              context.fillText("CARDRIVE", x + w / 2, y + h / 2, w * 0.92);
-            }
-            let webp: Blob | null = null;
-            for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
-              webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
-              if (webp && webp.size <= 220 * 1024) break;
-            }
-            if (webp) files.push(new File([webp], "cardrive-" + (index + 1) + ".webp", { type: "image/webp" }));
-          } finally {
-            bitmap.close();
-          }
+          if (!blob.type.startsWith("image/")) continue;
+          files.push(new File([blob], item.name || "telegram-photo.jpg", { type: blob.type }));
         }
         if (!cancelled) {
-          setPhotos(files);
-          setPhotoStatus(files.length + " ta rasm tayyorlandi");
+          setSourcePhotos(files);
+          setPhotoStatus(files.length + " ta asl rasm olindi, ishlov berilmoqda");
           setPhotoProgress(files.length + "/" + draft.photo_count + " rasm brauzerga muvaffaqiyatli olindi");
         }
       } catch (e) {
@@ -165,6 +149,126 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
     }
     return () => { cancelled = true; };
   }, [draft.id, draft.photo_count]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function processPhotos() {
+      if (!sourcePhotos.length) {
+        setPhotos([]);
+        return;
+      }
+      setPhotoStatus("Rasmlar optimallashtirilmoqda va avtoraqamlar CARDRIVE bilan yopilmoqda…");
+      const files: File[] = [];
+      for (const [index, file] of sourcePhotos.entries()) {
+        const bitmap = await createImageBitmap(file);
+        try {
+          const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const context = canvas.getContext("2d");
+          if (!context) continue;
+          context.filter = "brightness(1.035) contrast(1.045)";
+          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          context.filter = "none";
+
+          const aiRegion = (draft.plate_regions ?? []).find(region => isPlausiblePlateRegion(region, index));
+          const box = manualPlateRegions[index] ?? (aiRegion
+            ? { x: aiRegion.x, y: aiRegion.y, width: aiRegion.width, height: aiRegion.height }
+            : null);
+          if (box) {
+            const x = box.x / 1000 * canvas.width;
+            const y = box.y / 1000 * canvas.height;
+            const w = box.width / 1000 * canvas.width;
+            const h = box.height / 1000 * canvas.height;
+            context.fillStyle = "#f8fafc";
+            context.fillRect(x, y, w, h);
+            context.strokeStyle = "#14532d";
+            context.lineWidth = Math.max(1, h * 0.045);
+            context.strokeRect(x, y, w, h);
+            context.fillStyle = "#14532d";
+            let fontSize = Math.max(7, Math.floor(h * 0.52));
+            context.font = "900 " + fontSize + "px Arial, sans-serif";
+            while (context.measureText("CARDRIVE").width > w * 0.9 && fontSize > 5) {
+              fontSize -= 1;
+              context.font = "900 " + fontSize + "px Arial, sans-serif";
+            }
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText("CARDRIVE", x + w / 2, y + h / 2, Math.max(1, w * 0.92));
+          }
+          let webp: Blob | null = null;
+          for (const quality of [0.84, 0.76, 0.68, 0.6, 0.52]) {
+            webp = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/webp", quality));
+            if (webp && webp.size <= 220 * 1024) break;
+          }
+          if (webp) files.push(new File([webp], "cardrive-" + (index + 1) + ".webp", { type: "image/webp" }));
+        } finally {
+          bitmap.close();
+        }
+      }
+      if (!cancelled) {
+        setPhotos(files);
+        setPhotoStatus(files.length + " ta rasm e’lon uchun tayyor");
+        setPhotoProgress(files.length + "/" + sourcePhotos.length + " rasm tayyorlandi; belgilangan avtoraqamlarga CARDRIVE yozildi");
+      }
+    }
+    void processPhotos().catch(error => {
+      if (!cancelled) {
+        setPhotoStatus("Rasmlarni tayyorlashda xatolik");
+        setPhotoProgress(error instanceof Error ? error.message : "Qayta urinib ko‘ring");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [sourcePhotos, manualPlateRegions, draft.plate_regions]);
+
+  function pointerBox(event: React.PointerEvent<HTMLDivElement>): { x: number; y: number } | null {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    return {
+      x: Math.max(0, Math.min(1000, ((event.clientX - rect.left) / rect.width) * 1000)),
+      y: Math.max(0, Math.min(1000, ((event.clientY - rect.top) / rect.height) * 1000)),
+    };
+  }
+  function beginPlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index) return;
+    const point = pointerBox(event);
+    if (!point) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSelectionStart(point);
+    setSelectionPreview({ x: point.x, y: point.y, width: 0, height: 0 });
+  }
+  function movePlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index || !selectionStart) return;
+    const point = pointerBox(event);
+    if (!point) return;
+    setSelectionPreview({
+      x: Math.min(selectionStart.x, point.x),
+      y: Math.min(selectionStart.y, point.y),
+      width: Math.abs(point.x - selectionStart.x),
+      height: Math.abs(point.y - selectionStart.y),
+    });
+  }
+  function finishPlateSelection(event: React.PointerEvent<HTMLDivElement>, index: number) {
+    if (selectingPlateIndex !== index || !selectionStart) return;
+    const point = pointerBox(event);
+    if (!point) return;
+    const box = {
+      x: Math.min(selectionStart.x, point.x),
+      y: Math.min(selectionStart.y, point.y),
+      width: Math.abs(point.x - selectionStart.x),
+      height: Math.abs(point.y - selectionStart.y),
+    };
+    if (box.width >= 18 && box.height >= 10) {
+      setManualPlateRegions(current => ({ ...current, [index]: box }));
+      setSelectingPlateIndex(null);
+      setSelectionStart(null);
+      setSelectionPreview(null);
+    } else {
+      setSelectionStart(null);
+      setSelectionPreview(null);
+    }
+  }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -272,10 +376,32 @@ export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
       <p className="font-bold">Avtomobil rasmlari</p>
       <p className="mt-1 text-xs text-slate-600">{photoStatus}</p>
       {photoProgress && <p className="mt-1 text-xs font-medium text-emerald-700">{photoProgress}</p>}
-      {photos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((file, i) => <div key={file.name + i} className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-        {photoUrls[i] ? <img src={photoUrls[i]} alt={"Avtomobil rasmi " + (i+1)} className="aspect-[4/3] w-full object-cover" /> : <div className="aspect-[4/3] animate-pulse bg-slate-200" />}
-        <span className="block truncate px-2 py-1.5 text-xs">{i === (p.primary_image_index ?? 0) ? "⭐ Asosiy rasm" : "Rasm " + (i + 1)}</span>
-      </div>)}</div>}
+      {photos.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{photos.map((file, i) => {
+        const aiRegion = (draft.plate_regions ?? []).find(region => isPlausiblePlateRegion(region, i));
+        const box = manualPlateRegions[i] ?? (aiRegion ? { x: aiRegion.x, y: aiRegion.y, width: aiRegion.width, height: aiRegion.height } : null);
+        const visibleBox = selectingPlateIndex === i ? selectionPreview : box;
+        return <div key={file.name + i} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+          <div className={"relative select-none " + (selectingPlateIndex === i ? "cursor-crosshair touch-none" : "")}
+            onPointerDown={event => beginPlateSelection(event, i)}
+            onPointerMove={event => movePlateSelection(event, i)}
+            onPointerUp={event => finishPlateSelection(event, i)}
+            onPointerCancel={() => { setSelectionStart(null); setSelectionPreview(null); }}>
+            {photoUrls[i] ? <img src={photoUrls[i]} alt={"Avtomobil rasmi " + (i+1)} draggable={false} className="block max-h-52 w-full object-contain" /> : <div className="aspect-[4/3] animate-pulse bg-slate-200" />}
+            {visibleBox && <div className="pointer-events-none absolute border-2 border-emerald-600 bg-white/80 flex items-center justify-center text-[9px] font-black text-emerald-900"
+              style={{ left: (visibleBox.x / 10) + "%", top: (visibleBox.y / 10) + "%", width: (visibleBox.width / 10) + "%", height: (visibleBox.height / 10) + "%" }}>CARDRIVE</div>}
+          </div>
+          <span className="block truncate px-2 pt-1.5 text-xs">{i === (p.primary_image_index ?? 0) ? "⭐ Asosiy rasm" : "Rasm " + (i + 1)}</span>
+          <div className="flex flex-wrap gap-1 p-2">
+            <button type="button" onClick={() => { setSelectingPlateIndex(i); setSelectionStart(null); setSelectionPreview(null); }}
+              className="rounded-lg border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700">
+              {selectingPlateIndex === i ? "Raqam joyini rasmda belgilang" : box ? "Raqam joyini o‘zgartirish" : "Raqam joyini belgilang"}
+            </button>
+            {box && <button type="button" onClick={() => setManualPlateRegions(current => { const next = { ...current }; delete next[i]; return next; })}
+              className="rounded-lg px-2 py-1 text-[10px] text-red-700">Belgilashni bekor qilish</button>}
+          </div>
+          {selectingPlateIndex === i && <p className="px-2 pb-2 text-[10px] text-blue-700">Rasmda avtoraqam ustidan bosib torting, so‘ng qo‘yib yuboring.</p>}
+        </div>;
+      })}</div>}
       <input className="mt-3 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => {
         const selected = Array.from(e.target.files ?? []).slice(0, Math.max(0, 8 - photos.length));
         setPhotos(current => [...current, ...selected].slice(0, 8));
