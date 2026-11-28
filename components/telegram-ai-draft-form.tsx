@@ -3,18 +3,43 @@
 import { useEffect, useState, useTransition } from "react";
 import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 
+type DraftAiPayload = {
+  brand?: string | null;
+  model?: string | null;
+  year?: number | null;
+  mileage_km?: number | null;
+  price?: number | null;
+  currency?: "UZS" | "USD" | null;
+  country_of_origin?: "uzbekistan" | "foreign" | "unknown" | null;
+  region?: string | null;
+  district?: string | null;
+  body_type?: string | null;
+  fuel_type?: string | null;
+  transmission?: string | null;
+  engine_volume?: number | null;
+  color?: string | null;
+  vehicle_condition?: string | null;
+  condition_description?: string | null;
+  description?: string | null;
+  contact_name?: string | null;
+  is_negotiable?: boolean;
+  primary_image_index?: number | null;
+  image_quality_scores?: number[];
+};
+type PlateRegion = { image_index: number; x: number; y: number; width: number; height: number; confidence: number };
 type Draft = {
   id: string;
-  ai_payload: Record<string, any>;
+  ai_payload: DraftAiPayload;
   missing_fields: string[];
   photo_count: number;
+  plate_regions?: PlateRegion[];
 };
 function cls(missing: boolean) {
   return "w-full rounded-xl border px-3 py-3 text-sm outline-none focus:ring-2 " +
     (missing ? "border-red-500 bg-red-50 focus:ring-red-200" : "border-slate-300 bg-white focus:ring-blue-200");
 }
 export function TelegramAiDraftForm({ draft }: { draft: Draft }) {
-  const p = draft.ai_payload ?? {};
+  const p: DraftAiPayload = draft.ai_payload ?? {};
   const aliases: Record<string, string> = { mileage_km: "mileageKm", condition_description: "conditionDescription", vehicle_condition: "vehicleCondition" };
   const missing = new Set((draft.missing_fields ?? []).map(key => aliases[key] ?? key));
   const [photos, setPhotos] = useState<File[]>([]);
