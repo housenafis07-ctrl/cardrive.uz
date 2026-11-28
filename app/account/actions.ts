@@ -44,6 +44,7 @@ export async function requestCustomerOtpAction(
     await new OtpService(new SmsService(smsProvider)).requestOtp({ phone, purpose });
     return { status: "sent" };
   } catch (error) {
+    console.error("[auth:otp] request failed", { code: error instanceof Error ? error.message : "UNKNOWN" });
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Kodni yuborib bo'lmadi",

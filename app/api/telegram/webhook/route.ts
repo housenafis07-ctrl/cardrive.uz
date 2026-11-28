@@ -138,8 +138,13 @@ async function analyzeDraft(token: string, chatId: number, telegramUserId: strin
     }).eq("id", draft.id).eq("telegram_user_id", telegramUserId).select("id").single();
     if (updated.error) throw new Error("DRAFT_SAVE_FAILED");
     const next = "/avtobozor/ai-draft?token=" + encodeURIComponent(rawToken);
-    const previewHost = process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://cardrive.uz";
-    const loginUrl = previewHost + "/account/login?next=" + encodeURIComponent(next);
+    // Production links must always use the canonical public domain; VERCEL_URL is a deployment hostname.
+    const siteOrigin = process.env.VERCEL_ENV === "production"
+      ? "https://cardrive.uz"
+      : process.env.VERCEL_URL
+        ? "https://" + process.env.VERCEL_URL
+        : "https://cardrive.uz";
+    const loginUrl = siteOrigin + "/account/login?next=" + encodeURIComponent(next);
     await sendMessage(token, chatId,
       "✅ AI tahlili tayyor.\n\n" +
       "🚘 " + [result.brand, result.model, result.year].filter(Boolean).join(" ") + "\n" +
