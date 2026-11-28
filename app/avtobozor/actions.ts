@@ -39,7 +39,7 @@ export async function createUsedCarListingAction(form: FormData) {
   const price = number(form, "price");
   const region = text(form, "region");
   const descriptionBase = text(form, "description");
-  const description = [descriptionBase, text(form, "trim") ? "Komplektatsiya: " + text(form, "trim") : "", text(form, "gasCylinder") ? "Gaz balloni: " + text(form, "gasCylinder") : ""].filter(Boolean).join("\\n");
+  const description = [descriptionBase, text(form, "trim") ? "Komplektatsiya: " + text(form, "trim") : "", text(form, "gasCylinder") ? "Gaz balloni: " + text(form, "gasCylinder") : ""].filter(Boolean).join("\n");
   const contactName = text(form, "contactName");
   const currency = text(form, "currency") || "UZS";
   const files = form.getAll("photos").filter((file): file is File => file instanceof File && file.size > 0);
