@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { getServerEnv } from "@/lib/env";
+import { getTelegramRuntimeConfig } from "@/lib/telegram-runtime";
 import { verifyTelegramWebAppInitData } from "@/lib/telegram-webapp-auth";
 
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
-  const env = getServerEnv();
-  if (!env.TELEGRAM_BOT_TOKEN) return NextResponse.json({ error: "TELEGRAM_NOT_CONFIGURED" }, { status: 503 });
+  const { token } = getTelegramRuntimeConfig();
+  if (!token) return NextResponse.json({ error: "TELEGRAM_NOT_CONFIGURED" }, { status: 503 });
   const body = await request.json().catch(() => null) as { initData?: unknown } | null;
   if (!body || typeof body.initData !== "string") return NextResponse.json({ error: "INIT_DATA_REQUIRED" }, { status: 400 });
-  const verified = verifyTelegramWebAppInitData(body.initData, env.TELEGRAM_BOT_TOKEN);
+  const verified = verifyTelegramWebAppInitData(body.initData, token);
   if (!verified) return NextResponse.json({ error: "INVALID_OR_EXPIRED_INIT_DATA" }, { status: 401 });
   return NextResponse.json({
     ok: true,
