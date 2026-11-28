@@ -6,6 +6,7 @@ import { createUsedCarListingAction } from "@/app/avtobozor/actions";
 import { prepareCarDriveListingImage, type CarDrivePlateBox } from "@/lib/cardrive-image-branding";
 import type { Locale } from "@/lib/i18n";
 import { VEHICLE_BRANDS } from "@/lib/vehicle-catalog";
+import { followServerActionRedirect } from "@/lib/follow-server-action-redirect";
 
 type VehicleCondition = {
   value: string;
@@ -171,6 +172,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
       }
       await createUsedCarListingAction(data);
     } catch (error) {
+      if (followServerActionRedirect(error)) return;
       const message = error instanceof Error ? error.message : "";
       setSubmitError(message.includes("Body exceeded") || message.includes("413")
         ? "Rasmlar hajmi server chegarasidan oshdi. Rasmlarni kichraytirib qayta yuboring."
@@ -202,7 +204,7 @@ export function UsedCarListingForm({ locale, isAuthenticated, error }: { locale:
 
   return (
     <>
-      {error ? <p role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <div role="alert" className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700"><p>{error}</p>{error.includes("3 ta bepul e'lon limiti") ? <a href="/account/monetization" className="mt-2 inline-block font-bold underline">Tariflar va qo‘shimcha e’lon slotlari</a> : null}</div> : null}
       {submitError ? <p role="alert" className="col-span-full rounded-xl bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
       <form onSubmit={handleSubmit} className="mt-6 grid w-full min-w-0 grid-cols-1 gap-4 overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-5">
         <h2 className="col-span-full text-lg font-black">{ru ? "Основная информация" : "Asosiy ma'lumotlar"}</h2>
