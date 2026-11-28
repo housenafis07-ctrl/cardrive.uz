@@ -76,7 +76,7 @@ export default async function AvtobozorPage({ searchParams }: { searchParams: Pr
   }));
   const resultCount = rankedListings ? rankedListings.length : count ?? 0;
   const hasSearchCriteria = ["q","brand","model","region","fuel","transmission","body","currency","minPrice","maxPrice","mileageFrom","mileageTo","yearFrom","yearTo"].some(key => Boolean(value(key)));
-  const discoveryItems: SavedVehicle[] = listingsWithCredit.map(item => { const photo=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url; return { key:"used:"+item.id,type:"used",title:item.brand+" "+item.model+" · "+item.year,href:"/avtobozor/"+item.slug,image:photo,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year),views:Number(item.view_count??0),credit:item.bestCredit }; });
+  const discoveryItems: SavedVehicle[] = listingsWithCredit.map(item => { const photo=[...(item.used_car_listing_images??[])].sort((a,b)=>Number(b.is_primary)-Number(a.is_primary)||a.sort_order-b.sort_order)[0]?.public_url; return { key:"used:"+item.id,type:"used",title:item.brand+" "+item.model+" · "+item.year,href:"/avtobozor/"+item.slug,image:photo,price:money(Number(item.price),item.currency,locale),brand:item.brand,model:item.model,year:Number(item.year),sellerType:item.seller_type,views:Number(item.view_count??0),credit:item.bestCredit }; });
   const topListings = listingsWithCredit;
   const totalPages = Math.max(1, Math.ceil(resultCount / 12));
   const params = new URLSearchParams();
